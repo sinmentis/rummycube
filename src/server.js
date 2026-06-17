@@ -4,10 +4,15 @@ import serve from 'koa-static';
 import {Rummikub} from "./rummikub/Game.js";
 import {FRONTEND_ADDR} from "./rummikub/constants.js";
 
+const allowedOrigins = [Origins.LOCALHOST, `http://${FRONTEND_ADDR}`];
+if (process.env.PUBLIC_ORIGIN) {
+    allowedOrigins.push(process.env.PUBLIC_ORIGIN);
+}
+
 const server = Server({
     games: [Rummikub],
-    apiOrigins: [Origins.LOCALHOST, `http://${FRONTEND_ADDR}`],
-    origins: [Origins.LOCALHOST, `http://${FRONTEND_ADDR}`]
+    apiOrigins: allowedOrigins,
+    origins: allowedOrigins,
 });
 const PORT = process.env.PORT || 9119;
 
@@ -23,4 +28,3 @@ server.run(PORT, () => {
         )
     )
 });
-
