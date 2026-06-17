@@ -1,56 +1,31 @@
-# Rummikub online multiplayer game
+# RummyCube
 
-Implementation of [Rummikub](https://en.wikipedia.org/wiki/Rummikub) game variation. 
-Was built using React + bunch of libraries "just for fun". First attempt on this technology, 
-so the code is a little bit messy, hope to refactor someday :)
+Online multiplayer rummy tiles game (2-4 players), played in the browser with a
+nickname and a room code. Hosted at https://game.shunlyu.com.
 
-Some differences from original rules:
-1. Tile with value "1" could be placed after "13" in a run (but not "2" after "1" in this case)
-2. After first move ("initial meld") is done, player should pick two tile instead of one 
-   (in case if he forced/wants to skip his turn)
+## Credits
 
-### Features
-- Online multiplayer 2-4 players
-- Visualised turn timer
-- Tile drag/drop including multi-tile selection (using `Shift` key)
-- Achieved points results on game end
+Bootstrapped from [ilov3/rummikub](https://github.com/ilov3/rummikub). Thanks to
+the original author. Distributed under the MIT License (see `LICENSE`).
 
-### Screenshots
+## House rules (inherited, may change)
 
-Game creation
-![img.png](screenshots/img.png)
+1. A tile with value "1" can be placed after "13" in a run (but not "2" after "1").
+2. After the initial meld, a skipping player draws two tiles instead of one.
 
-Game in progress
-![img_1.png](screenshots/img_1.png)
+## Local development
 
-### Known limitations:
-- Turn timeout handled on client-side, so there is a way to bypass it
+Requires Node 22+.
 
-### Local development
-Make sure node/npm installed, currently game requires node v22
-
-1. Create .env file and change env var values if needed
 ```shell
-cp .env.example .env
-```
-
-2. Run npm install
-```shell
+cp .env.example .env   # adjust values if needed
 npm install
+npm start              # frontend (Vite dev server)
+npm run serve          # dev backend server
 ```
 
-3. Launch frontend
-```shell
-npm start
-```
+## Tests
 
-4. Launch dev backend sever
-```shell
-npm run serve
-```
-
-### Running tests
-To run tests:
 ```shell
 npm test
 ```
