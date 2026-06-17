@@ -1,0 +1,8 @@
+# Append to ~/.cloudflared/config.yml ingress list, ABOVE the 404 catch-all:
+- hostname: game.shunlyu.com
+  service: http://localhost:8093
+# DNS: a proxied CNAME game.shunlyu.com -> <TUNNEL_ID>.cfargotunnel.com
+#   Preferred: cloudflared tunnel route dns <TUNNEL_ID> game.shunlyu.com
+#   (requires a valid Zone:DNS:Edit token in ~/.cloudflared/cert.pem)
+#   Fallback: create the CNAME via the Cloudflare dashboard or API with a
+#   Zone:DNS:Edit token for shunlyu.com.
