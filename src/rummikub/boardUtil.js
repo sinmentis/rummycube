@@ -1,5 +1,6 @@
 import {isSequenceValid, tryOrderTiles} from "./util";
 import {HAND_GRID_ID} from "./constants.js";
+import {toggleSelection} from "./dndUtil";
 
 function getNextTile(G, playerID, tileId) {
     const currentPos = G.tilePositions[tileId];
@@ -67,7 +68,10 @@ function handleTileSelection(G, state, setState, playerID, tileId, shiftKey, ctr
     }
 
     if (!shiftKey || !state.lastSelectedTileId) {
-        setState({selectedTiles: [tileId], lastSelectedTileId: tileId});
+        setState(prev => ({
+            selectedTiles: toggleSelection(prev.selectedTiles, tileId),
+            lastSelectedTileId: tileId,
+        }));
         return;
     }
 

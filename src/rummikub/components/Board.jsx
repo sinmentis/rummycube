@@ -2,7 +2,7 @@ import React, {useState, useCallback, useRef, useEffect} from "react";
 import './board.css';
 import '../theme/classic.css';
 import GridContainer from "./GridContainer";
-import {DndContext, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors} from '@dnd-kit/core'
+import {DndContext, DragOverlay, MouseSensor, TouchSensor, useSensor, useSensors} from '@dnd-kit/core'
 import {parseSlotId} from "../dndUtil";
 import {TilePreview} from "./Tile";
 import {
@@ -45,8 +45,8 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     const stateRef = useRef(state);
     useEffect(() => { stateRef.current = state; }, [state]);
     const sensors = useSensors(
-        useSensor(PointerSensor, {activationConstraint: {distance: 6}}),
-        useSensor(TouchSensor, {activationConstraint: {delay: 120, tolerance: 8}}),
+        useSensor(MouseSensor, {activationConstraint: {distance: 6}}),
+        useSensor(TouchSensor, {activationConstraint: {distance: 6}}),
     );
     const onDragStart = useCallback((e) => {
         const id = e.active.id;
