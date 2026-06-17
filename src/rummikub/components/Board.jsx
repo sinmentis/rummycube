@@ -2,15 +2,15 @@ import React, {useState, useCallback, useRef, useEffect} from "react";
 import './board.css';
 import '../theme/classic.css';
 import GridContainer from "./GridContainer";
-import {DndProvider} from 'react-dnd'
-import {HTML5Backend} from 'react-dnd-html5-backend'
+import {DndContext, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors} from '@dnd-kit/core'
+import {parseSlotId} from "../dndUtil";
+import {TilePreview} from "./Tile";
 import {
     HAND_GRID_ID, BOARD_GRID_ID, BOARD_ROWS, BOARD_COLS, HAND_ROWS, HAND_COLS
 } from "../constants";
 import Sidebar from "./Sidebar";
 import {extractSeqs, isBoardHasNewTiles, isBoardValid} from "../moveValidation";
 import {buildGridsFromTilePositions, getSecTs, isSequenceValid} from "../util";
-import TileDragLayer from "./TileDragLayer";
 import GameOverModal from "./GameOverModal";
 import {handleTileSelection, handleLongPress} from "../boardUtil";
 import _ from "lodash";
@@ -40,6 +40,27 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     }, [G.recentlyDrawnTiles]);
 
     const [state, setState] = useState({selectedTiles: [], lastSelectedTileId: null})
+
+    const [activeTile, setActiveTile] = useState(null);
+    const stateRef = useRef(state);
+    useEffect(() => { stateRef.current = state; }, [state]);
+    const sensors = useSensors(
+        useSensor(PointerSensor, {activationConstraint: {distance: 6}}),
+        useSensor(TouchSensor, {activationConstraint: {delay: 120, tolerance: 8}}),
+    );
+    const onDragStart = useCallback((e) => {
+        const id = e.active.id;
+        setActiveTile(id);
+        setState(prev => prev.selectedTiles.includes(id) ? prev : {selectedTiles: [id], lastSelectedTileId: id});
+    }, []);
+    const onDragEnd = useCallback((e) => {
+        setActiveTile(null);
+        if (!e.over) return;
+        const {gridId, col, row} = parseSlotId(String(e.over.id));
+        const id = e.active.id;
+        moves.moveTiles(col, row, gridId, {id}, stateRef.current.selectedTiles);
+        setState({selectedTiles: [], lastSelectedTileId: null});
+    }, [moves]);
     const [showInvalidTiles, setShowInvalidTiles] = useState(false);
     const [validTiles, setValidTiles] = useState([])
     const [hoverPosition, setHoverPosition] = useState({})
@@ -221,7 +242,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         drawOrEnd = endBut
     }
 
-    return <DndProvider backend={HTML5Backend}>
+    return <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
 
         <div className={'container-float board-container'}>
             {ctx.gameover &&
@@ -256,13 +277,17 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                     </div>
                 </div>
             </div>
-            <TileDragLayer
-                G={G}
-                playerID={playerID}
-                selectedTiles={state.selectedTiles}
-            />
         </div>
-    </DndProvider>
+        <DragOverlay dropAnimation={null}>
+            {activeTile ? (
+                state.selectedTiles.includes(activeTile)
+                    ? <div style={{display: 'flex', gap: '2px'}}>
+                        {state.selectedTiles.map(id => <TilePreview key={id} tile={id}/>)}
+                      </div>
+                    : <TilePreview tile={activeTile}/>
+            ) : null}
+        </DragOverlay>
+    </DndContext>
 }
 
 export default RummikubBoard

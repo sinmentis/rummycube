@@ -1,11 +1,8 @@
-import React, {useCallback, useState} from 'react';
-import {useEffect} from "react";
+import React, {useCallback} from 'react';
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {faSmileBeam} from "@fortawesome/free-solid-svg-icons";
 import {getTileValue, isJoker, getTileColor} from "../util";
-import {useDrag} from 'react-dnd';
-import {getEmptyImage} from "react-dnd-html5-backend";
-import useLongPress from "../hooks/useLongPress";
+import {useDraggable} from '@dnd-kit/core';
 import {COLORS, TILE_WIDTH} from "../constants";
 
 
@@ -85,89 +82,24 @@ function getTileStyle(selected, isDragging, isValid, position, index, newlyAdded
     return result
 }
 
-export function Tile({
-                         tile,
-                         canDnD,
-                         isSelected,
-                         isValid,
-                         handleTileSelection,
-                         onTileDragEnd,
-                         handleLongPress,
-                         onLongPressMouseUp,
-                         selectedTiles,
-                         newlyAdded
-                     }) {
-    const longPressTimeout = 250
-    const [longPressTriggered, setLongPress] = useState(false)
-    const [{isDragging}, drag, preview] = useDrag(function () {
-        return {
-            type: 'tile',
-            item: function (monitor) {
-                const draggedIndex = selectedTiles.indexOf(tile);
-                return {
-                    id: tile,
-                    selectedTiles,
-                    draggedIndex,
-                };
-            },
-            end: function (draggedItem, monitor) {
-                let didDrop = monitor.didDrop()
-                if (didDrop) {
-                    onTileDragEnd()
-                }
-            },
-            canDrag: () => {
-                return canDnD
-            },
-            collect: monitor => ({
-                isDragging: monitor.isDragging(),
-            }),
-        }
-    }, [canDnD, selectedTiles])
-    useEffect(() => {
-        preview(getEmptyImage(), {captureDraggingState: true});
-    }, [preview]);
-
-    const onLongPress = (e) => {
-        if (e.altKey || e.optionKey) {
-            handleLongPress(tile, longPressTimeout)
-        }
-    };
+export function Tile({tile, canDnD, isSelected, isValid, handleTileSelection, selectedTiles, newlyAdded}) {
+    const {attributes, listeners, setNodeRef, isDragging} = useDraggable({id: tile, disabled: !canDnD});
 
     const onClick = useCallback((e) => {
-        if (longPressTriggered) {
-            console.log('CLEARING AFTER LONGPRESS')
-            setLongPress(false)
-            return
-        }
-        if (!(e.altKey || e.optionKey)) {
-            handleTileSelection(tile, e.shiftKey, e.ctrlKey || e.metaKey)
-        }
-    }, [longPressTriggered, handleTileSelection])
+        handleTileSelection(tile, e.shiftKey, e.ctrlKey || e.metaKey)
+    }, [tile, handleTileSelection])
 
-    function onMouseUp() {
-        onLongPressMouseUp()
-    }
-
-    const defaultOptions = {
-        shouldPreventDefault: false,
-        delay: longPressTimeout,
-    };
-    const longPressEvent = useLongPress(onLongPress, onMouseUp, longPressTriggered, setLongPress, defaultOptions);
-
-    return <div
-        onClick={onClick}
-        {...longPressEvent}
-        ref={drag}
-        id={tile}>
-        <TilePreview
-            tile={tile}
-            isSelected={isSelected}
-            isDragging={isDragging}
-            isValid={isValid}
-            newlyAdded={newlyAdded.includes(parseInt(tile))}
-        />
-    </div>
+    return (
+        <div ref={setNodeRef} {...listeners} {...attributes} onClick={onClick} id={tile}
+             style={{touchAction: 'none', opacity: isDragging ? 0.4 : 1, cursor: canDnD ? 'grab' : 'default'}}>
+            <TilePreview
+                tile={tile}
+                isSelected={isSelected}
+                isValid={isValid}
+                newlyAdded={Array.isArray(newlyAdded) ? newlyAdded.includes(parseInt(tile)) : !!newlyAdded}
+            />
+        </div>
+    )
 }
 
 
