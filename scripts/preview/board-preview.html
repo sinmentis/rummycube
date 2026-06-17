@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RummyCube board preview (A1 Classic)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@800&display=swap" rel="stylesheet">
+<!-- Keep these two links pointing at the REAL css so screenshots reflect the live board -->
+<link rel="stylesheet" href="../../src/rummikub/theme/classic.css">
+<link rel="stylesheet" href="../../src/rummikub/components/board.css">
+<style>body{margin:0}</style>
+</head>
+<body>
+<!-- The board container mirrors the real Board.jsx DOM so the CSS is exercised
+     exactly as it is in the app (incl. the drag-wrapper div and inline grid tracks). -->
+<div class="container-float board-container">
+  <div class="board" id="board"></div>
+</div>
+
+<script>
+// Mirror constants.js so the preview grid matches the real app density.
+const BOARD_COLS = 32, BOARD_ROWS = 9;
+const HAND_COLS = 22, HAND_ROWS = 2;
+const COL_W = 2.2; // GridContainer colWidth (vw)
+const ROW_H = 7;   // GridContainer row height (vh)
+
+// A tile = {v: value|'joker', c: 'red'|'black'|'blue'|'orange'}
+function T(v, c) { return {v, c}; }
+
+// Board layout (row-major). null = empty cell. Mirrors the A1 mock sets and adds
+// extra rows / two-digit numerals to stress-test legibility in the dense grid.
+const board = [
+  // run + group of nines + joker group (the A1 mock row)
+  [T(5,'blue'),T(6,'blue'),T(7,'blue'), null, T(9,'red'),T(9,'black'),T(9,'orange'), null, T('joker','red'),T(11,'black'),T(12,'black')],
+  [],
+  // two-digit run + red run + mixed group
+  [T(10,'orange'),T(11,'orange'),T(12,'orange'),T(13,'orange'), null, T(1,'red'),T(2,'red'),T(3,'red'), null, T(8,'blue'),T(9,'blue'),T(10,'blue')],
+  [],
+  [T(4,'black'),T(5,'black'),T(6,'black'), null, T(7,'red'),T(7,'black'),T(7,'blue'),T(7,'orange'), null, T(13,'blue'),T(13,'red'),T(13,'black')],
+];
+
+// Player's hand on the rack
+const hand = [
+  [T(4,'red'),T(8,'blue'),T(3,'orange'),T(1,'black'),T(13,'red'),T(7,'black'),T(11,'blue'),T(2,'orange'),T('joker','black')],
+  [],
+];
+
+function tileEl(t) {
+  // Mirror real DOM: .grid-item > div(drag wrapper, id) > .tile.tile-clickable.border-dark
+  //                  > (.tile-text.tile-<color> + .tile-subscript)
+  const cell = document.createElement('div');
+  cell.className = 'grid-item';
+  if (!t) return cell;
+  const wrap = document.createElement('div');           // unstyled drag-ref wrapper
+  wrap.id = 'tile-' + Math.random().toString(36).slice(2, 8);
+  const tile = document.createElement('div');
+  tile.className = 'tile tile-clickable border-dark';
+  const text = document.createElement('div');
+  text.className = 'tile-text tile-' + t.c;
+  text.textContent = (t.v === 'joker') ? '\u263A' : t.v; // ☺ approximates the joker glyph
+  const sub = document.createElement('div');
+  sub.className = 'tile-subscript';
+  tile.appendChild(text);
+  tile.appendChild(sub);
+  wrap.appendChild(tile);
+  cell.appendChild(wrap);
+  return cell;
+}
+
+// Build one grid (mirrors GridContainer -> Centered > Grid).
+function grid(rows, cols, data) {
+  const centered = document.createElement('div');       // the Centered wrapper
+  centered.style.width = (cols * COL_W) + 'vw';
+  centered.style.margin = '0 auto';
+  const g = document.createElement('div');
+  g.className = 'grid-container';
+  g.style.gridTemplateColumns = `repeat(${cols}, ${COL_W}vw)`;
+  g.style.gridTemplateRows = `repeat(${rows}, ${ROW_H}vh)`;
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      const t = (data[y] && data[y][x]) || null;
+      g.appendChild(tileEl(t));
+    }
+  }
+  centered.appendChild(g);
+  return centered;
+}
+
+function button(label, extra) {
+  const b = document.createElement('button');
+  b.className = 'rummikub-button' + (extra ? ' ' + extra : '');
+  b.textContent = label;
+  return b;
+}
+
+const root = document.getElementById('board');
+
+// Board grid lives inside a .ref wrapper (as in Board.jsx)
+const ref = document.createElement('div');
+ref.className = 'ref';
+ref.appendChild(grid(BOARD_ROWS, BOARD_COLS, board));
+root.appendChild(ref);
+
+// Wooden rack: hand grid + turn controls (as in Board.jsx .hand-buttons)
+const rack = document.createElement('div');
+rack.className = 'hand-buttons';
+rack.appendChild(grid(HAND_ROWS, HAND_COLS, hand));
+const controls = document.createElement('div');
+controls.className = 'controls-wrapper';
+controls.appendChild(button('Sort: runs'));
+controls.appendChild(button('Sort: colours'));
+controls.appendChild(button('Draw'));
+controls.appendChild(button('Undo', 'undo'));
+controls.appendChild(button('Redo', 'redo'));
+rack.appendChild(controls);
+root.appendChild(rack);
+</script>
+</body>
+</html>

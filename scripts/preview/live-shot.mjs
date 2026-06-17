@@ -1,0 +1,17 @@
+import {chromium} from 'playwright';
+const BASE = process.env.SMOKE_URL || 'https://game.shunlyu.com';
+const b = await chromium.launch({executablePath: process.env.CHROMIUM_PATH});
+const ctx = await b.newContext({viewport:{width:1440,height:900}, permissions:['clipboard-write']});
+const p = await ctx.newPage();
+await p.goto(BASE, {waitUntil:'networkidle'});
+await p.getByPlaceholder('Enter username').fill('alice');
+await p.selectOption('#formNumPlayers','2');
+await p.getByRole('button',{name:'Create',exact:true}).click();
+await p.waitForURL(/\/match\//,{timeout:30000});
+await p.waitForTimeout(3500);
+await p.screenshot({path:'/tmp/rc-live.png'});
+const mp = await (await b.newContext({viewport:{width:390,height:844}, isMobile:true})).newPage();
+await mp.goto(BASE, {waitUntil:'networkidle'});
+await mp.screenshot({path:'/tmp/rc-live-mobile.png'});
+await b.close();
+console.log('live shots -> /tmp/rc-live.png, /tmp/rc-live-mobile.png');

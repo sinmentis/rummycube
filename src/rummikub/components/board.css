@@ -3,8 +3,22 @@ body {
     position: relative;
 }
 
+/* Felt base scoped to the match wrapper (this class only exists in-game), so the
+   lobby keeps a readable light background until it is restyled in R5. */
+.board-container {
+    background: var(--felt-base, #1c4528);
+}
+
 .game-navbar {
     height: 40px;
+}
+
+/* The green felt table that everything sits on. */
+.board {
+    min-height: 100vh;
+    padding: 2.5vh 1vw 3vh;
+    background: var(--felt);
+    box-shadow: var(--felt-vignette), inset 0 0 140px rgba(0, 0, 0, .35);
 }
 
 .sidenav {
@@ -22,11 +36,25 @@ body {
     color: #5d7239;
 }
 
+/* The wooden rack that holds the player's hand + turn controls. */
+.hand-buttons {
+    width: fit-content;
+    max-width: 94vw;
+    margin: 2.2vh auto 1vh;
+    padding: 1.4vh 1.6vw 1.8vh;
+    border-radius: 16px;
+    background: var(--rack);
+    border: 1px solid var(--rack-border);
+    box-shadow: var(--rack-highlight), 0 14px 26px rgba(0, 0, 0, .42);
+}
+
 .controls-wrapper {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-top: 20px; /* adjust spacing as needed */
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 1.6vh; /* adjust spacing as needed */
 }
 
 .controls-wrapper button {
@@ -43,10 +71,14 @@ body {
 }
 
 div.grid-item {
-    border: 0.5px solid gray;
+    /* graph-paper border removed for the felt look */
     position: relative;
+    box-sizing: border-box;
     width: 100%;
     height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 div.grid-container {
@@ -71,35 +103,42 @@ div.tile-drag-layer {
 }
 
 div.tile {
-    /*background-image: linear-gradient(to bottom right, var(--tile-gradient-light), var(--tile-gradient-dark));*/
-    background: rgb(209, 219, 220);
-    /*float: left;*/
-    height: 6.95vh;
-    padding: 0px;
-    width: 2.15vw;
-    display: inline-block;
-    border: 1px solid rgb(230, 230, 230);;
-    border-radius: 0.3vw;
-    margin-bottom: 0.5vw;
-    font-family: cheva;
-    font-size: x-large;
-    box-shadow: 2px 2px 3px #00000033;
+    box-sizing: border-box;
+    width: 2.0vw;
+    height: 5.4vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Solid face colour (overridable by the inline state colours from getTileStyle)
+       + translucent sheen on top so selected/valid/invalid/newly-drawn still read. */
+    background-color: var(--tile-face-solid);
+    background-image: var(--tile-sheen);
+    border: 1px solid var(--tile-border);
+    border-radius: 5px;
+    /* drop shadow + carved top highlight + warm bottom shading = beveled ivory */
+    box-shadow: var(--tile-shadow);
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-weight: 800;
+    font-size: clamp(15px, 1.7vw, 26px);
+    line-height: 1;
+    transition: transform .12s ease, box-shadow .12s ease;
+}
 
-    /*transition: transform 0.5s ease-out;*/
+/* tactile lift on hover (visual only — transform doesn't affect layout/DnD) */
+div.tile:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--tile-shadow-lift);
 }
 
 .tile-text {
     user-select: none;
-    position: relative;
     text-align: center;
-    font-weight: bold;
-    top: 50%;
-    -ms-transform: translateY(-50%);
-    transform: translateY(-50%);
+    line-height: 1;
+    letter-spacing: .5px;
 }
 
 svg.fa-smile-beam {
-    font-size: 1.1vw;
+    font-size: clamp(14px, 1.5vw, 22px);
 }
 
 
@@ -108,19 +147,19 @@ svg.fa-smile-beam {
 }
 
 .tile-black {
-    color: black;
+    color: var(--c-black);
 }
 
 .tile-red {
-    color: #b30404;
+    color: var(--c-red);
 }
 
 .tile-blue {
-    color: #0a0ae3;
+    color: var(--c-blue);
 }
 
 .tile-orange {
-    color: #d58300;
+    color: var(--c-orange);
 }
 
 .player-list {
@@ -236,4 +275,88 @@ svg.fa-smile-beam {
 
 .tile-pool-counter {
     font-size: 1.2rem;
+}
+
+/* ============================================================
+   Mobile (<= 820px) — keep tiles legible and reachable at ~390px.
+   The grid track width is set inline by GridContainer (2.2vw, far
+   too small on a phone), so we override it here and let each grid
+   pan horizontally. Column counts mirror BOARD_COLS (32) and
+   HAND_COLS (22) from constants.js.
+   ============================================================ */
+@media (max-width: 820px) {
+    .board {
+        padding: 1vh 0 2.4vh;
+        overflow-x: hidden;
+    }
+
+    /* Sidebar drops into normal flow as a top strip instead of a fixed overlay. */
+    .sidenav {
+        position: static;
+        width: auto;
+        height: auto;
+        font-size: 13px;
+        padding: 8px 10px;
+    }
+
+    .player-list {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 1rem;
+        padding: 0.5rem;
+    }
+
+    /* Board grid pans horizontally inside its wrapper. */
+    .ref {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 8px;
+    }
+
+    .ref > div {
+        width: max-content !important;
+        margin: 0 !important;
+    }
+
+    .ref .grid-container {
+        grid-template-columns: repeat(32, 8.4vw) !important;
+    }
+
+    /* Hand grid pans horizontally inside the wood rack; controls stay put below. */
+    .hand-buttons {
+        width: auto;
+        max-width: 96vw;
+        margin: 1.6vh auto 1vh;
+        padding: 1.2vh 2vw 1.4vh;
+    }
+
+    .hand-buttons > div:first-child {
+        width: 100% !important;
+        margin: 0 !important;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 6px;
+    }
+
+    .hand-buttons .grid-container {
+        grid-template-columns: repeat(22, 8.4vw) !important;
+    }
+
+    div.tile {
+        width: 7.6vw;
+        height: 5.6vh;
+        border-radius: 6px;
+        font-size: clamp(17px, 5vw, 26px);
+    }
+
+    div.tile:hover {
+        transform: none;
+        box-shadow: var(--tile-shadow);
+    }
+
+    .rummikub-button {
+        font-size: 15px;
+        padding: 8px 14px;
+        margin: 0 4px;
+    }
 }

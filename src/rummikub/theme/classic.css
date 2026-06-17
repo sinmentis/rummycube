@@ -1,0 +1,34 @@
+:root {
+  --felt: radial-gradient(120% 120% at 50% 0%, #3a7d4f 0%, #245733 70%, #1c4528 100%);
+  --felt-vignette: inset 0 0 60px rgba(0,0,0,.45);
+  --tile-face: linear-gradient(180deg,#fffdf4 0%,#f3ead5 60%,#e9dcc0 100%);
+  --tile-border: rgba(120,90,40,.25);
+  --tile-shadow: 0 7px 9px rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.95), inset 0 -4px 7px rgba(120,90,40,.18);
+  --tile-shadow-lift: 0 18px 22px rgba(0,0,0,.5), inset 0 2px 0 rgba(255,255,255,.95);
+  --c-red:#b3162a; --c-black:#1c1c1c; --c-blue:#13478f; --c-orange:#cc7a14;
+  --rack: linear-gradient(180deg,#8a5a2b,#5e3a18);
+  --set-glow: radial-gradient(closest-side, rgba(120,255,150,.55), rgba(120,255,150,0));
+
+  /* dark green base behind the felt (page background) */
+  --felt-base: #1c4528;
+
+  /* Opaque ivory used as the tile's background-COLOR (not a gradient image).
+     Kept solid so the game's inline state colors — selected (grey), valid (green),
+     invalid (red), newly-drawn (orange) set in Tile.jsx getTileStyle — still show
+     through instead of being hidden behind an opaque gradient image. */
+  --tile-face-solid: #f4ecd6;
+
+  /* Translucent gloss laid over the face: a top highlight fading to a faint warm
+     bottom. Because it is mostly transparent, the underlying state colour still
+     reads through, while normal tiles gain a carved-ivory sheen. */
+  --tile-sheen: linear-gradient(180deg,
+      rgba(255,255,255,.55) 0%,
+      rgba(255,255,255,.12) 16%,
+      rgba(255,255,255,0) 40%,
+      rgba(125,95,45,.04) 76%,
+      rgba(125,95,45,.15) 100%);
+
+  /* Wood rack accents */
+  --rack-border: rgba(40,24,8,.55);
+  --rack-highlight: inset 0 3px 6px rgba(255,220,170,.28), inset 0 -6px 14px rgba(0,0,0,.30);
+}

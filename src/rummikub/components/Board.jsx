@@ -1,5 +1,6 @@
 import React, {useState, useCallback, useRef, useEffect} from "react";
 import './board.css';
+import '../theme/classic.css';
 import GridContainer from "./GridContainer";
 import {DndProvider} from 'react-dnd'
 import {HTML5Backend} from 'react-dnd-html5-backend'
@@ -241,13 +242,13 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                                 title={'Order by runs'}
                                 className={'rummikub-button'} onClick={() => {
                             onOrderByColorClicked()
-                        }}>789
+                        }}>Sort: runs
                         </button>
                         <button disabled={ctx.gameover}
                                 title={'Order by sets'}
                                 className={'rummikub-button'} onClick={() => {
                             onOrderByValColor()
-                        }}>777
+                        }}>Sort: colours
                         </button>
                         {drawOrEnd}
                         {undoBut}
