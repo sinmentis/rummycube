@@ -43,6 +43,12 @@ podman build -t shunlyu-rummycube:latest ~/work/rummycube \
 ## Smoke tests
 
 ```bash
-./scripts/smoke-rest.sh https://game.shunlyu.com   # lobby REST create/join
-node scripts/smoke-frontend.mjs                    # headless SPA load check
+# lobby REST create/join through the edge
+./scripts/smoke-rest.sh https://game.shunlyu.com
+
+# headless browser checks. On this VM, point CHROMIUM_PATH at the cached
+# Playwright chromium (the repo's own browser binary is not installed separately):
+export CHROMIUM_PATH=~/.cache/ms-playwright/chromium-1228/chrome-linux/chrome
+node scripts/smoke-frontend.mjs      # SPA loads through the edge, no console errors
+node scripts/smoke-multiplayer.mjs   # two clients connect over WSS and receive state
 ```
