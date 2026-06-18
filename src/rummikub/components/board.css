@@ -23,18 +23,18 @@ body {
 }
 
 .sidenav {
-    font-size: 0.95vw;
-    height: 100%; /* Full-height: remove this if you want "auto" height */
-    width: 13vw; /* Set the width of the sidebar */
-    position: fixed; /* Fixed Sidebar (stay in place on scroll) */
-    z-index: 1; /* Stay on top */
-    top: 0; /* Stay at the top */
-    left: 0;
-    /*background-color: #393939; !* Black *!*/
-    overflow-x: hidden; /* Disable horizontal scroll */
-    padding-top: 20px;
-    padding-left: 2px;
-    color: #5d7239;
+    position: fixed;
+    top: calc(var(--nav-h, 54px) + 8px);
+    left: 8px;
+    z-index: 8;
+    width: auto;
+    max-width: 230px;
+    padding: 0;
+    font-size: 14px;
+    color: var(--cream, #f7eed8);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 /* The wooden rack that holds the player's hand + turn controls. */
@@ -169,6 +169,36 @@ svg.fa-smile-beam {
     gap: 3rem;
     padding: 1rem;
     align-items: flex-start; /* optional: aligns to the left */
+}
+
+/* ===== Mahjong-style seats around the table (R-seats) ===== */
+.table-seats {
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    pointer-events: none; /* avatars are display-only; never block tile dragging */
+}
+.seat-slot {
+    position: absolute;
+}
+.seat-self {
+    left: 1.5vw;
+    bottom: 11vh;
+}
+.seat-top {
+    top: 1vh;
+    left: 50%;
+    transform: translateX(-50%);
+}
+.seat-left {
+    left: 1.5vw;
+    top: 58%;
+    transform: translateY(-50%);
+}
+.seat-right {
+    right: 1.5vw;
+    top: 58%;
+    transform: translateY(-50%);
 }
 
 .avatar {
@@ -323,10 +353,15 @@ svg.fa-smile-beam {
 
 /* "Player N not joined yet" — muted parchment instead of bright bootstrap orange */
 .player-pending {
+    width: 84px;
+    text-align: center;
     color: var(--cream, #f5edd8);
-    opacity: .75;
-    font-size: .9rem;
-    font-style: italic;
+    background: rgba(0, 0, 0, .32);
+    border: 1px dashed rgba(255, 250, 238, .5);
+    border-radius: 12px;
+    padding: 10px 6px;
+    font-size: .72rem;
+    line-height: 1.25;
 }
 
 /* ============================================================

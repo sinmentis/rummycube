@@ -9,6 +9,7 @@ import {
     HAND_GRID_ID, BOARD_GRID_ID, BOARD_ROWS, BOARD_COLS, HAND_ROWS, HAND_COLS
 } from "../constants";
 import Sidebar from "./Sidebar";
+import TableSeats from "./TableSeats";
 import {extractSeqs, isBoardHasNewTiles, isBoardValid, isSubmitAccepted, getFormedGroups} from "../moveValidation";
 import {buildGridsFromTilePositions, getSecTs, isSequenceValid, getTileValue, isJoker} from "../util";
 import GameOverModal from "./GameOverModal";
@@ -247,8 +248,19 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                        newlyAdded={recentlyDrawnTiles}
         />)
 
+    const allJoined = (matchData || []).length && _.every(matchData, (item) => item.name)
     const sidebar = (
         <Sidebar
+            matchData={matchData || []}
+            matchID={matchID}
+            gameover={ctx.gameover}
+            allJoined={allJoined}
+            tilesOnPool={G.tilesPool.length}
+        />
+    )
+
+    const tableSeats = (
+        <TableSeats
             currentPlayer={ctx.currentPlayer}
             playerID={playerID}
             matchData={matchData || []}
@@ -258,7 +270,6 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             timerExpireAt={G.timerExpireAt}
             onTimeout={onTurnTimeout}
             hands={hands}
-            tilesOnPool={G.tilesPool.length}
         />
     )
 
@@ -284,6 +295,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             {sidebar}
             <div className="board" onClick={onBoardClick}>
                 <ComboOverlay combo={combo}/>
+                {tableSeats}
                 {boardGrid}
                 <div className={'hand-buttons'}>
                     {handGrid}
