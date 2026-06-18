@@ -132,6 +132,23 @@ function endTurn({G, ctx, playerID, events}) {
     }
 }
 
+function forceEndTurn({G, ctx, events}) {
+    // Any player may force-end the current turn, but ONLY after the server-set
+    // deadline has passed. G.timerExpireAt is written server-side in
+    // onTurnBegin/onPlayPhaseBegin, so a client cannot extend its own turn by
+    // suppressing its local timer — an honest opponent ends it and the server
+    // rejects any force-end before the real deadline.
+    if (!G.timerExpireAt || getSecTs() < G.timerExpireAt) {
+        return INVALID_MOVE
+    }
+    const player = ctx.currentPlayer
+    if (isBoardHasNewTiles(G)) {
+        validatePlayerMove(G, ctx, player, events)
+    } else {
+        drawTile({G, ctx, playerID: player, events}, !isBoardValid(G))
+    }
+}
+
 function rollbackChanges(G, player, ctx) {
     let tilesToReturnBack = []
     for (const [tile, tilePos] of Object.entries(G.tilePositions)) {
@@ -257,6 +274,7 @@ function checkGameOver(G, ctx, events) {
 
 export {
     endTurn,
+    forceEndTurn,
     moveTiles,
     validatePlayerMove,
     onTurnBegin,

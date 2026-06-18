@@ -15,13 +15,23 @@ const GameMatch = function (props) {
     console.debug('STATE:', location.state)
     const navigate = useNavigate()
     useEffect(() => {
-        if (!location.state) {
-            navigate(`/join-match/${matchID}`)
-        } else {
+        const key = `rummycube:match:${matchID}`;
+        if (location.state) {
             setLocationState(location.state)
             sessionStorage.setItem("authToken", location.state.creds);
+            // persist so a reload/disconnect can rejoin the same seat
+            try { localStorage.setItem(key, JSON.stringify(location.state)); } catch (e) {}
+        } else {
+            let saved = null;
+            try { saved = JSON.parse(localStorage.getItem(key)); } catch (e) {}
+            if (saved && saved.creds) {
+                setLocationState(saved)
+                sessionStorage.setItem("authToken", saved.creds);
+            } else {
+                navigate(`/join-match/${matchID}`)
+            }
         }
-    }, [location.state, navigate]);
+    }, [location.state, navigate, matchID]);
     let PlayerClient = Client({
         numPlayers: locationState.numPlayers,
         game: Rummikub,

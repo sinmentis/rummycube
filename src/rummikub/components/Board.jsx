@@ -132,22 +132,14 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         }, 600)
     }
 
-    function onTimeout() {
-        console.log('TURN TIME OUT!', new Date())
-        endTurn()
-    }
-
-    const checkTimerExpired = useCallback((timerId) => {
-        if (ctx.gameover) {
-            clearInterval(timerId)
-        }
-        if (G.timerExpireAt) {
-            const secondsLeft = G.timerExpireAt - getSecTs();
-            if (secondsLeft <= 0 && playerID === ctx.currentPlayer) {
-                onTimeout()
-            }
-        }
-    }, [G.timerExpireAt, ctx.currentPlayer, ctx.gameover, G.tilePositions])
+    // Any connected client fires this when the server-set deadline passes. The
+    // forceEndTurn move is rejected server-side until the real deadline, so a
+    // player cannot extend their own turn by suppressing their local timer — an
+    // honest opponent's client ends it.
+    const onTurnTimeout = useCallback(() => {
+        if (ctx.gameover) return
+        moves.forceEndTurn()
+    }, [moves, ctx.gameover])
 
 
     const endBut = (<button disabled={!(ctx.currentPlayer === playerID) || ctx.gameover}
@@ -229,7 +221,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             gameover={ctx.gameover}
             timePerTurn={G.timePerTurn}
             timerExpireAt={G.timerExpireAt}
-            onTimeout={checkTimerExpired}
+            onTimeout={onTurnTimeout}
             hands={hands}
             tilesOnPool={G.tilesPool.length}
         />

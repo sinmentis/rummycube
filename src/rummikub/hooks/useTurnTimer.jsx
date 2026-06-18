@@ -16,7 +16,7 @@ export function useTurnTimer({timerExpireAt, timePerTurn, onTimeout, isActivePla
                 console.log(clamped)
                 setTimeLeft(clamped);
 
-                if (isActivePlayer && clamped <= 0 && !timeoutCalled.current) {
+                if (clamped <= 0 && !timeoutCalled.current) {
                     timeoutCalled.current = true;
                     onTimeout();
                     clearInterval(intervalRef.current);
