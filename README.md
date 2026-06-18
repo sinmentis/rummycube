@@ -83,6 +83,8 @@ match you can play on your own.
 
 Bootstrapped from [ilov3/rummikub](https://github.com/ilov3/rummikub). Thanks to the original author.
 
+Player cat avatars are generated with [RoboHash](https://robohash.org) (set4 "Cats" by [David Revoy](https://www.peppercarrot.com/extras/html/2016_cat-generator/), licensed [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/)).
+
 ## License
 
 Released under the MIT License — see [`LICENSE`](LICENSE).

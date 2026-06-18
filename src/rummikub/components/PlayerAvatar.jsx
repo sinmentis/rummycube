@@ -1,11 +1,12 @@
 import React, {useEffect, useState} from "react";
 import {stringToColor} from "../util";
+import {catAvatarUrl} from "../avatars/catAvatar";
 
 const RADIUS = 45;
 const STROKE = 6;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-const PlayerAvatarWithTimer = ({name, tiles, isActive, timeLeft, totalTime, showTurnTimer}) => {
+const PlayerAvatarWithTimer = ({name, matchId, seatId, tiles, isActive, timeLeft, totalTime, showTurnTimer}) => {
     const [dashOffset, setDashOffset] = useState(CIRCUMFERENCE);
     const [strokeColor, setStrokeColor] = useState("#00f");
 
@@ -23,7 +24,11 @@ const PlayerAvatarWithTimer = ({name, tiles, isActive, timeLeft, totalTime, show
 
     return (
         <div className="player">
-            <div className={`avatar ${isActive ? "active" : ""}`} style={{background: stringToColor(name)}}>
+            <div className={`avatar ${isActive ? "active" : ""}`}
+                 style={{
+                     backgroundColor: stringToColor(name),
+                     backgroundImage: `url(${catAvatarUrl(matchId, seatId)})`,
+                 }}>
                 {isActive && showTurnTimer ? <svg className="timer-ring" width="100" height="100" viewBox="0 0 100 100">
                     <circle
                         className="timer-bg"

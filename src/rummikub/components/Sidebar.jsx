@@ -45,6 +45,8 @@ const Sidebar = function ({
                         <PlayerAvatarWithTimer key={data.id}
                                                isActive={index == currentPlayer}
                                                name={data.name}
+                                               matchId={matchID}
+                                               seatId={data.id}
                                                tiles={tiles}
                                                timeLeft={timeLeft}
                                                totalTime={timePerTurn}

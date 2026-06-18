@@ -177,6 +177,9 @@ svg.fa-smile-beam {
     height: 80px;
     border-radius: 50%;
     /*background: linear-gradient(135deg, #8fc56a, #5d7e30);*/
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -194,12 +197,22 @@ svg.fa-smile-beam {
 }
 
 .username {
-    position: absolute; /* Position the username absolutely within the circle */
-    top: 50%; /* Position from top */
-    left: 50%; /* Position from left */
-    transform: translate(-50%, -50%); /* Centering the text */
+    position: absolute;
+    left: 50%;
+    bottom: 4px;
+    transform: translateX(-50%);
+    max-width: 92%;
+    padding: 1px 7px;
+    border-radius: 9px;
+    background: rgba(0, 0, 0, .55);
+    color: #fff;
+    font-size: 0.72rem;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     z-index: 2; /* Ensure the username is on top */
-    font-size: 1rem; /* Adjust size if needed */
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .6);
 }
 
 .tile-count {

@@ -1,0 +1,8 @@
+Cat avatars in this folder were generated with RoboHash (https://robohash.org).
+
+Artwork: RoboHash set4 "Cats" — "Hydroponically grown beautiful kittens"
+Author:  David Revoy (https://www.peppercarrot.com/extras/html/2016_cat-generator/)
+License: CC-BY-4.0 (https://creativecommons.org/licenses/by/4.0/)
+
+Each cat-NN.png was generated from a fixed seed and is redistributed here under
+the terms of CC-BY-4.0 with attribution to David Revoy.
