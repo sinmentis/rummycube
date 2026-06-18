@@ -3,7 +3,7 @@ import './board.css';
 import '../theme/classic.css';
 import GridContainer from "./GridContainer";
 import {DndContext, DragOverlay, MouseSensor, TouchSensor, useSensor, useSensors} from '@dnd-kit/core'
-import {parseSlotId} from "../dndUtil";
+import {parseSlotId, orderTilesBySource} from "../dndUtil";
 import {TilePreview} from "./Tile";
 import {
     HAND_GRID_ID, BOARD_GRID_ID, BOARD_ROWS, BOARD_COLS, HAND_ROWS, HAND_COLS
@@ -310,7 +310,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             {activeTile ? (
                 <div className="tile-lift" style={{display: 'flex', gap: '2px'}}>
                     {state.selectedTiles.includes(activeTile)
-                        ? state.selectedTiles.map(id => <TilePreview key={id} tile={id}/>)
+                        ? orderTilesBySource(state.selectedTiles, G.tilePositions).map(id => <TilePreview key={id} tile={id}/>)
                         : <TilePreview tile={activeTile}/>}
                 </div>
             ) : null}

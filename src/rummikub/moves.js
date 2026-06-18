@@ -18,6 +18,7 @@ import {original} from "immer"
 import {current} from 'immer';
 
 import {pushTilesToGrid} from "./orderTiles.js";
+import {orderTilesBySource} from "./dndUtil.js";
 
 import { INVALID_MOVE } from 'boardgame.io/dist/cjs/core.js';
 
@@ -109,15 +110,10 @@ function moveTiles({G, ctx, playerID}, col, row, destGridId, tileIdObj, selected
     }
 
     if (selectedTiles.length > 0 && selectedTiles.indexOf(tileId) !== -1) {
-        // Place the selection in the order the tiles sit in their source grid
-        // (reading order: row then col), not the order they were tapped — so a
-        // run you sorted in the rack lands in the same order on the board.
-        const ordered = [...selectedTiles].sort((a, b) => {
-            const pa = G.tilePositions[a]
-            const pb = G.tilePositions[b]
-            if (!pa || !pb) return 0
-            return (pa.row - pb.row) || (pa.col - pb.col)
-        })
+        // Place the selection in rack reading order (row then col), not tap order,
+        // so a run you sorted lands in the same order it looks. Shared with the
+        // drag preview via orderTilesBySource.
+        const ordered = orderTilesBySource(selectedTiles, G.tilePositions)
         ordered.map(function (id, index) {
             insertTile(id, destGridId, row, col + index)
         })
