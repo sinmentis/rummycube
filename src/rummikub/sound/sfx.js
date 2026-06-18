@@ -62,3 +62,22 @@ export function play(name) {
         }
     } catch (e) { /* never let sound break gameplay */ }
 }
+
+export function place(combo = 1) {
+    if (muted) return;
+    try {
+        const base = 150 + Math.min(combo, 10) * 26; // pitch rises with combo
+        tone(base, 0.12, 'triangle', 0.26);
+        tone(base / 2, 0.13, 'sine', 0.18);
+    } catch (e) { /* never break gameplay */ }
+}
+
+export function milestone() {
+    if (muted) return;
+    try { [660, 880, 1175].forEach((f, i) => tone(f, 0.18, 'triangle', 0.2, i * 0.06)); } catch (e) {}
+}
+
+export function buzz() {
+    if (muted) return;
+    try { tone(120, 0.22, 'sawtooth', 0.22); tone(90, 0.22, 'square', 0.16, 0.02); } catch (e) {}
+}
