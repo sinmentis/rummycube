@@ -79,7 +79,7 @@ const Rummikub = {
         onBegin: onTurnBegin,
         onEnd: onTurnEnd,
     },
-    minPlayers: 2,
+    minPlayers: 1,
     maxPlayers: 4,
 };
 export {Rummikub}

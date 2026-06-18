@@ -19,7 +19,10 @@ const CreateGameForm = function () {
 
     function onGameCreate(event) {
         event.preventDefault();
-        client.createGame(numPlayers, timePerTurn).then(
+        // "0" players = solo test mode -> a real single-player game (no second
+        // browser needed); any other value is a normal multiplayer match.
+        const actualNumPlayers = numPlayers === '0' ? '1' : numPlayers;
+        client.createGame(actualNumPlayers, timePerTurn).then(
             (id) => {
                 let matchLink = buildMatchLink(id)
                 copyToClipboard(matchLink)
@@ -29,7 +32,7 @@ const CreateGameForm = function () {
                     navigate(`/match/${id}`, {
                         state: {
                             username: username,
-                            numPlayers: numPlayers,
+                            numPlayers: actualNumPlayers,
                             creds: playerCreds,
                             playerID: '0',
                         }
@@ -69,6 +72,7 @@ const CreateGameForm = function () {
                     onChange={(e) => {
                         setNumPlayers(e.target.value)
                     }}>
+                    <option value="0">0 · solo test</option>
                     <option>2</option>
                     <option>3</option>
                     <option>4</option>
