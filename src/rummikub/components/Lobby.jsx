@@ -1,6 +1,7 @@
 import {useState} from "react";
 import CreateGameForm from "./CreateGame";
 import JoinGameForm from "./JoinGame";
+import ServerStats from "./ServerStats";
 import "./lobby.css";
 
 
@@ -24,6 +25,7 @@ export const GameLobby = function () {
                     {showCreateForm ? <CreateGameForm/> : <JoinGameForm/>}
                 </div>
             </div>
+            <ServerStats/>
         </div>
     )
 }

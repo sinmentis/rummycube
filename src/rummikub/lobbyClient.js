@@ -29,6 +29,13 @@ class GameLobbyClient {
         return await this.client.getMatch(GAME_NAME, matchID)
     }
 
+    async getStats() {
+        const base = `${LOBBY_SERVER_PROTO}://${LOBBY_SERVER_HOST}:${LOBBY_SERVER_PORT}`
+        const res = await fetch(`${base}/api/stats`)
+        if (!res.ok) throw new Error('stats unavailable')
+        return await res.json()
+    }
+
     async playAgain(matchId, playerMetaData) {
         return await this.client.playAgain(GAME_NAME, matchId, playerMetaData)
     }
