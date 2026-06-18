@@ -4,21 +4,23 @@ import {QUICK_PHRASES, CHAT_EMOJI, MAX_CHAT_LEN, sanitizeChatText} from "../chat
 import "./chat.css";
 
 const TYPING_PING_MS = 2000;   // throttle outgoing "typing" pings
-const TYPING_SHOW_MS = 3000;   // how long to show "X is typing" after the last ping
+const TYPING_SHOW_MS = 3000;   // show "X is typing" for this long after the last ping
 const TYPING_FRESH_MS = 5000;  // ignore stale pings (e.g. replayed on reconnect)
+const MAX_VISIBLE = 60;        // cap rendered history so the DOM never grows unbounded
 
-// Always-on, translucent chat in the top-right. Fed boardgame.io's built-in
-// chatMessages/sendChatMessage. Real messages carry {text}; "typing" pings carry
-// {typing, ts} and are filtered out of the list but drive the typing indicator.
+// Always-on, translucent chat in the top-right. Quick phrases + emoji live in
+// pop-up sub-menus to keep the box clean. Fed boardgame.io's built-in chat;
+// "typing" pings ({typing, ts}) are filtered out of the list and drive the
+// typing indicator.
 export default function ChatPanel({chatMessages, sendChatMessage, matchData, matchID, playerID}) {
     const messages = chatMessages || [];
     const [draft, setDraft] = useState("");
-    const [typers, setTypers] = useState({}); // sender -> expiry ms
+    const [menu, setMenu] = useState(null); // null | 'emoji' | 'phrases'
+    const [typers, setTypers] = useState({});
     const listRef = useRef(null);
     const seenRef = useRef(0);
     const lastPingRef = useRef(0);
 
-    // React to newly arrived messages: schedule/clear typing indicators.
     useEffect(() => {
         for (let i = seenRef.current; i < messages.length; i++) {
             const m = messages[i];
@@ -35,7 +37,6 @@ export default function ChatPanel({chatMessages, sendChatMessage, matchData, mat
         seenRef.current = messages.length;
     }, [messages.length, playerID]);
 
-    // Expire typing indicators.
     useEffect(() => {
         if (!Object.keys(typers).length) return;
         const id = setInterval(() => {
@@ -51,12 +52,13 @@ export default function ChatPanel({chatMessages, sendChatMessage, matchData, mat
     }, [typers]);
 
     const shown = messages.filter(m => m && m.payload && typeof m.payload.text === "string");
+    const visible = shown.slice(-MAX_VISIBLE);
 
     useEffect(() => {
         if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
     }, [shown.length]);
 
-    if (typeof sendChatMessage !== "function") return null; // chat transport unavailable
+    if (typeof sendChatMessage !== "function") return null;
 
     const nameFor = (sender) =>
         (matchData && matchData[sender] && matchData[sender].name) || `Player ${Number(sender) + 1}`;
@@ -64,7 +66,7 @@ export default function ChatPanel({chatMessages, sendChatMessage, matchData, mat
     function send(text) {
         const t = sanitizeChatText(text);
         if (!t) return;
-        lastPingRef.current = 0; // allow a fresh typing ping next time
+        lastPingRef.current = 0;
         sendChatMessage({text: t});
     }
 
@@ -82,11 +84,19 @@ export default function ChatPanel({chatMessages, sendChatMessage, matchData, mat
         e.preventDefault();
         send(draft);
         setDraft("");
+        setMenu(null);
     }
 
     function addEmoji(em) {
         setDraft(d => (d + em).slice(0, MAX_CHAT_LEN));
     }
+
+    function sendPhrase(p) {
+        send(p);
+        setMenu(null);
+    }
+
+    const toggleMenu = (which) => setMenu(m => (m === which ? null : which));
 
     const typingNames = Object.keys(typers)
         .filter(s => String(s) !== String(playerID))
@@ -103,8 +113,8 @@ export default function ChatPanel({chatMessages, sendChatMessage, matchData, mat
                 <div className="chat-head"><span>Chat</span></div>
 
                 <div className="chat-messages" ref={listRef}>
-                    {shown.length === 0 && <div className="chat-empty">Say hi 👋</div>}
-                    {shown.map((m) => {
+                    {visible.length === 0 && <div className="chat-empty">Say hi 👋</div>}
+                    {visible.map((m) => {
                         const isOwn = String(m.sender) === String(playerID);
                         return (
                             <div key={m.id} className={`chat-msg ${isOwn ? "own" : ""}`}>
@@ -124,25 +134,32 @@ export default function ChatPanel({chatMessages, sendChatMessage, matchData, mat
                     {typingLabel && (<><span className="chat-typing-dots"><i/><i/><i/></span>{typingLabel}</>)}
                 </div>
 
-                <div className="chat-quick">
-                    {QUICK_PHRASES.map(p => (
-                        <button type="button" key={p} className="chat-chip" onClick={() => send(p)}>{p}</button>
-                    ))}
-                </div>
-
-                <div className="chat-emoji">
-                    {CHAT_EMOJI.map(em => (
-                        <button type="button" key={em} className="chat-emoji-btn" onClick={() => addEmoji(em)} aria-label={`emoji ${em}`}>{em}</button>
-                    ))}
-                </div>
-
                 <form className="chat-input" onSubmit={onSubmit}>
+                    <button type="button" className={`chat-menu-btn ${menu === 'phrases' ? 'on' : ''}`}
+                            onClick={() => toggleMenu('phrases')} title="Quick phrases" aria-label="Quick phrases">💬</button>
+                    <button type="button" className={`chat-menu-btn ${menu === 'emoji' ? 'on' : ''}`}
+                            onClick={() => toggleMenu('emoji')} title="Emoji" aria-label="Emoji">😊</button>
                     <input type="text" value={draft} maxLength={MAX_CHAT_LEN}
                            onChange={onInput}
                            placeholder="Type a message…" aria-label="Chat message"/>
                     <button type="submit" className="chat-send" disabled={!draft.trim()}>Send</button>
                 </form>
             </div>
+
+            {menu === 'phrases' && (
+                <div className="chat-pop chat-pop-phrases">
+                    {QUICK_PHRASES.map(p => (
+                        <button type="button" key={p} className="chat-chip" onClick={() => sendPhrase(p)}>{p}</button>
+                    ))}
+                </div>
+            )}
+            {menu === 'emoji' && (
+                <div className="chat-pop chat-pop-emoji">
+                    {CHAT_EMOJI.map(em => (
+                        <button type="button" key={em} className="chat-emoji-btn" onClick={() => addEmoji(em)} aria-label={`emoji ${em}`}>{em}</button>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

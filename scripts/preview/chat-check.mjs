@@ -26,9 +26,11 @@ const typingSeen = /typing/i.test(typingText) && /alice/i.test(typingText);
 // A sends the typed message, a quick phrase, and an emoji
 await A.locator('.chat-send').click();
 await A.waitForTimeout(300);
-await A.locator('.chat-chip', {hasText: 'Nice!'}).click();
+await A.locator('.chat-menu-btn[aria-label="Quick phrases"]').click();
+await A.locator('.chat-pop .chat-chip', {hasText: 'Nice!'}).click();
 await A.waitForTimeout(300);
-await A.locator('.chat-emoji-btn').first().click();
+await A.locator('.chat-menu-btn[aria-label="Emoji"]').click();
+await A.locator('.chat-pop .chat-emoji-btn').first().click();
 await A.locator('.chat-send').click();
 await A.waitForTimeout(1500);
 
