@@ -109,7 +109,16 @@ function moveTiles({G, ctx, playerID}, col, row, destGridId, tileIdObj, selected
     }
 
     if (selectedTiles.length > 0 && selectedTiles.indexOf(tileId) !== -1) {
-        selectedTiles.map(function (id, index) {
+        // Place the selection in the order the tiles sit in their source grid
+        // (reading order: row then col), not the order they were tapped — so a
+        // run you sorted in the rack lands in the same order on the board.
+        const ordered = [...selectedTiles].sort((a, b) => {
+            const pa = G.tilePositions[a]
+            const pb = G.tilePositions[b]
+            if (!pa || !pb) return 0
+            return (pa.row - pb.row) || (pa.col - pb.col)
+        })
+        ordered.map(function (id, index) {
             insertTile(id, destGridId, row, col + index)
         })
     } else {
