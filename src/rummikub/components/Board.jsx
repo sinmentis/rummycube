@@ -10,10 +10,12 @@ import {
 } from "../constants";
 import Sidebar from "./Sidebar";
 import {extractSeqs, isBoardHasNewTiles, isBoardValid} from "../moveValidation";
-import {buildGridsFromTilePositions, getSecTs, isSequenceValid} from "../util";
+import {buildGridsFromTilePositions, getSecTs, isSequenceValid, getTileValue, isJoker} from "../util";
 import GameOverModal from "./GameOverModal";
 import {handleTileSelection, handleLongPress} from "../boardUtil";
-import {play} from "../sound/sfx";
+import {play, place, milestone, buzz} from "../sound/sfx";
+import * as fx from "../juice/effects";
+import ComboOverlay from "./ComboOverlay";
 import _ from "lodash";
 
 const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, events}) {
@@ -50,6 +52,18 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         useSensor(MouseSensor, {activationConstraint: {distance: 6}}),
         useSensor(TouchSensor, {activationConstraint: {distance: 6}}),
     );
+    const [combo, setCombo] = useState(0);
+    const comboRef = useRef(0);
+    const bumpCombo = useCallback((x, y) => {
+        const n = comboRef.current + 1;
+        comboRef.current = n;
+        setCombo(n);
+        place(n);
+        fx.burstAt(x, y, n);
+        fx.kick(n);
+        if (n === 3 || n === 5 || n === 7) { fx.flash('combo'); milestone(); }
+    }, []);
+    useEffect(() => { comboRef.current = 0; setCombo(0); }, [ctx.turn, ctx.gameover]);
     const onDragStart = useCallback((e) => {
         const id = e.active.id;
         setActiveTile(id);
@@ -60,10 +74,18 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         if (!e.over) return;
         const {gridId, col, row} = parseSlotId(String(e.over.id));
         const id = e.active.id;
+        const sourceGrid = G.tilePositions[id] && G.tilePositions[id].gridId;
         moves.moveTiles(col, row, gridId, {id}, stateRef.current.selectedTiles);
-        play('place');
+        if (gridId === BOARD_GRID_ID && sourceGrid === HAND_GRID_ID && ctx.currentPlayer === playerID) {
+            const r = e.over.rect;
+            const bx = r ? r.left + r.width / 2 : window.innerWidth / 2;
+            const by = r ? r.top + r.height / 2 : window.innerHeight / 2;
+            bumpCombo(bx, by);
+        } else {
+            play('place');
+        }
         setState({selectedTiles: [], lastSelectedTileId: null});
-    }, [moves]);
+    }, [moves, G, ctx.currentPlayer, playerID, bumpCombo]);
     const [showInvalidTiles, setShowInvalidTiles] = useState(false);
     const [validTiles, setValidTiles] = useState([])
     const [hoverPosition, setHoverPosition] = useState({})
@@ -129,6 +151,19 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         }
         setValidTiles(_validTiles)
         setShowInvalidTiles(true)
+        const tmp = Object.values(G.tilePositions).filter(p => p && p.gridId === BOARD_GRID_ID && p.tmp);
+        const submitValid = isBoardValid(G) && tmp.length > 0;
+        const cx = window.innerWidth / 2, cy = window.innerHeight * 0.4;
+        if (submitValid) {
+            const pts = tmp.reduce((s, p) => s + (isJoker(p.id) ? 0 : getTileValue(p.id)), 0);
+            fx.floatText('+' + pts, cx, cy);
+            fx.burstAt(cx, cy, 8);
+            play('win');
+        } else if (tmp.length > 0) {
+            fx.flash('bad');
+            fx.kick(6);
+            buzz();
+        }
         setTimeout(() => {
             setShowInvalidTiles(false)
             moves.endTurn()
@@ -251,6 +286,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
 
             {sidebar}
             <div className="board" onClick={onBoardClick}>
+                <ComboOverlay combo={combo}/>
                 {boardGrid}
                 <div className={'hand-buttons'}>
                     {handGrid}
