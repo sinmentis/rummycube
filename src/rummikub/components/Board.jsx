@@ -9,7 +9,7 @@ import {
     HAND_GRID_ID, BOARD_GRID_ID, BOARD_ROWS, BOARD_COLS, HAND_ROWS, HAND_COLS
 } from "../constants";
 import Sidebar from "./Sidebar";
-import {extractSeqs, isBoardHasNewTiles, isBoardValid, isMoveValid, isFirstMove, isFirstMoveValid} from "../moveValidation";
+import {extractSeqs, isBoardHasNewTiles, isBoardValid, isSubmitAccepted} from "../moveValidation";
 import {buildGridsFromTilePositions, getSecTs, isSequenceValid, getTileValue, isJoker} from "../util";
 import GameOverModal from "./GameOverModal";
 import {handleTileSelection, handleLongPress} from "../boardUtil";
@@ -138,8 +138,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         // combo only celebrates a submit the server will actually keep. An invalid
         // board is reverted + penalised server-side, so it earns no combo.
         const placed = countPlacedThisTurn(G.tilePositions, BOARD_GRID_ID);
-        const accepted = placed > 0 &&
-            (isFirstMove(G, ctx) ? isFirstMoveValid(G, ctx) : isMoveValid(G, ctx));
+        const accepted = isSubmitAccepted(G, ctx);
         const n = submitComboCount(accepted, placed);
         const cx = window.innerWidth / 2, cy = window.innerHeight * 0.4;
         let delay = 600;
@@ -176,8 +175,13 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     }, [moves, ctx.gameover])
 
 
+    // Live cue on the End button: green when the current board would be accepted
+    // as a submit, red when it would be rejected. Only while it's your move and
+    // you have placed something (otherwise the button stays neutral).
+    const endHasPending = ctx.currentPlayer === playerID && !ctx.gameover && isBoardHasNewTiles(G);
+    const endStateClass = endHasPending ? (isSubmitAccepted(G, ctx) ? ' end-valid' : ' end-invalid') : '';
     const endBut = (<button disabled={!(ctx.currentPlayer === playerID) || ctx.gameover}
-                            className={'rummikub-button'}
+                            className={'rummikub-button' + endStateClass}
                             onClick={() => {
                                 endTurn()
                             }}>End

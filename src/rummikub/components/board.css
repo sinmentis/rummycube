@@ -280,6 +280,18 @@ svg.fa-smile-beam {
     color: #004080;
 }
 
+.rummikub-button.end-valid {
+    background-color: #b6efb6;
+    color: #0a5a0a;
+    box-shadow: 0 4px 0 #6cbf6c, 0 0 14px rgba(70, 200, 70, .65);
+}
+
+.rummikub-button.end-invalid {
+    background-color: #ffc1c1;
+    color: #8a1414;
+    box-shadow: 0 4px 0 #d98686, 0 0 12px rgba(220, 70, 70, .55);
+}
+
 .tile-pool-counter {
     display: inline-flex;
     align-items: center;

@@ -102,9 +102,7 @@ function isMoveValid(G, ctx) {
 
 function isFirstMove(G, ctx) {
     return !G.firstMoveDone[ctx.currentPlayer]
-}
-
-function isFirstMoveValid(G, ctx) {
+}function isFirstMoveValid(G, ctx) {
     let seqs = extractSeqs(G)
     console.debug(seqs)
 
@@ -146,6 +144,15 @@ function isFirstMoveValid(G, ctx) {
     return true
 }
 
+// Whether clicking End right now would be kept by the server (validatePlayerMove).
+// Needs at least one newly placed tile, then the first-move or regular rule.
+function isSubmitAccepted(G, ctx) {
+    if (!isBoardHasNewTiles(G)) {
+        return false
+    }
+    return isFirstMove(G, ctx) ? isFirstMoveValid(G, ctx) : isMoveValid(G, ctx)
+}
+
 export {
     isMoveValid,
     freezeTmpTiles,
@@ -153,5 +160,6 @@ export {
     isFirstMove,
     isBoardHasNewTiles,
     isBoardValid,
+    isSubmitAccepted,
     extractSeqs,
 }
