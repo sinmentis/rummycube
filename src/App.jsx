@@ -9,6 +9,7 @@ import {Client} from "boardgame.io/react";
 import {Rummikub} from "./rummikub/Game";
 import RummikubBoard from "./rummikub/components/Board";
 import JoinGamePage from "./rummikub/components/JoinGamePage";
+import SoundToggle from "./rummikub/components/SoundToggle";
 
 function getTestPlayerClient() {
     let PlayerClient = Client({
@@ -32,6 +33,7 @@ const App = function () {
         <>
             <div className={"navbar justify-content-center"}>
                 <a href="/"><span>RummyCube</span></a>
+                <SoundToggle/>
             </div>
             <Routes>
                 <Route path="/match/:matchID" element={<GameMatch/>}/>

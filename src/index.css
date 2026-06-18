@@ -67,3 +67,22 @@ div.navbar a:hover, a:visited, a:link, a:active {
     font-size: 1.45rem;
   }
 }
+
+/* R6 — sound mute toggle in the themed navbar */
+div.navbar { position: relative; }
+.sound-toggle {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: var(--cream, #f3ecda);
+    font-size: 18px;
+    line-height: 1;
+    padding: 6px 9px;
+    cursor: pointer;
+    opacity: .8;
+    transition: opacity .15s ease, transform .12s ease;
+}
+.sound-toggle:hover { opacity: 1; transform: translateY(-50%) scale(1.08); }

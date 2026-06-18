@@ -1,5 +1,6 @@
 import React, {useEffect} from "react";
 import confetti from "canvas-confetti";
+import {play} from "../sound/sfx";
 import "./GameOverModal.css";
 import {FRONTEND_PORT, LOBBY_SERVER_HOST, LOBBY_SERVER_PROTO} from "../constants";
 import {copyToClipboard} from "../util";
@@ -12,6 +13,7 @@ const GameOverModal = ({gameover, matchId, playerID, matchData}) => {
     const navigate = useNavigate()
 
     useEffect(() => {
+        play('win');
         if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
         const end = Date.now() + 1200;
         (function frame() {

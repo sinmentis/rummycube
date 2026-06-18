@@ -13,6 +13,7 @@ import {extractSeqs, isBoardHasNewTiles, isBoardValid} from "../moveValidation";
 import {buildGridsFromTilePositions, getSecTs, isSequenceValid} from "../util";
 import GameOverModal from "./GameOverModal";
 import {handleTileSelection, handleLongPress} from "../boardUtil";
+import {play} from "../sound/sfx";
 import _ from "lodash";
 
 const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, events}) {
@@ -29,6 +30,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     useEffect(() => {
         if (G.recentlyDrawnTiles?.length) {
             setRecentlyDrawnTiles(G.recentlyDrawnTiles);
+            play('draw');
 
             const timeout = setTimeout(() => {
                 setRecentlyDrawnTiles([]);
@@ -59,6 +61,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         const {gridId, col, row} = parseSlotId(String(e.over.id));
         const id = e.active.id;
         moves.moveTiles(col, row, gridId, {id}, stateRef.current.selectedTiles);
+        play('place');
         setState({selectedTiles: [], lastSelectedTileId: null});
     }, [moves]);
     const [showInvalidTiles, setShowInvalidTiles] = useState(false);
