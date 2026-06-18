@@ -17,9 +17,10 @@ import {play, place, milestone, buzz} from "../sound/sfx";
 import * as fx from "../juice/effects";
 import {countPlacedThisTurn, submitComboCount} from "../juice/comboMath";
 import ComboOverlay from "./ComboOverlay";
+import ChatPanel from "./ChatPanel";
 import _ from "lodash";
 
-const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, events}) {
+const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, events, chatMessages, sendChatMessage}) {
     console.log('RENDER BOARD')
     const [recentlyDrawnTiles, setRecentlyDrawnTiles] = useState([]);
 
@@ -315,6 +316,11 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                 </div>
             ) : null}
         </DragOverlay>
+        <ChatPanel chatMessages={chatMessages}
+                   sendChatMessage={sendChatMessage}
+                   matchData={matchData}
+                   matchID={matchID}
+                   playerID={playerID}/>
     </DndContext>
 }
 
