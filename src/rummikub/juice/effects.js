@@ -59,3 +59,26 @@ export function floatText(text, x, y) {
     document.body.appendChild(d);
     setTimeout(() => d.remove(), 1200);
 }
+
+// Spotlight the groups the player just built. `groups` is an array of sequences,
+// each a list of tile ids; the tile wrappers carry id={tile}. Lights them up
+// gold, staggered group-by-group for a "battle report" feel. The glow itself is
+// static (CSS), the bounce is motion-gated in CSS, so it degrades gracefully.
+export function celebrateGroups(groups) {
+    if (!groups || !groups.length) return;
+    const touched = [];
+    groups.forEach((group, gi) => {
+        group.forEach(id => {
+            const el = document.getElementById(String(id));
+            if (!el) return;
+            el.style.setProperty('--celebrate-delay', (gi * 0.16) + 's');
+            el.classList.add('tile-celebrate');
+            touched.push(el);
+        });
+    });
+    if (!touched.length) return;
+    setTimeout(() => touched.forEach(el => {
+        el.classList.remove('tile-celebrate');
+        el.style.removeProperty('--celebrate-delay');
+    }), 1300);
+}

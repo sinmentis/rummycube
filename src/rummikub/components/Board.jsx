@@ -9,7 +9,7 @@ import {
     HAND_GRID_ID, BOARD_GRID_ID, BOARD_ROWS, BOARD_COLS, HAND_ROWS, HAND_COLS
 } from "../constants";
 import Sidebar from "./Sidebar";
-import {extractSeqs, isBoardHasNewTiles, isBoardValid, isSubmitAccepted} from "../moveValidation";
+import {extractSeqs, isBoardHasNewTiles, isBoardValid, isSubmitAccepted, getFormedGroups} from "../moveValidation";
 import {buildGridsFromTilePositions, getSecTs, isSequenceValid, getTileValue, isJoker} from "../util";
 import GameOverModal from "./GameOverModal";
 import {handleTileSelection, handleLongPress} from "../boardUtil";
@@ -123,26 +123,16 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     }
 
     function endTurn(e) {
-        let seqs = extractSeqs(G)
-        let _validTiles = []
-        for (const seq of seqs) {
-            if (isSequenceValid(seq)) {
-                for (const tile of seq) {
-                    _validTiles.push(tile)
-                }
-            }
-        }
-        setValidTiles(_validTiles)
-        setShowInvalidTiles(true)
-        // Mirror the server's accept/reject decision (validatePlayerMove) so the
-        // combo only celebrates a submit the server will actually keep. An invalid
-        // board is reverted + penalised server-side, so it earns no combo.
         const placed = countPlacedThisTurn(G.tilePositions, BOARD_GRID_ID);
         const accepted = isSubmitAccepted(G, ctx);
         const n = submitComboCount(accepted, placed);
         const cx = window.innerWidth / 2, cy = window.innerHeight * 0.4;
         let delay = 600;
-        if (n > 0) {
+        if (accepted) {
+            // Spotlight the runs/sets you just built (gold, staggered) and pay off
+            // the combo. No green/red wash here — the submit is valid, so lighting
+            // up only your groups reads as a clean "here's what you scored".
+            fx.celebrateGroups(getFormedGroups(G));
             const pts = Object.values(G.tilePositions)
                 .filter(p => p && p.gridId === BOARD_GRID_ID && p.tmp)
                 .reduce((s, p) => s + (isJoker(p.id) ? 0 : getTileValue(p.id)), 0);
@@ -153,14 +143,20 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             if (n >= 3) { fx.flash('combo'); milestone(); }
             fx.floatText('+' + pts, cx, cy);
             play('win');
-            delay = 1400; // let the combo celebration breathe before the turn flips
+            delay = 1400; // let the celebration breathe before the turn flips
         } else if (placed > 0) {
+            // Diagnostic for a rejected submit: green = tiles already in a valid
+            // run/set, red = the rest, so you can see what to fix.
+            const validNow = extractSeqs(G).filter(seq => isSequenceValid(seq)).flat();
+            setValidTiles(validNow);
+            setShowInvalidTiles(true);
             fx.flash('bad');
             fx.kick(6);
             buzz();
         }
         setTimeout(() => {
             setShowInvalidTiles(false)
+            setValidTiles([])
             moves.endTurn()
         }, delay)
     }

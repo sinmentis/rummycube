@@ -153,6 +153,14 @@ function isSubmitAccepted(G, ctx) {
     return isFirstMove(G, ctx) ? isFirstMoveValid(G, ctx) : isMoveValid(G, ctx)
 }
 
+// The valid runs/sets that contain at least one tile placed this turn — i.e. the
+// groups the player just built or extended. Used to spotlight them on a submit.
+function getFormedGroups(G) {
+    return extractSeqs(G).filter(seq =>
+        seq.some(t => G.tilePositions[t] && G.tilePositions[t].tmp) && isSequenceValid(seq)
+    )
+}
+
 export {
     isMoveValid,
     freezeTmpTiles,
@@ -161,5 +169,6 @@ export {
     isBoardHasNewTiles,
     isBoardValid,
     isSubmitAccepted,
+    getFormedGroups,
     extractSeqs,
 }

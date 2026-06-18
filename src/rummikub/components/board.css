@@ -620,3 +620,23 @@ svg.fa-smile-beam {
 @keyframes board-kick { 0%{transform:translate(0,0)} 25%{transform:translate(calc(var(--kick,4px)*-1),var(--kick,4px))} 50%{transform:translate(var(--kick,4px),calc(var(--kick,4px)*-1))} 75%{transform:translate(calc(var(--kick,4px)*-.5),0)} 100%{transform:translate(0,0)} }
 @keyframes fx-flash-fade { 0%{opacity:0} 25%{opacity:1} 100%{opacity:0} }
 @keyframes fx-float-up { 0%{opacity:0;transform:translate(-50%,-30%) scale(.6)} 25%{opacity:1;transform:translate(-50%,-60%) scale(1.1)} 100%{opacity:0;transform:translate(-50%,-160%) scale(1)} }
+
+/* ===== Formed-group spotlight (R-juice) ===== */
+.tile-celebrate {
+    position: relative;
+    z-index: 5;
+}
+.tile-celebrate .tile {
+    box-shadow: 0 0 0 2px rgba(255, 216, 110, .95),
+                0 0 16px 5px rgba(255, 201, 82, .85),
+                var(--tile-shadow);
+}
+@media (prefers-reduced-motion: no-preference) {
+    .tile-celebrate {
+        animation: tile-celebrate .55s ease var(--celebrate-delay, 0s) 2;
+    }
+}
+@keyframes tile-celebrate {
+    0%, 100% { transform: translateY(0) scale(1); }
+    40% { transform: translateY(-7px) scale(1.07); }
+}
