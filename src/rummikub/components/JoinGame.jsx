@@ -1,9 +1,6 @@
-import Form from "react-bootstrap/Form";
-import Button from "react-bootstrap/Button";
 import {useState} from "react";
 import {useNavigate} from "react-router-dom";
 import GameLobbyClient from "../lobbyClient";
-import {IS_DEV} from "../constants";
 
 const JoinGameForm = function () {
     const client = new GameLobbyClient()
@@ -49,10 +46,12 @@ const JoinGameForm = function () {
     }
 
     return (
-        <Form>
-            <Form.Group controlId="formUsername">
-                <Form.Label>Username</Form.Label>
-                <Form.Control
+        <form className="lobby-form-inner" onSubmit={onJoinMatch}>
+            <div className="lobby-field">
+                <label htmlFor="formUsername">Username</label>
+                <input
+                    id="formUsername"
+                    className="lobby-input"
                     value={username}
                     onChange={(e) => {
                         setUsername(e.target.value)
@@ -60,10 +59,12 @@ const JoinGameForm = function () {
                     type="text"
                     placeholder="Enter username"
                 />
-            </Form.Group>
-            <Form.Group controlId="formMatchID">
-                <Form.Label>Match ID</Form.Label>
-                <Form.Control
+            </div>
+            <div className="lobby-field">
+                <label htmlFor="formMatchID">Room code</label>
+                <input
+                    id="formMatchID"
+                    className="lobby-input"
                     value={matchID}
                     onChange={(e) => {
                         onMatchIDChange(e.target.value)
@@ -71,24 +72,26 @@ const JoinGameForm = function () {
                     type="text"
                     placeholder="Enter match ID"
                 />
-            </Form.Group>
+            </div>
 
-            <Button
-                onClick={onJoinMatch}
-                variant="success"
-                type={"submit"}
+            <button
+                type="submit"
+                className="lobby-btn lobby-btn-primary"
                 disabled={!username || !matchID || (seats.length && seats.every(seat => seat.name))}>
                 Join
-            </Button>
-            <div className="mt-2">
+            </button>
+            <div className="lobby-seats">
                 {seats.length ? seats.map((seat) => {
-                    return <div key={seat.id} className="text-info">
-                        {seat.name ? `Player ${seat.name} has joined` : `${seat.id + 1} player place vacant`}
+                    return <div key={seat.id}
+                                className={`seat-status ${seat.name ? 'seat-filled' : 'seat-vacant'}`}>
+                        {seat.name ? `Player ${seat.name} has joined` : `Seat ${seat.id + 1} is open`}
                     </div>
-                }) : <span className="text-warning">Match not found</span>}
+                }) : (matchID ? <span className="seat-status seat-error">Match not found</span>
+                              : <span className="seat-status seat-hint">Enter a room code to see open seats</span>)}
             </div>
-            {(seats.length && seats.every(seat => seat.name)) ? <div className="text-danger">No slots left</div> : ''}
-        </Form>
+            {(seats.length && seats.every(seat => seat.name)) ?
+                <div className="seat-status seat-error">No slots left</div> : ''}
+        </form>
     )
 }
 

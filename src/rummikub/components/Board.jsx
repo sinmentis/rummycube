@@ -225,6 +225,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             currentPlayer={ctx.currentPlayer}
             playerID={playerID}
             matchData={matchData || []}
+            matchID={matchID}
             gameover={ctx.gameover}
             timePerTurn={G.timePerTurn}
             timerExpireAt={G.timerExpireAt}

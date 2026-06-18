@@ -1,24 +1,27 @@
 import {useState} from "react";
 import CreateGameForm from "./CreateGame";
 import JoinGameForm from "./JoinGame";
+import "./lobby.css";
 
 
 export const GameLobby = function () {
     const [showCreateForm, setToggle] = useState(true)
 
     return (
-        <div className='container'>
-            <div className="justify-content-center row mt-1">
-                <div>
-                    <button onClick={() => setToggle(true)} className="btn btn-outline-primary mr-2">
+        <div className='lobby-page'>
+            <div className="lobby-card">
+                <div className="lobby-tabs">
+                    <button onClick={() => setToggle(true)}
+                            className={`lobby-tab ${showCreateForm ? 'active' : ''}`}>
                         Create game
                     </button>
-                    <button onClick={() => setToggle(false)} className="btn btn-outline-success">
+                    <button onClick={() => setToggle(false)}
+                            className={`lobby-tab ${showCreateForm ? '' : 'active'}`}>
                         Join game
                     </button>
-                    <div className="mt-2">
-                        {showCreateForm ? <CreateGameForm/> : <JoinGameForm/>}
-                    </div>
+                </div>
+                <div className="lobby-body">
+                    {showCreateForm ? <CreateGameForm/> : <JoinGameForm/>}
                 </div>
             </div>
         </div>

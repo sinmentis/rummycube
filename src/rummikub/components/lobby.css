@@ -1,0 +1,243 @@
+@import '../theme/classic.css';
+
+/* ============================================================
+   Lobby — A1 classic: a felt table with a parchment panel that
+   holds the Create / Join forms. Shared by Lobby, CreateGame,
+   JoinGame and the standalone JoinGamePage.
+   ============================================================ */
+.lobby-page {
+    min-height: calc(100vh - var(--nav-h, 56px));
+    box-sizing: border-box;
+    background: var(--felt, #1c4528);
+    box-shadow: var(--felt-vignette, inset 0 0 60px rgba(0, 0, 0, .45));
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 5vh 16px 40px;
+}
+
+.lobby-card {
+    width: 100%;
+    max-width: 420px;
+    box-sizing: border-box;
+    padding: 22px 22px 26px;
+    background: var(--parchment, linear-gradient(180deg, #fbf6e8, #f1e6cb));
+    border: 1px solid var(--parchment-border, #cbae7e);
+    border-radius: 18px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 255, 255, .6);
+}
+
+/* Create / Join tab toggle */
+.lobby-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    padding: 5px;
+    background: rgba(0, 0, 0, .06);
+    border-radius: 12px;
+}
+
+.lobby-tab {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 10px 12px;
+    border-radius: 9px;
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--ink-soft, #6f5b3e);
+    cursor: pointer;
+    transition: all .15s ease;
+}
+
+.lobby-tab:hover {
+    color: var(--ink, #3b2c1a);
+}
+
+.lobby-tab.active {
+    background: linear-gradient(180deg, #2f6a43, #235536);
+    color: var(--cream, #f5edd8);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .3);
+}
+
+/* Fields */
+.lobby-form-inner {
+    display: flex;
+    flex-direction: column;
+}
+
+.lobby-field {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 16px;
+}
+
+.lobby-field label {
+    margin-bottom: 6px;
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-size: .9rem;
+    font-weight: 600;
+    color: var(--ink, #3b2c1a);
+}
+
+.lobby-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 11px 12px;
+    border: 1px solid #c9b083;
+    border-radius: 10px;
+    background: #fffdf6;
+    color: var(--ink, #3b2c1a);
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-size: 1rem;
+    transition: border-color .15s, box-shadow .15s;
+}
+
+.lobby-input:focus {
+    outline: none;
+    border-color: var(--brass, #cda24b);
+    box-shadow: 0 0 0 3px rgba(205, 162, 75, .28);
+}
+
+/* Buttons */
+.lobby-btn {
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+}
+
+.lobby-btn:disabled {
+    cursor: not-allowed;
+    color: rgba(74, 60, 38, .5);
+    background: linear-gradient(180deg, #ddd2b4, #cabd98);
+    box-shadow: 0 3px 0 #b1a47f, 0 2px 6px rgba(0, 0, 0, .14);
+    text-shadow: none;
+}
+
+.lobby-btn-primary {
+    width: 100%;
+    margin-top: 4px;
+    color: var(--cream, #f5edd8);
+    background: linear-gradient(180deg, #3a7d50, #205233);
+    box-shadow: 0 4px 0 #163a23, 0 6px 16px rgba(0, 0, 0, .32);
+    text-shadow: 0 1px 1px rgba(0, 0, 0, .35);
+}
+
+.lobby-btn-primary:not(:disabled):hover {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+}
+
+.lobby-btn-primary:not(:disabled):active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 #163a23, 0 3px 8px rgba(0, 0, 0, .3);
+}
+
+.lobby-btn-copy {
+    color: #2b1708;
+    background: linear-gradient(180deg, #e7c879, #cda24b);
+    box-shadow: 0 3px 0 #9c7a2f, 0 2px 6px rgba(0, 0, 0, .3);
+    white-space: nowrap;
+}
+
+.lobby-btn-copy:not(:disabled):hover {
+    transform: translateY(-1px);
+}
+
+.lobby-btn-copy:not(:disabled):active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 #9c7a2f;
+}
+
+/* Room-code share (after Create) */
+.room-share {
+    margin-top: 18px;
+    padding: 14px;
+    border-radius: 12px;
+    text-align: center;
+    background: linear-gradient(180deg, #ffffff, #f4ead0);
+    border: 1px dashed var(--brass, #cda24b);
+}
+
+.room-share-label {
+    display: block;
+    margin-bottom: 8px;
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-size: .74rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    font-weight: 700;
+    color: var(--ink-soft, #6f5b3e);
+}
+
+.room-share-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.room-code {
+    padding: 6px 12px;
+    border: 1px solid #d8c79c;
+    border-radius: 8px;
+    background: #fff;
+    font-family: 'Poppins', ui-monospace, monospace;
+    font-weight: 800;
+    font-size: 1.2rem;
+    letter-spacing: .05em;
+    color: var(--ink, #3b2c1a);
+    word-break: break-all;
+}
+
+/* Seat / status lines */
+.lobby-seats {
+    margin-top: 14px;
+}
+
+.seat-status {
+    margin-top: 4px;
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-size: .9rem;
+}
+
+.seat-filled {
+    color: #1f7a3a;
+    font-weight: 600;
+}
+
+.seat-vacant {
+    color: var(--ink-soft, #6f5b3e);
+}
+
+.seat-error {
+    color: #b3162a;
+    font-weight: 600;
+}
+
+.seat-hint {
+    color: var(--ink-soft, #6f5b3e);
+    font-style: italic;
+    opacity: .85;
+}
+
+/* Invite banner on the standalone join page */
+.lobby-room-banner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 18px;
+    padding: 14px;
+    border-radius: 12px;
+    text-align: center;
+    background: linear-gradient(180deg, #ffffff, #f4ead0);
+    border: 1px dashed var(--brass, #cda24b);
+}

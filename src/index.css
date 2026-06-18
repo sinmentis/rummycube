@@ -5,6 +5,8 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* dark felt backstop so no white edges show through behind the themed surfaces */
+  background: var(--felt-base, #1c4528);
 }
 
 code {
@@ -27,18 +29,41 @@ code {
   src: local('cheva'), url(./fonts/ChevadisplayRegular-1G5ve.otf) format('truetype');
 }
 
-div.navbar span {
-  color: darkolivegreen;
-  font-family: ramadan;
-  font-size: 2rem;
-  text-decoration: none
+/* ===== R5c: themed top bar + clean A1 wordmark =====
+   The top bar reads as the wooden far-edge of the table (echoes the rack) with a
+   thin brass trim, replacing the old white strip + dated script font. Height is
+   pinned to --nav-h (border-box) so the mobile match can tile exactly under it. */
+div.navbar {
+  box-sizing: border-box;
+  height: var(--nav-h, 56px);
+  min-height: var(--nav-h, 56px);
+  margin: 0;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--wood-bar, linear-gradient(180deg, #4a2c12 0%, #28190a 100%));
+  border-bottom: 2px solid var(--brass, #cda24b);
+  box-shadow: var(--wood-bar-edge), 0 4px 14px rgba(0, 0, 0, .35);
 }
 
-div.navbar {
-  padding-top: 1rem;
-  padding-bottom: 0rem;
+div.navbar span {
+  font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-weight: 800;
+  font-size: 1.6rem;
+  line-height: 1;
+  letter-spacing: .04em;
+  color: var(--cream, #f5edd8);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, .5), 0 2px 7px rgba(0, 0, 0, .4);
+  text-decoration: none;
 }
 
 div.navbar a:hover, a:visited, a:link, a:active {
   text-decoration: none;
+}
+
+@media (max-width: 820px) {
+  div.navbar span {
+    font-size: 1.45rem;
+  }
 }

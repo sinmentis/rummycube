@@ -31,4 +31,30 @@
   /* Wood rack accents */
   --rack-border: rgba(40,24,8,.55);
   --rack-highlight: inset 0 3px 6px rgba(255,220,170,.28), inset 0 -6px 14px rgba(0,0,0,.30);
+
+  /* ===== R5: chrome + lobby palette =====
+     Shared by the top bar (index.css), the in-match sidebar (board.css) and the
+     lobby (lobby.css) so the whole app reads as one classic A1 theme. */
+
+  /* Wooden table-edge bar behind the wordmark (echoes the rack, but darker). */
+  --wood-bar: linear-gradient(180deg, #4a2c12 0%, #34200e 55%, #28190a 100%);
+  --wood-bar-edge: inset 0 1px 0 rgba(255,210,150,.18), inset 0 -1px 0 rgba(0,0,0,.5);
+
+  /* Brass / gold trim + warm ivory + inks for parchment text. */
+  --brass: #cda24b;
+  --brass-soft: rgba(205,162,75,.5);
+  --cream: #f5edd8;
+  --ink: #3b2c1a;
+  --ink-soft: #6f5b3e;
+
+  /* Lobby parchment panel. */
+  --parchment: linear-gradient(180deg, #fbf6e8 0%, #f1e6cb 100%);
+  --parchment-border: #cbae7e;
+
+  /* Avatar chip rim + active-turn glow (warm gold, aligned to the brass trim). */
+  --avatar-rim: rgba(255,250,238,.92);
+  --avatar-glow: rgba(255,196,92,.85);
+
+  /* Fixed height of the top bar — referenced by the mobile match layout calc. */
+  --nav-h: 56px;
 }

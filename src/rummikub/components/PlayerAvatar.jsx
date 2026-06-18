@@ -24,7 +24,7 @@ const PlayerAvatarWithTimer = ({name, tiles, isActive, timeLeft, totalTime, show
     return (
         <div className="player">
             <div className={`avatar ${isActive ? "active" : ""}`} style={{background: stringToColor(name)}}>
-                {isActive && showTurnTimer ? <svg className="timer-ring" width="100" height="100">
+                {isActive && showTurnTimer ? <svg className="timer-ring" width="100" height="100" viewBox="0 0 100 100">
                     <circle
                         className="timer-bg"
                         r={RADIUS}

@@ -1,9 +1,8 @@
-import Form from "react-bootstrap/Form";
-import Button from "react-bootstrap/Button";
 import {useState, useEffect} from "react";
 import {useNavigate, useParams} from "react-router-dom";
 import GameLobbyClient from "../lobbyClient";
 import {IS_DEV} from "../constants";
+import "./lobby.css";
 
 const JoinGamePage = function () {
     let {matchID} = useParams();
@@ -48,38 +47,43 @@ const JoinGamePage = function () {
     }
 
     return (
-        <div className='container'>
-            <div className="justify-content-center row mt-lg-5 mt-sm-5">
-                <div className="col-lg-4 col-md-4 col-sm-8">
-                    <Form>
-                        <Form.Group controlId="formUsername">
-                            <Form.Label>Username</Form.Label>
-                            <Form.Control
-                                value={username}
-                                onChange={(e) => {
-                                    setUsername(e.target.value)
-                                }}
-                                type="text"
-                                placeholder="Enter username"
-                            />
-                        </Form.Group>
-                        <Button
-                            onClick={onJoinMatch}
-                            variant="success"
-                            type={"submit"}
-                            disabled={!username || seats.every(seat => seat.name)}>
-                            Join
-                        </Button>
-                        <div className="mt-2">
-                            {seats.length ? seats.map((seat) => {
-                                return <div key={seat.id} className="text-info">
-                                    {seat.name ? `Player ${seat.name} has joined` : `${seat.id + 1} player place vacant`}
-                                </div>
-                            }) : <span className="text-warning">Match not found</span>}
-                        </div>
-                        {seats.every(seat => seat.name) ? <div className="text-danger">No slots left</div> : ''}
-                    </Form>
-                </div>
+        <div className='lobby-page'>
+            <div className="lobby-card">
+                <form className="lobby-form-inner" onSubmit={onJoinMatch}>
+                    <div className="lobby-room-banner">
+                        <span className="room-share-label">You're invited — room</span>
+                        <span className="room-code">{matchID}</span>
+                    </div>
+                    <div className="lobby-field">
+                        <label htmlFor="formUsername">Username</label>
+                        <input
+                            id="formUsername"
+                            className="lobby-input"
+                            value={username}
+                            onChange={(e) => {
+                                setUsername(e.target.value)
+                            }}
+                            type="text"
+                            placeholder="Enter username"
+                        />
+                    </div>
+                    <button
+                        type="submit"
+                        className="lobby-btn lobby-btn-primary"
+                        disabled={!username || seats.every(seat => seat.name)}>
+                        Join
+                    </button>
+                    <div className="lobby-seats">
+                        {seats.length ? seats.map((seat) => {
+                            return <div key={seat.id}
+                                        className={`seat-status ${seat.name ? 'seat-filled' : 'seat-vacant'}`}>
+                                {seat.name ? `Player ${seat.name} has joined` : `Seat ${seat.id + 1} is open`}
+                            </div>
+                        }) : <span className="seat-status seat-error">Match not found</span>}
+                    </div>
+                    {seats.every(seat => seat.name) ?
+                        <div className="seat-status seat-error">No slots left</div> : ''}
+                </form>
             </div>
         </div>
     )

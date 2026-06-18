@@ -1,5 +1,3 @@
-import Form from "react-bootstrap/Form";
-import Button from "react-bootstrap/Button";
 import GameLobbyClient from "../lobbyClient";
 import {useState} from "react";
 import {useNavigate} from "react-router-dom"
@@ -13,12 +11,17 @@ const CreateGameForm = function () {
     const [numPlayers, setNumPlayers] = useState(IS_DEV ? '2' : '4')
     const [matchID, setMatchID] = useState('')
     const [timePerTurn, setTimePerTurn] = useState(IS_DEV ? '30' : '30')
+    const [copied, setCopied] = useState(false)
+
+    function buildMatchLink(id) {
+        return `${LOBBY_SERVER_PROTO}://${FRONTEND_ADDR}/join-match/${id}`
+    }
 
     function onGameCreate(event) {
         event.preventDefault();
         client.createGame(numPlayers, timePerTurn).then(
             (id) => {
-                let matchLink = `${LOBBY_SERVER_PROTO}://${FRONTEND_ADDR}/join-match/${id}`
+                let matchLink = buildMatchLink(id)
                 copyToClipboard(matchLink)
                 console.debug(id)
                 setMatchID(id)
@@ -36,40 +39,51 @@ const CreateGameForm = function () {
         )
     }
 
+    function onCopyLink() {
+        copyToClipboard(buildMatchLink(matchID))
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1500)
+    }
+
     return (
-        <Form>
-            <Form.Group controlId="formUsername">
-                <Form.Label>Username</Form.Label>
-                <Form.Control
+        <form className="lobby-form-inner" onSubmit={onGameCreate}>
+            <div className="lobby-field">
+                <label htmlFor="formUsername">Username</label>
+                <input
+                    id="formUsername"
+                    className="lobby-input"
                     value={username}
                     onChange={(e) => {
                         setUsername(e.target.value)
                     }}
                     type="text"
                     placeholder="Enter username"/>
-            </Form.Group>
+            </div>
 
-            <Form.Group controlId="formNumPlayers">
-                <Form.Label>Number of players</Form.Label>
-                <Form.Control
+            <div className="lobby-field">
+                <label htmlFor="formNumPlayers">Number of players</label>
+                <select
+                    id="formNumPlayers"
+                    className="lobby-input"
                     value={numPlayers}
                     onChange={(e) => {
                         setNumPlayers(e.target.value)
-                    }}
-                    as="select">
+                    }}>
                     <option>2</option>
                     <option>3</option>
                     <option>4</option>
-                </Form.Control>
-            </Form.Group>
-            <Form.Group controlId="timePerTurn">
-                <Form.Label>Time per turn, in seconds</Form.Label>
-                <Form.Control
+                </select>
+            </div>
+
+            <div className="lobby-field">
+                <label htmlFor="timePerTurn">Time per turn, in seconds</label>
+                <select
+                    id="timePerTurn"
+                    className="lobby-input"
                     value={timePerTurn}
                     onChange={(e) => {
                         setTimePerTurn(e.target.value)
-                    }}
-                    as="select">
+                    }}>
                     <option>10</option>
                     <option>20</option>
                     <option>30</option>
@@ -77,16 +91,27 @@ const CreateGameForm = function () {
                     <option>50</option>
                     <option>60</option>
                     {IS_DEV && <option>3600</option>}
-                </Form.Control>
-            </Form.Group>
-            <Button onClick={onGameCreate}
-                    disabled={!username || !numPlayers}
-                    type={"submit"}
-                    variant="primary">
+                </select>
+            </div>
+
+            <button
+                type="submit"
+                className="lobby-btn lobby-btn-primary"
+                disabled={!username || !numPlayers}>
                 Create
-            </Button>
-            <div className="mt-1 text-success">{matchID ? `Match ID: ${matchID} created` : ''}</div>
-        </Form>
+            </button>
+
+            {matchID ?
+                <div className="room-share">
+                    <span className="room-share-label">Game created — room code</span>
+                    <div className="room-share-row">
+                        <span className="room-code">{matchID}</span>
+                        <button type="button" className="lobby-btn lobby-btn-copy" onClick={onCopyLink}>
+                            {copied ? 'Copied!' : 'Copy link'}
+                        </button>
+                    </div>
+                </div> : null}
+        </form>
     )
 }
 
