@@ -10,13 +10,15 @@ import {
 } from "../constants";
 import Sidebar from "./Sidebar";
 import TableSeats from "./TableSeats";
-import {extractSeqs, isBoardHasNewTiles, isBoardValid, isSubmitAccepted, getFormedGroups} from "../moveValidation";
-import {buildGridsFromTilePositions, getSecTs, isSequenceValid, getTileValue, isJoker} from "../util";
+import PlayerAvatarWithTimer from "./PlayerAvatar";
+import {useTurnTimer} from "../hooks/useTurnTimer";
+import {extractSeqs, isBoardHasNewTiles, isBoardValid, isSubmitAccepted} from "../moveValidation";
+import {buildGridsFromTilePositions, getSecTs, isSequenceValid, count2dArrItems} from "../util";
 import GameOverModal from "./GameOverModal";
 import {handleTileSelection, handleLongPress} from "../boardUtil";
 import {play, place, milestone, buzz} from "../sound/sfx";
 import * as fx from "../juice/effects";
-import {countPlacedThisTurn, submitComboCount} from "../juice/comboMath";
+import {countPlacedThisTurn} from "../juice/comboMath";
 import ComboOverlay from "./ComboOverlay";
 import ChatPanel from "./ChatPanel";
 import _ from "lodash";
@@ -56,7 +58,32 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         useSensor(TouchSensor, {activationConstraint: {distance: 6}}),
     );
     const [combo, setCombo] = useState(0);
-    useEffect(() => { setCombo(0); }, [ctx.turn, ctx.gameover]);
+    const [comboBy, setComboBy] = useState('');
+    const comboTimer = useRef(null);
+    const seenPlayRef = useRef(undefined);
+    // Everyone celebrates a valid submit: the server records it in G.lastPlay and
+    // every client (not just the scorer) fires the combo/spotlight off its ts.
+    useEffect(() => {
+        const lp = G.lastPlay;
+        const ts = lp && lp.ts ? lp.ts : null;
+        if (seenPlayRef.current === undefined) { seenPlayRef.current = ts; return; } // ignore the one present at mount/reconnect
+        if (ts === null || ts === seenPlayRef.current) return;
+        seenPlayRef.current = ts;
+        const n = lp.count || 0;
+        const by = (matchData && matchData[lp.seat] && matchData[lp.seat].name) || `Player ${Number(lp.seat) + 1}`;
+        const cx = window.innerWidth / 2, cy = window.innerHeight * 0.4;
+        setCombo(n);
+        setComboBy(by);
+        if (lp.groups && lp.groups.length) fx.celebrateGroups(lp.groups);
+        place(n);
+        fx.burstAt(cx, cy, n);
+        fx.kick(n);
+        if (n >= 3) { fx.flash('combo'); milestone(); }
+        fx.floatText('+' + (lp.points || 0), cx, cy);
+        play('win');
+        clearTimeout(comboTimer.current);
+        comboTimer.current = setTimeout(() => { setCombo(0); setComboBy(''); }, 1800);
+    }, [G.lastPlay ? G.lastPlay.ts : null]);
     const onDragStart = useCallback((e) => {
         const id = e.active.id;
         setActiveTile(id);
@@ -127,34 +154,18 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     function endTurn(e) {
         const placed = countPlacedThisTurn(G.tilePositions, BOARD_GRID_ID);
         const accepted = isSubmitAccepted(G, ctx);
-        const n = submitComboCount(accepted, placed);
-        const cx = window.innerWidth / 2, cy = window.innerHeight * 0.4;
-        let delay = 600;
-        if (accepted) {
-            // Spotlight the runs/sets you just built (gold, staggered) and pay off
-            // the combo. No green/red wash here — the submit is valid, so lighting
-            // up only your groups reads as a clean "here's what you scored".
-            fx.celebrateGroups(getFormedGroups(G));
-            const pts = Object.values(G.tilePositions)
-                .filter(p => p && p.gridId === BOARD_GRID_ID && p.tmp)
-                .reduce((s, p) => s + (isJoker(p.id) ? 0 : getTileValue(p.id)), 0);
-            setCombo(n);
-            place(n);
-            fx.burstAt(cx, cy, n);
-            fx.kick(n);
-            if (n >= 3) { fx.flash('combo'); milestone(); }
-            fx.floatText('+' + pts, cx, cy);
-            play('win');
-            delay = 1400; // let the celebration breathe before the turn flips
-        } else if (placed > 0) {
-            // Diagnostic for a rejected submit: green = tiles already in a valid
-            // run/set, red = the rest, so you can see what to fix.
+        let delay = 150;
+        if (!accepted && placed > 0) {
+            // Local feedback for a rejected submit: green = tiles already in a valid
+            // run/set, red = the rest, so you can see what to fix. (A valid submit's
+            // celebration comes from G.lastPlay so everyone sees it.)
             const validNow = extractSeqs(G).filter(seq => isSequenceValid(seq)).flat();
             setValidTiles(validNow);
             setShowInvalidTiles(true);
             fx.flash('bad');
             fx.kick(6);
             buzz();
+            delay = 600;
         }
         setTimeout(() => {
             setShowInvalidTiles(false)
@@ -249,6 +260,13 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         />)
 
     const allJoined = (matchData || []).length && _.every(matchData, (item) => item.name)
+    const showTurnTimer = (matchData || []).length && !ctx.gameover && allJoined
+    const timeLeft = useTurnTimer({
+        timerExpireAt: showTurnTimer ? G.timerExpireAt : null,
+        timePerTurn: G.timePerTurn,
+        onTimeout: onTurnTimeout,
+        isActivePlayer: playerID === ctx.currentPlayer,
+    })
     const sidebar = (
         <Sidebar
             matchData={matchData || []}
@@ -265,13 +283,27 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             playerID={playerID}
             matchData={matchData || []}
             matchID={matchID}
-            gameover={ctx.gameover}
-            timePerTurn={G.timePerTurn}
-            timerExpireAt={G.timerExpireAt}
-            onTimeout={onTurnTimeout}
             hands={hands}
+            timeLeft={timeLeft}
+            timePerTurn={G.timePerTurn}
+            showTurnTimer={showTurnTimer}
         />
     )
+
+    const selfData = (matchData || [])[Number(playerID)]
+    const selfAvatar = selfData && selfData.name ? (
+        <div className="rack-self">
+            <PlayerAvatarWithTimer isActive={ctx.currentPlayer === playerID}
+                                   name={selfData.name}
+                                   matchId={matchID}
+                                   seatId={Number(playerID)}
+                                   tiles={count2dArrItems(hands[playerID])}
+                                   isConnected={selfData.isConnected}
+                                   timeLeft={timeLeft}
+                                   totalTime={G.timePerTurn}
+                                   showTurnTimer={showTurnTimer}/>
+        </div>
+    ) : null
 
     // todo finish and check
     let drawOrEnd
@@ -294,10 +326,11 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
 
             {sidebar}
             <div className="board" onClick={onBoardClick}>
-                <ComboOverlay combo={combo}/>
+                <ComboOverlay combo={combo} by={comboBy}/>
                 {tableSeats}
                 {boardGrid}
                 <div className={'hand-buttons'}>
+                    {selfAvatar}
                     {handGrid}
                     <div className="controls-wrapper">
                         <button disabled={ctx.gameover}

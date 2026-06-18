@@ -43,6 +43,7 @@ const Rummikub = {
             redoMoveStack: [],
             lastCircle: [],
             recentlyDrawnTiles: [],
+            lastPlay: null,
         }
     },
     phases: {

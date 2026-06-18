@@ -6,7 +6,7 @@ const RADIUS = 45;
 const STROKE = 6;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-const PlayerAvatarWithTimer = ({name, matchId, seatId, tiles, isActive, timeLeft, totalTime, showTurnTimer}) => {
+const PlayerAvatarWithTimer = ({name, matchId, seatId, tiles, isActive, isConnected, timeLeft, totalTime, showTurnTimer}) => {
     const [dashOffset, setDashOffset] = useState(CIRCUMFERENCE);
     const [strokeColor, setStrokeColor] = useState("#00f");
 
@@ -24,11 +24,13 @@ const PlayerAvatarWithTimer = ({name, matchId, seatId, tiles, isActive, timeLeft
 
     return (
         <div className="player">
-            <div className={`avatar ${isActive ? "active" : ""}`}
+            <div className={`avatar ${isActive ? "active" : ""} ${isConnected === false ? "offline" : ""}`}
                  style={{
                      backgroundColor: stringToColor(name),
                      backgroundImage: `url(${catAvatarUrl(matchId, seatId)})`,
                  }}>
+                 {isConnected === false &&
+                     <span className="avatar-offline" title="Disconnected" aria-label="Disconnected">🔌</span>}
                 {isActive && showTurnTimer ? <svg className="timer-ring" width="100" height="100" viewBox="0 0 100 100">
                     <circle
                         className="timer-bg"

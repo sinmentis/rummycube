@@ -6,13 +6,15 @@ import {
     isFirstMove,
     isMoveValid,
     freezeTmpTiles, isBoardValid,
+    getFormedGroups,
 } from "./moveValidation.js";
 import {
     countPoints,
     findWinner,
     getSecTs,
     getGameState,
-    getTileReadableName, getHandsTilesGrid
+    getTileReadableName, getHandsTilesGrid,
+    getTileValue, isJoker,
 } from "./util.js";
 import {original} from "immer"
 import {current} from 'immer';
@@ -228,6 +230,18 @@ function validatePlayerMove(G, ctx, playerID, events) {
     if (moveValid) {
         console.debug('MOVE VALID')
         G.firstMoveDone[player] = true
+        // Record the play so EVERY client can celebrate the combo (not just the
+        // player who made it). Computed before freezing while tiles are still tmp.
+        const groups = getFormedGroups(G)
+        const tmp = Object.values(G.tilePositions).filter(p => p && p.gridId === BOARD_GRID_ID && p.tmp)
+        const points = tmp.reduce((s, p) => s + (isJoker(p.id) ? 0 : getTileValue(p.id)), 0)
+        G.lastPlay = {
+            seat: player,
+            count: tmp.length,
+            points: points,
+            groups: groups.map(seq => seq.map(Number)),
+            ts: getSecTs(),
+        }
         freezeTmpTiles(G)
         events.endTurn()
     } else {

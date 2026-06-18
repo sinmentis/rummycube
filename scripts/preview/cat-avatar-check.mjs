@@ -20,7 +20,7 @@ await B.waitForURL(/\/match\//,{timeout:30000});
 await A.waitForTimeout(4000);
 
 // read both avatars' background-image on page A
-const bgs = await A.$$eval('.table-seats .avatar', els =>
+const bgs = await A.$$eval('.avatar', els =>
   els.map(el => getComputedStyle(el).backgroundImage));
 // verify the cat images actually decode (naturalWidth>0)
 const loaded = await A.evaluate(async (urls) => {

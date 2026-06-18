@@ -39,6 +39,7 @@ body {
 
 /* The wooden rack that holds the player's hand + turn controls. */
 .hand-buttons {
+    position: relative;
     width: fit-content;
     max-width: 94vw;
     margin: 2.2vh auto 1vh;
@@ -47,6 +48,14 @@ body {
     background: var(--rack);
     border: 1px solid var(--rack-border);
     box-shadow: var(--rack-highlight), 0 14px 26px rgba(0, 0, 0, .42);
+}
+
+/* Your own avatar, pinned to the top-left corner of your rack. */
+.rack-self {
+    position: absolute;
+    left: 6px;
+    bottom: calc(100% + 2px);
+    z-index: 7;
 }
 
 .controls-wrapper {
@@ -268,6 +277,28 @@ svg.fa-smile-beam {
     0 0 16px 5px var(--avatar-glow, rgba(255, 196, 92, .85)),
     0 0 34px 12px rgba(255, 196, 92, .42);
     transition: box-shadow 0.3s ease-in-out;
+}
+
+/* Disconnected player: dim the cat + a plug badge, visible to everyone. */
+.avatar.offline {
+    filter: grayscale(.9) brightness(.72);
+}
+.avatar-offline {
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    z-index: 3;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #3a3a3a;
+    color: #fff;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .45);
 }
 
 .timer-ring {
@@ -642,6 +673,7 @@ svg.fa-smile-beam {
     text-shadow: 0 2px 0 rgba(0,0,0,.35), 0 0 18px rgba(0,0,0,.4);
 }
 .combo-overlay .combo-x { font-size: 15px; letter-spacing: 3px; opacity: .9; color: #fffdf4; }
+.combo-overlay .combo-by { font-size: 19px; font-weight: 800; color: #fffdf4; margin-bottom: 1px; text-shadow: 0 2px 4px rgba(0,0,0,.5); }
 .combo-overlay .combo-n { font-size: 64px; line-height: 1; color: #fffdf4; }
 .combo-overlay .combo-label { font-size: 20px; letter-spacing: 2px; margin-top: 2px; }
 .combo-warm .combo-n { color: #ffe08a; }

@@ -1,0 +1,30 @@
+import {chromium} from 'playwright';
+const BASE = process.env.SMOKE_URL || 'https://game.shunlyu.com';
+const b = await chromium.launch({executablePath: process.env.CHROMIUM_PATH});
+const errs=[];
+const cA=await b.newContext(), cB=await b.newContext();
+const A=await cA.newPage(), B=await cB.newPage();
+A.on('pageerror',e=>errs.push('A:'+e));
+await A.goto(BASE,{waitUntil:'domcontentloaded'});
+await A.getByPlaceholder('Enter username').fill('alice');
+await A.selectOption('#formNumPlayers','2');
+await A.getByRole('button',{name:'Create',exact:true}).click();
+await A.waitForURL(/\/match\//,{timeout:30000});
+const mid=A.url().split('/match/')[1];
+await B.goto(`${BASE}/join-match/${mid}`,{waitUntil:'domcontentloaded'});
+await B.getByPlaceholder('Enter username').fill('bob');
+await B.getByRole('button',{name:'Join',exact:true}).click();
+await B.waitForURL(/\/match\//,{timeout:30000});
+await A.waitForTimeout(3000);
+const offlineBefore = await A.locator('.seat-slot .avatar.offline').count();
+// B disconnects
+await cB.close();
+await A.waitForTimeout(5000);
+const offlineAfter = await A.locator('.seat-slot .avatar.offline').count();
+const badge = await A.locator('.seat-slot .avatar-offline').count();
+await A.screenshot({path:'/tmp/disconnect-A.png'});
+await b.close();
+console.log(`offline before=${offlineBefore} after B left=${offlineAfter} badge=${badge} errs=${errs.length}`);
+if(errs.length) console.log(errs.join('\n'));
+if(offlineBefore!==0 || offlineAfter<1 || badge<1 || errs.length){ console.log('DISCONNECT MARKER FAILED'); process.exit(1); }
+console.log('DISCONNECT MARKER OK — a disconnected player is shown offline to everyone');
