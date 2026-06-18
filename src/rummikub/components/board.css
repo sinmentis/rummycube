@@ -15,6 +15,7 @@ body {
 
 /* The green felt table that everything sits on. */
 .board {
+    position: relative;
     min-height: 100vh;
     padding: 2.5vh 1vw 3vh;
     background: var(--felt);
@@ -572,3 +573,38 @@ svg.fa-smile-beam {
     /* a freshly drawn tile gives a little pulse */
     .tile.tile-drawn { animation: tileDrawnPulse .7s ease-in-out; }
 }
+
+/* ===== Combo & impact (R-juice) ===== */
+.combo-overlay {
+    position: absolute; top: 8%; left: 50%; transform: translateX(-50%);
+    z-index: 40; pointer-events: none; text-align: center;
+    font-family: 'Poppins', system-ui, sans-serif; font-weight: 800;
+    text-shadow: 0 2px 0 rgba(0,0,0,.35), 0 0 18px rgba(0,0,0,.4);
+}
+.combo-overlay .combo-x { font-size: 15px; letter-spacing: 3px; opacity: .9; color: #fffdf4; }
+.combo-overlay .combo-n { font-size: 64px; line-height: 1; color: #fffdf4; }
+.combo-overlay .combo-label { font-size: 20px; letter-spacing: 2px; margin-top: 2px; }
+.combo-warm .combo-n { color: #ffe08a; }
+.combo-hot  .combo-n, .combo-hot .combo-label  { color: #ffb24a; }
+.combo-fire .combo-n, .combo-fire .combo-label { color: #ff5a3c; text-shadow: 0 0 22px rgba(255,90,60,.7); }
+
+.fx-flash { position: fixed; inset: 0; z-index: 60; pointer-events: none; }
+.fx-flash-combo { background: radial-gradient(circle at 50% 40%, rgba(255,200,90,.30), transparent 60%); }
+.fx-flash-bad   { background: radial-gradient(circle at 50% 50%, rgba(220,40,40,.32), transparent 65%); }
+
+.fx-floattext {
+    position: fixed; z-index: 60; pointer-events: none; transform: translate(-50%, -50%);
+    font-family: 'Poppins', system-ui, sans-serif; font-weight: 800; font-size: 40px;
+    color: #ffe08a; text-shadow: 0 2px 0 rgba(0,0,0,.4), 0 0 20px rgba(255,180,60,.6);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .combo-overlay { animation: combo-pop .28s cubic-bezier(.34,1.56,.64,1); }
+    .board-kick { animation: board-kick .18s ease; }
+    .fx-flash { animation: fx-flash-fade .45s ease forwards; }
+    .fx-floattext { animation: fx-float-up 1.2s ease forwards; }
+}
+@keyframes combo-pop { 0%{transform:translateX(-50%) scale(.4);opacity:0} 60%{transform:translateX(-50%) scale(1.18);opacity:1} 100%{transform:translateX(-50%) scale(1)} }
+@keyframes board-kick { 0%{transform:translate(0,0)} 25%{transform:translate(calc(var(--kick,4px)*-1),var(--kick,4px))} 50%{transform:translate(var(--kick,4px),calc(var(--kick,4px)*-1))} 75%{transform:translate(calc(var(--kick,4px)*-.5),0)} 100%{transform:translate(0,0)} }
+@keyframes fx-flash-fade { 0%{opacity:0} 25%{opacity:1} 100%{opacity:0} }
+@keyframes fx-float-up { 0%{opacity:0;transform:translate(-50%,-30%) scale(.6)} 25%{opacity:1;transform:translate(-50%,-60%) scale(1.1)} 100%{opacity:0;transform:translate(-50%,-160%) scale(1)} }
