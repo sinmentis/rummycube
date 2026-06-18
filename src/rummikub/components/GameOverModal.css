@@ -66,3 +66,11 @@
   margin-right: 0.5em;
 }
 
+
+@keyframes gameoverIn {
+    0%   { transform: scale(.8) translateY(10px); opacity: 0; }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+@media (prefers-reduced-motion: no-preference) {
+    .gameover-modal { animation: gameoverIn .4s cubic-bezier(.34, 1.56, .64, 1) both; }
+}

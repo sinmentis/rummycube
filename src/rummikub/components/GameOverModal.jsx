@@ -1,4 +1,5 @@
-import React from "react";
+import React, {useEffect} from "react";
+import confetti from "canvas-confetti";
 import "./GameOverModal.css";
 import {FRONTEND_PORT, LOBBY_SERVER_HOST, LOBBY_SERVER_PROTO} from "../constants";
 import {copyToClipboard} from "../util";
@@ -9,6 +10,16 @@ import _ from "lodash";
 const GameOverModal = ({gameover, matchId, playerID, matchData}) => {
     const client = new GameLobbyClient()
     const navigate = useNavigate()
+
+    useEffect(() => {
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        const end = Date.now() + 1200;
+        (function frame() {
+            confetti({particleCount: 4, angle: 60, spread: 55, startVelocity: 45, origin: {x: 0, y: 0.7}});
+            confetti({particleCount: 4, angle: 120, spread: 55, startVelocity: 45, origin: {x: 1, y: 0.7}});
+            if (Date.now() < end) requestAnimationFrame(frame);
+        })();
+    }, []);
 
 
     function onPlayAgain(event) {

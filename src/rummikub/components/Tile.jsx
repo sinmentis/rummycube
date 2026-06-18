@@ -31,7 +31,7 @@ function TilePreview({tile, isSelected, isDragging, isValid, position, boardGriB
     return (
         <div
             style={getTileStyle(isSelected, isDragging, isValid, position, index, newlyAdded)}
-            className="tile tile-clickable border-dark">
+            className={"tile tile-clickable border-dark" + (newlyAdded === true ? " tile-drawn" : "")}>
             <div className={"tile-text tile-" + COLORS[getTileColor(tile)]}>{val}</div>
             <div className={"tile-subscript"}></div>
         </div>

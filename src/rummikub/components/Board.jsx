@@ -281,11 +281,11 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         </div>
         <DragOverlay dropAnimation={null}>
             {activeTile ? (
-                state.selectedTiles.includes(activeTile)
-                    ? <div style={{display: 'flex', gap: '2px'}}>
-                        {state.selectedTiles.map(id => <TilePreview key={id} tile={id}/>)}
-                      </div>
-                    : <TilePreview tile={activeTile}/>
+                <div className="tile-lift" style={{display: 'flex', gap: '2px'}}>
+                    {state.selectedTiles.includes(activeTile)
+                        ? state.selectedTiles.map(id => <TilePreview key={id} tile={id}/>)
+                        : <TilePreview tile={activeTile}/>}
+                </div>
             ) : null}
         </DragOverlay>
     </DndContext>

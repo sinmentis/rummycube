@@ -541,3 +541,34 @@ svg.fa-smile-beam {
         margin: 0 4px;
     }
 }
+
+/* ============================================================
+   R4 — animation / juice. transform & opacity only; gated by
+   prefers-reduced-motion so reduced-motion users get instant states.
+   ============================================================ */
+
+/* Lifted look for the tile(s) carried under the drag cursor (DragOverlay). */
+.tile-lift {
+    transform: scale(1.1) rotate(-3deg);
+    filter: drop-shadow(0 16px 16px rgba(0, 0, 0, .5));
+}
+.tile-lift .tile { cursor: grabbing; }
+
+@keyframes tilePop {
+    0%   { transform: scale(.7); opacity: 0; }
+    70%  { transform: scale(1.05); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes tileDrawnPulse {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.14); box-shadow: 0 0 0 3px rgba(255, 199, 78, .9), 0 10px 16px rgba(0, 0, 0, .4); }
+    100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    /* tiles pop in when they (re)mount: a cascade at deal, a settle on placement */
+    .grid-item .tile { animation: tilePop .26s cubic-bezier(.34, 1.56, .64, 1) both; }
+    /* a freshly drawn tile gives a little pulse */
+    .tile.tile-drawn { animation: tileDrawnPulse .7s ease-in-out; }
+}
