@@ -2,6 +2,7 @@ import {useState, useEffect} from "react";
 import {useNavigate, useParams} from "react-router-dom";
 import GameLobbyClient from "../lobbyClient";
 import {IS_DEV} from "../constants";
+import LobbySeat from "./LobbySeat";
 import "./lobby.css";
 
 const JoinGamePage = function () {
@@ -74,12 +75,9 @@ const JoinGamePage = function () {
                         Join
                     </button>
                     <div className="lobby-seats">
-                        {seats.length ? seats.map((seat) => {
-                            return <div key={seat.id}
-                                        className={`seat-status ${seat.name ? 'seat-filled' : 'seat-vacant'}`}>
-                                {seat.name ? `Player ${seat.name} has joined` : `Seat ${seat.id + 1} is open`}
-                            </div>
-                        }) : <span className="seat-status seat-error">Match not found</span>}
+                        {seats.length ? seats.map((seat) => (
+                            <LobbySeat key={seat.id} matchId={matchID} seat={seat}/>
+                        )) : <span className="seat-status seat-error">Match not found</span>}
                     </div>
                     {seats.every(seat => seat.name) ?
                         <div className="seat-status seat-error">No slots left</div> : ''}

@@ -1,6 +1,7 @@
 import {useState} from "react";
 import {useNavigate} from "react-router-dom";
 import GameLobbyClient from "../lobbyClient";
+import LobbySeat from "./LobbySeat";
 
 const JoinGameForm = function () {
     const client = new GameLobbyClient()
@@ -81,12 +82,9 @@ const JoinGameForm = function () {
                 Join
             </button>
             <div className="lobby-seats">
-                {seats.length ? seats.map((seat) => {
-                    return <div key={seat.id}
-                                className={`seat-status ${seat.name ? 'seat-filled' : 'seat-vacant'}`}>
-                        {seat.name ? `Player ${seat.name} has joined` : `Seat ${seat.id + 1} is open`}
-                    </div>
-                }) : (matchID ? <span className="seat-status seat-error">Match not found</span>
+                {seats.length ? seats.map((seat) => (
+                    <LobbySeat key={seat.id} matchId={matchID} seat={seat}/>
+                )) : (matchID ? <span className="seat-status seat-error">Match not found</span>
                               : <span className="seat-status seat-hint">Enter a room code to see open seats</span>)}
             </div>
             {(seats.length && seats.every(seat => seat.name)) ?
