@@ -4,7 +4,6 @@ import {
     getTileValue,
     groupValidSequences,
     getGameState,
-    deactivateTileVariant,
     getPlayerHandTiles
 } from "./util.js";
 import {HAND_COLS, HAND_GRID_ID, HAND_ROWS} from "./constants.js";
@@ -65,27 +64,7 @@ function compareTilesByValColor(a, b) {
 
 function orderByFunc(tiles, sortingFunc) {
     let flattened = _.compact(_.flatten(tiles))
-    const findDuplicateIndex = (arr, index) => {
-        const tile = arr[index];
-        for (let i = 0; i < arr.length; i++) {
-            if (i !== index && deactivateTileVariant(arr[i]) === deactivateTileVariant(tile)) {
-                return i;
-            }
-        }
-        return -1;
-    };
-
     flattened.sort(sortingFunc);
-
-    for (let i = 0; i < flattened.length - 1; i++) {
-        if (deactivateTileVariant(flattened[i]) === deactivateTileVariant(flattened[i + 1])) {
-            const duplicateIndex = findDuplicateIndex(flattened, i);
-            if (duplicateIndex !== -1) {
-                const duplicateTile = flattened.splice(duplicateIndex, 1)[0];
-                flattened.push(duplicateTile);
-            }
-        }
-    }
     return flattened
 }
 
