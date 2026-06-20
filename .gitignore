@@ -23,3 +23,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .idea
+
+# local, self-hosted Copilot memory (personal notes, never commit)
+.copilot-memory.md
+.copilot-memory.md.bak-*
