@@ -21,8 +21,15 @@ const Sidebar = function ({tilesOnPool, matchData, matchID, gameover, allJoined}
             </div>
             {showInvite &&
                 <div className="invite-panel">
-                    <span className="invite-label">Invite a player · room</span>
-                    <span className="invite-code">{matchID}</span>
+                    <span className="invite-title">Need more players?</span>
+                    <span className="invite-label">Share this room</span>
+                    <button
+                        type="button"
+                        className="invite-code"
+                        onClick={onCopyLink}
+                        title="Click to copy the join link">
+                        {matchID}
+                    </button>
                     <button type="button" className="invite-copy" onClick={onCopyLink}>
                         {copied ? 'Copied!' : 'Copy link'}
                     </button>
