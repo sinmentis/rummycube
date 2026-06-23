@@ -92,10 +92,37 @@ describe('useUndoRedoHotkeys', () => {
     });
 
     test('removes the listener on unmount', () => {
+
         const onUndo = jest.fn();
         const {unmount} = render(<Harness canUndo canRedo={false} onUndo={onUndo} onRedo={jest.fn()}/>);
         unmount();
         window.dispatchEvent(key({ctrlKey: true, key: 'z'}));
         expect(onUndo).not.toHaveBeenCalled();
+    });
+
+    test('does NOT call onUndo when Ctrl+Z is typed in a text input (chat)', () => {
+        const onUndo = jest.fn();
+        render(<Harness canUndo canRedo={false} onUndo={onUndo} onRedo={jest.fn()}/>);
+        const input = document.createElement('input');
+        input.type = 'text';
+        document.body.appendChild(input);
+        const ev = key({ctrlKey: true, key: 'z'});
+        input.dispatchEvent(ev);
+        expect(onUndo).not.toHaveBeenCalled();
+        // native text undo must be left alone
+        expect(ev.defaultPrevented).toBe(false);
+        document.body.removeChild(input);
+    });
+
+    test('does NOT call onUndo when Ctrl+Z is typed in a textarea', () => {
+        const onUndo = jest.fn();
+        render(<Harness canUndo canRedo={false} onUndo={onUndo} onRedo={jest.fn()}/>);
+        const ta = document.createElement('textarea');
+        document.body.appendChild(ta);
+        const ev = key({ctrlKey: true, key: 'z'});
+        ta.dispatchEvent(ev);
+        expect(onUndo).not.toHaveBeenCalled();
+        expect(ev.defaultPrevented).toBe(false);
+        document.body.removeChild(ta);
     });
 });

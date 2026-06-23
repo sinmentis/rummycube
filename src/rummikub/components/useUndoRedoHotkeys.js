@@ -11,6 +11,17 @@ export function resolveUndoRedoIntent(e) {
     return null;
 }
 
+// True when the event originates from a text-editable element, so the game
+// shortcut must yield to native text undo/redo (e.g. the chat input).
+function isEditableTarget(target) {
+    if (!target) return false;
+    if (target.isContentEditable) return true;
+    const tag = target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return true;
+    return typeof target.closest === 'function'
+        && !!target.closest('input, textarea, [contenteditable=""], [contenteditable="true"]');
+}
+
 // Window keydown handler for keyboard undo/redo. Fires onUndo/onRedo only when
 // the matching action is enabled (caller mirrors the button disabled guards:
 // stack length, not gameover, your turn, not waiting). preventDefault stops the
@@ -18,6 +29,8 @@ export function resolveUndoRedoIntent(e) {
 export function useUndoRedoHotkeys({canUndo, canRedo, onUndo, onRedo}) {
     useEffect(() => {
         const handler = (e) => {
+            // Typing in a text field (e.g. chat) keeps native text undo/redo.
+            if (isEditableTarget(e.target)) return;
             const intent = resolveUndoRedoIntent(e);
             if (!intent) return;
             if (intent === 'undo') {
