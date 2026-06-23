@@ -25,7 +25,6 @@ import ChatPanel from "./ChatPanel";
 import _ from "lodash";
 
 const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, events, chatMessages, sendChatMessage}) {
-    console.log('RENDER BOARD')
     const [recentlyDrawnTiles, setRecentlyDrawnTiles] = useState([]);
 
     useEffect(() => {
@@ -54,6 +53,8 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     const [activeTile, setActiveTile] = useState(null);
     const stateRef = useRef(state);
     useEffect(() => { stateRef.current = state; }, [state]);
+    const gRef = useRef(G);
+    useEffect(() => { gRef.current = G; });
     const sensors = useSensors(
         useSensor(MouseSensor, {activationConstraint: {distance: 6}}),
         useSensor(TouchSensor, {activationConstraint: {distance: 6}}),
@@ -116,12 +117,11 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         moves.moveTiles(col, row, destGridId, tileIdObj, selectedTiles)
     }, [moves])
     const handleTileSelectionCb = useCallback((tileId, shiftKey, ctrlKey) => {
-        console.log(state)
-        handleTileSelection(G, state, setState, playerID, tileId, shiftKey, ctrlKey)
-    }, [G, playerID, state])
+        handleTileSelection(gRef.current, stateRef.current, setState, playerID, tileId, shiftKey, ctrlKey)
+    }, [playerID])
     const handleLongPressCb = useCallback((tileId, timeout) => {
-        handleLongPress(G, playerID, setState, longPressTimeoutId, tileId, timeout)
-    }, [G, playerID, longPressTimeoutId])
+        handleLongPress(gRef.current, playerID, setState, longPressTimeoutId, tileId, timeout)
+    }, [playerID])
 
     const onTileDragEnd = useCallback(() => {
         setState({selectedTiles: [], lastSelectedTileId: null})
