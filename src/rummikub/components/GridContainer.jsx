@@ -1,5 +1,5 @@
+import React from 'react';
 import GridSlot from "./GridSlot";
-import {useState} from "react";
 
 const Centered = function ({cols, colWidth, children}) {
     return <div
@@ -28,40 +28,36 @@ const GridContainer = function ({
                                     validTiles,
                                     highlightTiles,
                                     selectedTiles,
-                                    moveTiles,
-                                    onTileDragEnd,
-                                    onLongPressMouseUp,
-                                    handleLongPress,
                                     handleTileSelection,
-                                    hoverPosition,
-                                    setHoverPosition,
                                     newlyAdded
                                 }) {
 
     let colWidth = 2.2
+    const selectedSet = new Set(selectedTiles)
     let gridItems = []
     let key = 0
     for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
             let tile = tiles2dArray[y] && tiles2dArray[y][x]
+            let isSelected = tile ? selectedSet.has(tile) : false
+            let isValid
+            if (tile && highlightTiles) {
+                isValid = validTiles.indexOf(tile) !== -1
+            }
+            let isNewlyAdded = Array.isArray(newlyAdded)
+                ? newlyAdded.includes(parseInt(tile))
+                : !!newlyAdded
             let gridTile = <GridSlot
                 canDnD={canDnD}
-                moveTiles={moveTiles}
-                onTileDragEnd={onTileDragEnd}
-                selectedTiles={selectedTiles}
                 handleTileSelection={handleTileSelection}
-                handleLongPress={handleLongPress}
-                onLongPressMouseUp={onLongPressMouseUp}
                 gridId={gridId}
-                validTiles={validTiles}
-                highlightTiles={highlightTiles}
                 row={y}
                 col={x}
                 key={key}
                 tile={tile}
-                hoverPosition={hoverPosition}
-                setHoverPosition={setHoverPosition}
-                newlyAdded={newlyAdded}
+                isSelected={isSelected}
+                isValid={isValid}
+                isNewlyAdded={isNewlyAdded}
             />
             gridItems.push(gridTile)
             key++

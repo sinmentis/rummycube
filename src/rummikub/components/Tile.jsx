@@ -82,26 +82,29 @@ function getTileStyle(selected, isDragging, isValid, position, index, newlyAdded
     return result
 }
 
-export function Tile({tile, canDnD, isSelected, isValid, handleTileSelection, selectedTiles, newlyAdded}) {
+const Tile = React.memo(function Tile({tile, canDnD, isSelected, isValid, handleTileSelection, isNewlyAdded}) {
     const {attributes, listeners, setNodeRef, isDragging} = useDraggable({id: tile, disabled: !canDnD});
 
     const onClick = useCallback((e) => {
         handleTileSelection(tile, e.shiftKey, e.ctrlKey || e.metaKey)
     }, [tile, handleTileSelection])
 
+    const jokerLabel = isJoker(tile) ? 'Joker (wildcard)' : undefined
+
     return (
         <div ref={setNodeRef} {...listeners} {...attributes} onClick={onClick} id={tile}
+             aria-label={jokerLabel} title={jokerLabel}
              style={{touchAction: 'none', opacity: isDragging ? 0.4 : 1, cursor: canDnD ? 'grab' : 'default'}}>
             <TilePreview
                 tile={tile}
                 isSelected={isSelected}
                 isValid={isValid}
-                newlyAdded={Array.isArray(newlyAdded) ? newlyAdded.includes(parseInt(tile)) : !!newlyAdded}
+                newlyAdded={isNewlyAdded}
             />
         </div>
     )
-}
+})
 
 
+export {Tile, TilePreview}
 export default Tile
-export {TilePreview}
