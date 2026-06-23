@@ -98,6 +98,50 @@ div.grid-container {
     display: grid;
 }
 
+/* ============================================================
+   U9 — Board "table tray". Frame the board grid as a discrete
+   inset object on the felt and lay a very faint cell grid over it
+   so empty cells read as a drop surface instead of a void. Scoped
+   to .ref so the wood hand rack is untouched.
+   ============================================================ */
+.ref div.grid-container {
+    box-sizing: border-box;
+    border: 1px solid var(--brass-soft, rgba(205, 162, 75, .5));
+    border-radius: 10px;
+    /* darkens the tray slightly + a felt vignette so it reads as inset */
+    background-color: rgba(0, 0, 0, .10);
+    box-shadow: var(--felt-vignette, inset 0 0 60px rgba(0, 0, 0, .45)),
+                0 1px 0 rgba(255, 255, 255, .04);
+    /* Faint cell lines. The 1px lines tile at the actual cell size
+       (cols = 2.2vw, rows = 7vh from GridContainer.jsx), so they sit
+       exactly on the grid-item boundaries — no guessed vw/vh. */
+    background-image:
+        linear-gradient(to right, rgba(255, 255, 255, .04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, .04) 1px, transparent 1px);
+    background-size: 2.2vw 7vh, 2.2vw 7vh;
+    background-position: 0 0;
+}
+
+/* ============================================================
+   U9 — Drop-slot visual contract. U10 toggles these classes on
+   empty .grid-item cells during a live drag; defined here as
+   CSS-only (no JS toggling in this task).
+   ============================================================ */
+.grid-item.slot-valid {
+    border-radius: 6px;
+    /* soft brass-green legal-drop highlight */
+    background-color: rgba(120, 200, 130, .16);
+    box-shadow: inset 0 0 0 2px rgba(150, 210, 120, .55),
+                inset 0 0 12px rgba(120, 200, 130, .28);
+}
+
+.grid-item.slot-reject {
+    border-radius: 6px;
+    /* muted, desaturated red illegal-drop indication */
+    background-color: rgba(150, 70, 70, .16);
+    box-shadow: inset 0 0 0 2px rgba(170, 80, 80, .5);
+}
+
 div.tile-drag-layer {
     position: fixed;
     pointer-events: none;
@@ -588,6 +632,8 @@ svg.fa-smile-beam {
 
     .ref .grid-container {
         grid-template-columns: repeat(32, 8.4vw) !important;
+        /* keep the faint cell lines aligned to the wider mobile track */
+        background-size: 8.4vw 7vh, 8.4vw 7vh;
     }
 
     /* Wood rack: pinned to the bottom of the column, always visible. */
