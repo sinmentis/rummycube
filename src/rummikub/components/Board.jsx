@@ -14,6 +14,7 @@ import PlayerAvatarWithTimer from "./PlayerAvatar";
 import TurnDeadlineWatcher from "./TurnDeadlineWatcher";
 import {extractSeqs, isBoardHasNewTiles, isBoardValid, isSubmitAccepted, submitRejectReason} from "../moveValidation";
 import {submitReasonText} from "../submitReasonText";
+import {waitingLabel, isWaitingForPlayers} from "../waitingRoom";
 import {buildGridsFromTilePositions, getSecTs, isSequenceValid, count2dArrItems} from "../util";
 import GameOverModal from "./GameOverModal";
 import {handleTileSelection, handleLongPress} from "../boardUtil";
@@ -242,8 +243,12 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     const isMyTurn = ctx.currentPlayer === playerID && !ctx.gameover;
     const hasStaged = isBoardHasNewTiles(G);
 
+    // Pre-match gate: while players are still joining, freeze the board+hand (no
+    // drag) and disable every turn control. Mirrors the allJoined / endPhase
+    // logic without changing it.
+    const waiting = isWaitingForPlayers(ctx, matchData);
     // Pass button, used only when there's nothing to submit and no tile to draw.
-    const endBut = (<button disabled={!isMyTurn}
+    const endBut = (<button disabled={!isMyTurn || waiting}
                             className={'rummikub-button'}
                             title={'Pass your turn'}
                             onClick={() => {
@@ -252,7 +257,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     </button>)
 
     // Non-destructive submit. Disabled until at least one tile is staged.
-    const submitBut = (<button disabled={!isMyTurn || !hasStaged}
+    const submitBut = (<button disabled={!isMyTurn || !hasStaged || waiting}
                                className={'rummikub-button' + endStateClass}
                                title={'Submit your placed tiles as a meld'}
                                onClick={() => {
@@ -261,7 +266,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     </button>)
 
     // Explicit forfeit, shown only when you have staged tiles to give back.
-    const forfeitBut = (<button disabled={!isMyTurn || !hasStaged}
+    const forfeitBut = (<button disabled={!isMyTurn || !hasStaged || waiting}
                                 className={'rummikub-button'}
                                 title={'Return your tiles and draw — ends your turn'}
                                 onClick={() => {
@@ -270,14 +275,14 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     </button>)
 
     const drawBut = (<button
-        disabled={!(ctx.currentPlayer === playerID && G.tilesPool.length) || ctx.gameover || ctx.phase === 'playersJoin' || hasStaged}
+        disabled={!(ctx.currentPlayer === playerID && G.tilesPool.length) || ctx.gameover || waiting || hasStaged}
         title={hasStaged ? 'Clear your placed tiles to draw instead' : 'Take a tile and skip the turn'}
         className={'rummikub-button'}
         onClick={() => {
             drawTile()
         }}>Draw
     </button>)
-    const undoBut = (<button disabled={!G.gameStateStack.length || ctx.gameover || ctx.currentPlayer !== playerID}
+    const undoBut = (<button disabled={!G.gameStateStack.length || ctx.gameover || ctx.currentPlayer !== playerID || waiting}
                              className={'rummikub-button'}
                              title={'Undo last action'}
                              onClick={() => {
@@ -285,7 +290,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                              }}>Undo
     </button>)
 
-    const redoBut = (<button disabled={!G.redoMoveStack.length || ctx.gameover || ctx.currentPlayer !== playerID}
+    const redoBut = (<button disabled={!G.redoMoveStack.length || ctx.gameover || ctx.currentPlayer !== playerID || waiting}
                              className={'rummikub-button'}
                              title={'Redo last action'}
                              onClick={() => {
@@ -300,7 +305,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             cols={BOARD_COLS}
             tiles2dArray={board}
             gridId={BOARD_GRID_ID}
-            canDnD={ctx.currentPlayer === playerID}
+            canDnD={!waiting && ctx.currentPlayer === playerID}
             isDragActive={isDragActive}
             moveTiles={moveTilesUseCb}
             highlightTiles={showInvalidTiles}
@@ -320,7 +325,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                        cols={HAND_COLS}
                        tiles2dArray={hands[playerID]}
                        gridId={HAND_GRID_ID}
-                       canDnD={true}
+                       canDnD={!waiting}
                        highlightTiles={false}
                        moveTiles={moveTilesUseCb}
                        selectedTiles={state.selectedTiles}
@@ -400,6 +405,14 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
 
             {sidebar}
             <div className="board" onClick={onBoardClick}>
+                {waiting &&
+                    <div className="waiting-overlay" role="status" aria-live="polite">
+                        <div className="waiting-card">
+                            <div className="waiting-spinner" aria-hidden="true"/>
+                            <div className="waiting-title">Waiting for players</div>
+                            <div className="waiting-count">{waitingLabel(matchData)} joined</div>
+                        </div>
+                    </div>}
                 <ComboOverlay combo={combo} by={comboBy}/>
                 <TurnDeadlineWatcher
                     timerExpireAt={showTurnTimer ? G.timerExpireAt : null}
@@ -410,13 +423,13 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                     {selfAvatar}
                     {handGrid}
                     <div className="controls-wrapper">
-                        <button disabled={ctx.gameover}
+                        <button disabled={ctx.gameover || waiting}
                                 title={'Order by runs'}
                                 className={'rummikub-button'} onClick={() => {
                             onOrderByColorClicked()
                         }}>Sort: runs
                         </button>
-                        <button disabled={ctx.gameover}
+                        <button disabled={ctx.gameover || waiting}
                                 title={'Order by sets'}
                                 className={'rummikub-button'} onClick={() => {
                             onOrderByValColor()

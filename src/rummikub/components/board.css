@@ -778,3 +778,58 @@ svg.fa-smile-beam {
     0%, 100% { transform: translateY(0) scale(1); }
     40% { transform: translateY(-7px) scale(1.07); }
 }
+
+/* ============================================================
+   U15 / WS-6 — pre-match waiting overlay. A semi-transparent felt
+   scrim with a centered card covers the board while players are
+   still joining, and blocks tile interaction. z-index sits below
+   the fixed .sidenav (z-index 8) so the room-code stays clickable.
+   ============================================================ */
+.waiting-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(12, 32, 20, .72);
+    backdrop-filter: blur(2px);
+}
+.waiting-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 26px 34px;
+    border-radius: 16px;
+    background: var(--rack, #3a2a1a);
+    border: 1px solid var(--rack-border, rgba(0, 0, 0, .35));
+    box-shadow: 0 14px 32px rgba(0, 0, 0, .5);
+    color: var(--cream, #f7eed8);
+    text-align: center;
+}
+.waiting-title {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: .3px;
+}
+.waiting-count {
+    font-size: 15px;
+    opacity: .9;
+}
+.waiting-spinner {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 4px solid rgba(247, 238, 216, .25);
+    border-top-color: var(--cream, #f7eed8);
+}
+/* Juice gated: the spinner only spins when motion is allowed. */
+@media (prefers-reduced-motion: no-preference) {
+    .waiting-spinner {
+        animation: waiting-spin 1s linear infinite;
+    }
+}
+@keyframes waiting-spin {
+    to { transform: rotate(360deg); }
+}
