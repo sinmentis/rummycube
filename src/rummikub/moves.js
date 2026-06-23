@@ -156,6 +156,15 @@ function forceEndTurn({G, ctx, events}) {
     }
 }
 
+function forfeitTurn({G, ctx, playerID, events}) {
+    // Explicit, intentional "give up my turn": unlike the timeout-only
+    // forceEndTurn, this is gated solely on being the current player. Reuses
+    // drawTile with doRollback=true to revert staged tmp tiles, draw the
+    // penalty, and end the turn.
+    if (playerID !== ctx.currentPlayer) return INVALID_MOVE
+    drawTile({G, ctx, playerID, events}, true)
+}
+
 function rollbackChanges(G, player, ctx) {
     let tilesToReturnBack = []
     for (const [tile, tilePos] of Object.entries(G.tilePositions)) {
@@ -312,6 +321,7 @@ function checkGameOver(G, ctx, events) {
 export {
     endTurn,
     forceEndTurn,
+    forfeitTurn,
     moveTiles,
     validatePlayerMove,
     submitMeld,
