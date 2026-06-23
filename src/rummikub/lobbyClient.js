@@ -10,6 +10,7 @@ class GameLobbyClient {
         const result = await this.client.createMatch(GAME_NAME, {
             numPlayers: parseInt(playersCount),
             setupData: {timePerTurn: parseInt(timePerTurn)},
+            unlisted: true,
         });
         return result.matchID
     }
