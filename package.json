@@ -24,7 +24,7 @@
   },
   "scripts": {
     "start": "source .env && vite",
-    "build": "source .env.production.local && vite build",
+    "build": "vite build",
     "test": "jest",
     "serve": "node --env-file .env src/devServer.js",
     "dev": "vite"
