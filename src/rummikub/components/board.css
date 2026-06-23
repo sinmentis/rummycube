@@ -4,28 +4,62 @@ body {
 }
 
 /* Felt base scoped to the match wrapper (this class only exists in-game), so the
-   lobby keeps a readable light background until it is restyled in R5. */
+   lobby keeps a readable light background until it is restyled in R5.
+   S2-U9: bound the whole match to one screen below the top bar and lay it out as
+   a vertical column — felt/board region on top, wood rack pinned at the bottom —
+   so the rack + control row are always on-screen. The old `.board {min-height:
+   100vh}` ignored the 56px navbar and the fixed-height grid, so the rack and the
+   Sort/Draw/Submit/Undo/Redo row ran off the bottom on shorter laptops. */
 .board-container {
     background: var(--felt-base, #1c4528);
+    height: calc(100vh - var(--nav-h, 56px));
+    height: calc(100dvh - var(--nav-h, 56px));
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .game-navbar {
     height: 40px;
 }
 
-/* The green felt table that everything sits on. */
+/* The green felt table that everything sits on. Fills the remaining column space
+   and is itself a column: the board region (flexible, scrolls internally) above,
+   the rack (fixed) below. */
 .board {
     position: relative;
-    min-height: 100vh;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     padding: 2.5vh 1vw 3vh;
     background: var(--felt);
     box-shadow: var(--felt-vignette), inset 0 0 140px rgba(0, 0, 0, .35);
 }
 
+/* The board region: grows to fill the felt and scrolls internally when the
+   viewport is too short to show the full 9-row grid, instead of pushing the rack
+   and controls below the fold. On tall screens the grid fits, so it never
+   scrolls and the board proportions are unchanged. */
+.ref {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+}
+
 /* Transform-only kick target. The board "kick" animates THIS thin wrapper so the
-   heavy 20-box-shadow .board felt subtree above is never repainted by the shake. */
+   heavy 20-box-shadow .board felt subtree above is never repainted by the shake.
+   It sits between .board and the board region / rack, so it has to carry the flex
+   column through or .ref + .hand-buttons stop shrinking and the rack runs off the
+   bottom of the viewport. */
 .board-kick-layer {
     will-change: transform;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .sidenav {
@@ -46,6 +80,7 @@ body {
 /* The wooden rack that holds the player's hand + turn controls. */
 .hand-buttons {
     position: relative;
+    flex: 0 0 auto;
     width: fit-content;
     max-width: 94vw;
     margin: 2.2vh auto 1vh;
@@ -658,6 +693,14 @@ svg.fa-smile-beam {
 
     .avatar .username {
         font-size: .62rem;
+    }
+
+    /* Opponent side-seats: the rack is much taller on a phone (two hand rows +
+       a possibly-wrapped control row), so the default 58% side-seat anchor would
+       sit on top of it. Pull them up into the felt region, clear of the rack. */
+    .seat-left,
+    .seat-right {
+        top: 38%;
     }
 
     /* Countdown ring scales with the avatar via the svg viewBox. */
