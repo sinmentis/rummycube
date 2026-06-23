@@ -27,10 +27,12 @@ export function burstAt(x, y, combo = 1) {
     } catch (e) { /* never break gameplay */ }
 }
 
-// brief board shake; amplitude grows mildly with combo (capped)
+// brief board shake; amplitude grows mildly with combo (capped). Targets a thin
+// transform-only wrapper (.board-kick-layer, will-change: transform) so the kick
+// never repaints the heavy 20-box-shadow .board felt subtree.
 export function kick(combo = 1) {
     if (reduced()) return;
-    const el = document.querySelector('.board');
+    const el = document.querySelector('.board-kick-layer');
     if (!el) return;
     const scale = INTENSITY === 'max' ? 1.4 : INTENSITY === 'subtle' ? 0.6 : 1;
     const amp = Math.min(3 + combo, 9) * scale;

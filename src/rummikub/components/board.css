@@ -22,6 +22,12 @@ body {
     box-shadow: var(--felt-vignette), inset 0 0 140px rgba(0, 0, 0, .35);
 }
 
+/* Transform-only kick target. The board "kick" animates THIS thin wrapper so the
+   heavy 20-box-shadow .board felt subtree above is never repainted by the shake. */
+.board-kick-layer {
+    will-change: transform;
+}
+
 .sidenav {
     position: fixed;
     top: calc(var(--nav-h, 54px) + 8px);

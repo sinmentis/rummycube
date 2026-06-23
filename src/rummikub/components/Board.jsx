@@ -20,6 +20,7 @@ import GameOverModal from "./GameOverModal";
 import {handleTileSelection, handleLongPress} from "../boardUtil";
 import {play, place, milestone, buzz} from "../sound/sfx";
 import * as fx from "../juice/effects";
+import {resolveJuice} from "../juice/gating";
 import {countPlacedThisTurn} from "../juice/comboMath";
 import ComboOverlay from "./ComboOverlay";
 import ChatPanel from "./ChatPanel";
@@ -78,15 +79,20 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         const n = lp.count || 0;
         const by = (matchData && matchData[lp.seat] && matchData[lp.seat].name) || `Player ${Number(lp.seat) + 1}`;
         const cx = window.innerWidth / 2, cy = window.innerHeight * 0.4;
+        // Scale the celebration to who played + whether we're mid-drag (pure predicate).
+        const isDragging = !!activeTile || state.selectedTiles.length > 0;
+        const g = resolveJuice({lastPlay: lp, localSeat: playerID, isDragging});
         setCombo(n);
         setComboBy(by);
-        if (lp.groups && lp.groups.length) fx.celebrateGroups(lp.groups);
-        place(n);
-        fx.burstAt(cx, cy, n);
-        fx.kick(n);
-        if (n >= 3) { fx.flash('combo'); milestone(); }
+        if (g.celebrate && lp.groups && lp.groups.length) fx.celebrateGroups(lp.groups);
+        if (g.intensity === 'full') place(n);
+        // One primary screen effect per play (T9-3): flash on a high manipulation
+        // score, otherwise a confetti burst — never both at once.
+        if (g.flash && n >= 3) { fx.flash('combo'); if (g.win) milestone(); }
+        else if (g.burst) fx.burstAt(cx, cy, n);
+        if (g.kick) fx.kick(n);
         fx.floatText('+' + (lp.points || 0), cx, cy);
-        play('win');
+        if (g.win) play('win');
         clearTimeout(comboTimer.current);
         comboTimer.current = setTimeout(() => { setCombo(0); setComboBy(''); }, 1800);
     }, [G.lastPlay ? G.lastPlay.ts : null]);
@@ -408,6 +414,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
 
             {sidebar}
             <div className="board" onClick={onBoardClick}>
+                <div className="board-kick-layer">
                 {waiting &&
                     <div className="waiting-overlay" role="status" aria-live="polite">
                         <div className="waiting-card">
@@ -444,6 +451,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                     </div>
                     {submitReason &&
                         <div className="submit-reason" role="alert">{submitReason}</div>}
+                </div>
                 </div>
             </div>
         </div>
