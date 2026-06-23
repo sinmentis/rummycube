@@ -76,72 +76,98 @@ function isBoardValid(G) {
     return true
 }
 
-function isMoveValid(G, ctx) {
-    let seqs = extractSeqs(G)
-
-    let newFound = _.find(seqs, function (seq) {
-        for (let tile of seq) {
-            let tilePos = G.tilePositions[tile]
-            if (tilePos.tmp) {
-                return true
-            }
+function seqHasNewTile(G, seq) {
+    for (let tile of seq) {
+        if (G.tilePositions[tile].tmp) {
+            return true
         }
-    })
+    }
+    return false
+}
+
+function seqIsMixed(G, seq) {
+    let oldFound = false
+    let newFound = false
+    for (let tile of seq) {
+        if (G.tilePositions[tile].tmp) {
+            newFound = true
+        } else {
+            oldFound = true
+        }
+    }
+    return oldFound && newFound
+}
+
+// Regular-move evaluator: needs at least one newly placed tile, then every
+// sequence on the board must be valid. Returns a reason object.
+function _evaluateRegularMove(G, seqs) {
+    let newFound = _.find(seqs, (seq) => seqHasNewTile(G, seq))
     if (!newFound) {
-        console.debug("MOVE FAIL: NO NEW TILE")
-        return false
+        return {code: 'NO_NEW_TILE'}
     }
     for (const seq of seqs) {
         if (!isSequenceValid(seq)) {
-            return false
+            return {code: 'INVALID_GROUP', group: seq.map(Number)}
         }
     }
-    return true
+    return {code: 'OK'}
+}
+
+// First-move evaluator: no mixed (old+new) sequence, every sequence valid, and
+// the score of the newly placed sequences meets FIRST_MOVE_SCORE_LIMIT.
+function _evaluateFirstMove(G, seqs) {
+    let mixed = _.find(seqs, (seq) => seqIsMixed(G, seq))
+    if (mixed) {
+        return {code: 'MIXED_FIRST_MOVE', group: mixed.map(Number)}
+    }
+
+    let score = 0
+    for (let seq of seqs) {
+        let seqScore = countSeqScore(seq)
+        if (!seqScore) {
+            return {code: 'INVALID_GROUP', group: seq.map(Number)}
+        }
+        if (G.tilePositions[seq[0]].tmp) {
+            score += seqScore
+        }
+    }
+    if (score < FIRST_MOVE_SCORE_LIMIT) {
+        return {code: 'BELOW_30', score, required: FIRST_MOVE_SCORE_LIMIT}
+    }
+    return {code: 'OK'}
+}
+
+// Single source of truth for "why a submit would be rejected". The first-move
+// vs regular-move reason logic is shared with the boolean validators below.
+function _evaluateSubmit(G, ctx) {
+    if (!isBoardHasNewTiles(G)) {
+        return {code: 'NO_NEW_TILE'}
+    }
+    let seqs = extractSeqs(G)
+    return isFirstMove(G, ctx)
+        ? _evaluateFirstMove(G, seqs)
+        : _evaluateRegularMove(G, seqs)
+}
+
+// Reason code for the current submit attempt:
+//   OK | NO_NEW_TILE | BELOW_30 | INVALID_GROUP | MIXED_FIRST_MOVE
+// (RUN_TOO_SHORT is reserved but never emitted; see report — util.js collapses a
+// too-short run and a structurally invalid group both to countSeqScore() === 0.)
+function submitRejectReason(G, ctx) {
+    return _evaluateSubmit(G, ctx)
+}
+
+function isMoveValid(G, ctx) {
+    return _evaluateRegularMove(G, extractSeqs(G)).code === 'OK'
 }
 
 
 function isFirstMove(G, ctx) {
     return !G.firstMoveDone[ctx.currentPlayer]
-}function isFirstMoveValid(G, ctx) {
-    let seqs = extractSeqs(G)
-    console.debug(seqs)
+}
 
-    let mixed = _.find(seqs, function (seq) {
-        let oldFound = false
-        let newFound = false
-        for (let tile of seq) {
-            let tilePos = G.tilePositions[tile]
-            if (tilePos.tmp) {
-                newFound = true
-            } else {
-                oldFound = true
-            }
-        }
-        return oldFound && newFound
-    })
-    if (mixed) {
-        console.debug("FIRST MOVE FAIL: MIXED:", mixed)
-        return false
-    }
-
-    let score = 0;
-    for (let seq of seqs) {
-        let seqScore = countSeqScore(seq)
-        if (!seqScore) {
-            console.debug("FIRST MOVE FAIL: INV SEQ:", seq)
-            return false
-        }
-        let tile = seq[0]
-        let tilePos = G.tilePositions[tile]
-        if (tilePos.tmp) {
-            score += seqScore
-        }
-    }
-    if (score < FIRST_MOVE_SCORE_LIMIT) {
-        console.debug("FIRST MOVE FAIL: NOT ENOUGH SCORE: ", score)
-        return false
-    }
-    return true
+function isFirstMoveValid(G, ctx) {
+    return _evaluateFirstMove(G, extractSeqs(G)).code === 'OK'
 }
 
 // Whether clicking End right now would be kept by the server (validatePlayerMove).
@@ -169,6 +195,7 @@ export {
     isBoardHasNewTiles,
     isBoardValid,
     isSubmitAccepted,
+    submitRejectReason,
     getFormedGroups,
     extractSeqs,
 }
