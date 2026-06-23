@@ -410,6 +410,18 @@ svg.fa-smile-beam {
     box-shadow: 0 4px 0 #d98686, 0 0 12px rgba(220, 70, 70, .55);
 }
 
+.submit-reason {
+    flex-basis: 100%;
+    margin-top: 6px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background-color: #ffe3e3;
+    color: #8a1414;
+    border: 1px solid #e7a3a3;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
 .tile-pool-counter {
     display: inline-flex;
     align-items: center;

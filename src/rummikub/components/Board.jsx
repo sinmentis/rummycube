@@ -12,7 +12,8 @@ import Sidebar from "./Sidebar";
 import TableSeats from "./TableSeats";
 import PlayerAvatarWithTimer from "./PlayerAvatar";
 import {useTurnTimer} from "../hooks/useTurnTimer";
-import {extractSeqs, isBoardHasNewTiles, isBoardValid, isSubmitAccepted} from "../moveValidation";
+import {extractSeqs, isBoardHasNewTiles, isBoardValid, isSubmitAccepted, submitRejectReason} from "../moveValidation";
+import {submitReasonText} from "../submitReasonText";
 import {buildGridsFromTilePositions, getSecTs, isSequenceValid, count2dArrItems} from "../util";
 import GameOverModal from "./GameOverModal";
 import {handleTileSelection, handleLongPress} from "../boardUtil";
@@ -100,8 +101,16 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     }, [moves]);
     const [showInvalidTiles, setShowInvalidTiles] = useState(false);
     const [validTiles, setValidTiles] = useState([])
+    // Inline English reason for the last rejected submit. Non-destructive: tiles
+    // stay on the board; this just tells the player what to fix.
+    const [submitReason, setSubmitReason] = useState('')
     const [hoverPosition, setHoverPosition] = useState({})
     let longPressTimeoutId = useRef(null)
+
+    // Clear the inline reason whenever the board changes (a rejected submit is a
+    // no-op so tilePositions is unchanged and the message persists; moving or
+    // clearing a tile updates it and dismisses the message).
+    useEffect(() => { setSubmitReason('') }, [G.tilePositions])
 
     const moveTilesUseCb = useCallback((col, row, destGridId, tileIdObj, selectedTiles) => {
         moves.moveTiles(col, row, destGridId, tileIdObj, selectedTiles)
@@ -151,27 +160,48 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         moves.orderByValColor()
     }
 
+    // Pass the turn when there's nothing to submit (e.g. the pool is empty so Draw
+    // is unavailable and no tiles are staged). On a clean board the server's
+    // endTurn just advances the turn — no rollback, no penalty.
     function endTurn(e) {
+        moves.endTurn()
+    }
+
+    // Non-destructive manual submit. On accept the server commits the meld (the
+    // G.lastPlay celebration fires for everyone). On reject NOTHING destructive
+    // runs: the staged tiles stay, the turn does not end, and we surface an inline
+    // English reason plus the local green/red tile feedback so the player can fix
+    // it. Penalty rollback only ever happens via the timeout (forceEndTurn) or the
+    // explicit "Give up turn" (forfeitTurn) paths.
+    function onSubmitMeld(e) {
+        if (isSubmitAccepted(G, ctx)) {
+            setSubmitReason('')
+            moves.submitMeld()
+            return
+        }
         const placed = countPlacedThisTurn(G.tilePositions, BOARD_GRID_ID);
-        const accepted = isSubmitAccepted(G, ctx);
-        let delay = 150;
-        if (!accepted && placed > 0) {
-            // Local feedback for a rejected submit: green = tiles already in a valid
-            // run/set, red = the rest, so you can see what to fix. (A valid submit's
-            // celebration comes from G.lastPlay so everyone sees it.)
+        if (placed > 0) {
             const validNow = extractSeqs(G).filter(seq => isSequenceValid(seq)).flat();
             setValidTiles(validNow);
             setShowInvalidTiles(true);
             fx.flash('bad');
             fx.kick(6);
             buzz();
-            delay = 600;
+            setSubmitReason(submitReasonText(submitRejectReason(G, ctx)));
+            setTimeout(() => {
+                setShowInvalidTiles(false)
+                setValidTiles([])
+            }, 600)
         }
-        setTimeout(() => {
-            setShowInvalidTiles(false)
-            setValidTiles([])
-            moves.endTurn()
-        }, delay)
+    }
+
+    // Explicit "Give up turn": confirm, then forfeit (tiles roll back + draw one +
+    // end turn). Distinct from a rejected submit, which is a no-op.
+    function onForfeitTurn(e) {
+        if (window.confirm("Give up your turn? Your tiles go back and you'll draw one.")) {
+            setSubmitReason('')
+            moves.forfeitTurn()
+        }
     }
 
     // Any connected client fires this when the server-set deadline passes. The
@@ -184,21 +214,44 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     }, [moves, ctx.gameover])
 
 
-    // Live cue on the End button: green when the current board would be accepted
-    // as a submit, red when it would be rejected. Only while it's your move and
-    // you have placed something (otherwise the button stays neutral).
+    // Live cue on the Submit-meld button: green when the current board would be
+    // accepted as a submit, red when it would be rejected. Only while it's your
+    // move and you have placed something (otherwise the button stays neutral).
     const endHasPending = ctx.currentPlayer === playerID && !ctx.gameover && isBoardHasNewTiles(G);
     const endStateClass = endHasPending ? (isSubmitAccepted(G, ctx) ? ' end-valid' : ' end-invalid') : '';
-    const endBut = (<button disabled={!(ctx.currentPlayer === playerID) || ctx.gameover}
-                            className={'rummikub-button' + endStateClass}
+    const isMyTurn = ctx.currentPlayer === playerID && !ctx.gameover;
+    const hasStaged = isBoardHasNewTiles(G);
+
+    // Pass button, used only when there's nothing to submit and no tile to draw.
+    const endBut = (<button disabled={!isMyTurn}
+                            className={'rummikub-button'}
+                            title={'Pass your turn'}
                             onClick={() => {
                                 endTurn()
                             }}>End
     </button>)
 
+    // Non-destructive submit. Disabled until at least one tile is staged.
+    const submitBut = (<button disabled={!isMyTurn || !hasStaged}
+                               className={'rummikub-button' + endStateClass}
+                               title={'Submit your placed tiles as a meld'}
+                               onClick={() => {
+                                   onSubmitMeld()
+                               }}>Submit meld
+    </button>)
+
+    // Explicit forfeit, shown only when you have staged tiles to give back.
+    const forfeitBut = (<button disabled={!isMyTurn || !hasStaged}
+                                className={'rummikub-button'}
+                                title={'Return your tiles and draw — ends your turn'}
+                                onClick={() => {
+                                    onForfeitTurn()
+                                }}>Give up turn
+    </button>)
+
     const drawBut = (<button
-        disabled={!(ctx.currentPlayer === playerID && G.tilesPool.length) || ctx.gameover || ctx.phase === 'playersJoin'}
-        title={'Take a tile and skip the turn'}
+        disabled={!(ctx.currentPlayer === playerID && G.tilesPool.length) || ctx.gameover || ctx.phase === 'playersJoin' || hasStaged}
+        title={hasStaged ? 'Clear your placed tiles to draw instead' : 'Take a tile and skip the turn'}
         className={'rummikub-button'}
         onClick={() => {
             drawTile()
@@ -305,9 +358,15 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         </div>
     ) : null
 
-    // todo finish and check
+    // Turn controls:
+    //  - staged tiles on your turn -> Submit meld (active) + Draw (disabled, with
+    //    a tooltip explaining why) + Give up turn.
+    //  - your turn, nothing staged, tiles in the pool -> Draw.
+    //  - otherwise (e.g. pool empty, nothing staged) -> End, to pass the turn.
     let drawOrEnd
-    if (G.tilesPool.length > 0 && !isBoardHasNewTiles(G)) {
+    if (isMyTurn && hasStaged) {
+        drawOrEnd = (<>{submitBut}{drawBut}{forfeitBut}</>)
+    } else if (G.tilesPool.length > 0 && !hasStaged) {
         drawOrEnd = drawBut
     } else {
         drawOrEnd = endBut
@@ -349,6 +408,8 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                         {undoBut}
                         {redoBut}
                     </div>
+                    {submitReason &&
+                        <div className="submit-reason" role="alert">{submitReason}</div>}
                 </div>
             </div>
         </div>
