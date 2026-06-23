@@ -357,6 +357,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             matchData={matchData || []}
             matchID={matchID}
             hands={hands}
+            handCounts={G.handCounts}
             timerExpireAt={showTurnTimer ? G.timerExpireAt : null}
             timePerTurn={G.timePerTurn}
             showTurnTimer={showTurnTimer}
@@ -370,7 +371,9 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                                    name={selfData.name}
                                    matchId={matchID}
                                    seatId={Number(playerID)}
-                                   tiles={count2dArrItems(hands[playerID])}
+                                   tiles={G.handCounts && G.handCounts[playerID] != null
+                                       ? G.handCounts[playerID]
+                                       : count2dArrItems(hands[playerID])}
                                    isConnected={selfData.isConnected}
                                    timerExpireAt={showTurnTimer ? G.timerExpireAt : null}
                                    totalTime={G.timePerTurn}

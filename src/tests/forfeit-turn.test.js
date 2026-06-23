@@ -65,16 +65,20 @@ test('forfeitTurn by the current player rolls back staged tiles, draws a penalty
 
     cur.moves.forfeitTurn();
 
-    const after = c0.getState();
+    // Read from the forfeiting player's own client: playerView hides a player's hand
+    // (and recentlyDrawnTiles) from everyone else, so the rolled-back tile is only
+    // visible in the owner's view. Board tiles, tilesPool.length and ctx stay public.
+    const after = cur.getState();
     // Staged tile is returned to the current player's hand (no tmp tile left on board).
     const tmpOnBoard = Object.values(after.G.tilePositions)
         .filter(p => p && p.gridId === BOARD_GRID_ID && p.tmp);
     expect(tmpOnBoard.length).toBe(0);
     expect(after.G.tilePositions[tiles[0]].gridId).toBe(HAND_GRID_ID);
     expect(after.G.tilePositions[tiles[0]].playerID).toBe(current);
-    // A penalty tile was drawn (firstMoveDone false => exactly one).
+    // A penalty tile was drawn (firstMoveDone false => exactly one): the pool shrank by
+    // one and the forfeiting player now holds 4 tiles (3 staged-back + 1 penalty).
     expect(after.G.tilesPool.length).toBe(poolLenBefore - 1);
-    expect(after.G.recentlyDrawnTiles.length).toBe(1);
+    expect(handTiles(after.G, current).length).toBe(4);
     // Turn advanced.
     expect(after.ctx.currentPlayer).not.toBe(current);
 });

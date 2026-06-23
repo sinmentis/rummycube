@@ -1,5 +1,5 @@
 import {Stage} from 'boardgame.io/dist/cjs/core.js';
-import {getTiles} from './util.js'
+import {getTiles, playerView} from './util.js'
 import {drawTile, endTurn, forceEndTurn, forfeitTurn, moveTiles, onPlayPhaseBegin, onTurnBegin, onTurnEnd, redo, submitMeld, undo} from "./moves.js";
 import {GAME_NAME, HAND_COLS, HAND_GRID_ID, HAND_ROWS, TILES_TO_DRAW} from "./constants.js";
 import {orderByColorVal, orderByValColor} from "./orderTiles.js";
@@ -84,6 +84,7 @@ const Rummikub = {
     },
     minPlayers: 1,
     maxPlayers: 4,
+    playerView,
 };
 export {Rummikub}
 
