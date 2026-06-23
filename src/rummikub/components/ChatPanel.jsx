@@ -17,8 +17,11 @@ export default function ChatPanel({chatMessages, sendChatMessage, matchData, mat
     const [draft, setDraft] = useState("");
     const [menu, setMenu] = useState(null); // null | 'emoji' | 'phrases'
     const [typers, setTypers] = useState({});
+    const [open, setOpen] = useState(false); // narrow-screen FAB: collapsed by default
+    const [unread, setUnread] = useState(false);
     const listRef = useRef(null);
     const seenRef = useRef(0);
+    const unreadRef = useRef(0);
     const lastPingRef = useRef(0);
 
     useEffect(() => {
@@ -57,6 +60,17 @@ export default function ChatPanel({chatMessages, sendChatMessage, matchData, mat
     useEffect(() => {
         if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
     }, [shown.length]);
+
+    // Unread dot on the collapsed FAB: while closed, light it when new messages
+    // arrive; opening the panel marks everything seen.
+    useEffect(() => {
+        if (open) {
+            unreadRef.current = shown.length;
+            setUnread(false);
+        } else if (shown.length > unreadRef.current) {
+            setUnread(true);
+        }
+    }, [shown.length, open]);
 
     if (typeof sendChatMessage !== "function") return null;
 
@@ -108,9 +122,22 @@ export default function ChatPanel({chatMessages, sendChatMessage, matchData, mat
             : "";
 
     return (
-        <div className="chat-root">
+        <div className={`chat-root ${open ? "open" : ""}`}>
+            <button type="button"
+                    className={`chat-fab ${unread ? "unread" : ""}`}
+                    onClick={() => setOpen(o => !o)}
+                    aria-label="Open chat" aria-expanded={open} title="Chat">
+                <span aria-hidden="true">💬</span>
+                {unread && <span className="chat-fab-dot" aria-hidden="true"/>}
+            </button>
+
             <div className="chat-panel">
-                <div className="chat-head"><span>Chat</span></div>
+                <div className="chat-head">
+                    <span>Chat</span>
+                    <button type="button" className="chat-close"
+                            onClick={() => setOpen(false)}
+                            aria-label="Close chat" title="Close chat">✕</button>
+                </div>
 
                 <div className="chat-messages" ref={listRef}>
                     {visible.length === 0 && <div className="chat-empty">Say hi 👋</div>}
