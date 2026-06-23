@@ -726,9 +726,9 @@ svg.fa-smile-beam {
     }
 
     .ref .grid-container {
-        grid-template-columns: repeat(32, 8.4vw) !important;
+        grid-template-columns: repeat(32, max(8.4vw, 48px)) !important;
         /* keep the faint cell lines aligned to the wider mobile track */
-        background-size: 8.4vw 7vh, 8.4vw 7vh;
+        background-size: max(8.4vw, 48px) 7vh, max(8.4vw, 48px) 7vh;
     }
 
     /* Wood rack: pinned to the bottom of the column, always visible. */
@@ -749,16 +749,21 @@ svg.fa-smile-beam {
     }
 
     .hand-buttons .grid-container {
-        grid-template-columns: repeat(22, 8.4vw) !important;
+        grid-template-columns: repeat(22, max(8.4vw, 48px)) !important;
     }
 
     .controls-wrapper {
         margin-top: 8px;
     }
 
+    /* S2-U6: grow the touch target toward ~44px on phones. The grid track
+       above is widened to match (max(8.4vw, 48px)) so the larger tile still
+       sits inside its cell and the grid layout is preserved. */
     div.tile {
-        width: 7.6vw;
-        height: 5.6vh;
+        width: max(7.6vw, 44px);
+        height: max(5.6vh, 44px);
+        min-width: 44px;
+        min-height: 44px;
         border-radius: 6px;
         font-size: clamp(17px, 5vw, 26px);
     }
@@ -772,6 +777,9 @@ svg.fa-smile-beam {
         font-size: 15px;
         padding: 8px 14px;
         margin: 0 4px;
+        /* S2-U6: ensure the control buttons clear the ~44px touch target. */
+        min-height: 44px;
+        min-width: 44px;
     }
 }
 

@@ -25,6 +25,7 @@ import {resolveJuice} from "../juice/gating";
 import {countPlacedThisTurn} from "../juice/comboMath";
 import ComboOverlay from "./ComboOverlay";
 import ChatPanel from "./ChatPanel";
+import {useUndoRedoHotkeys} from "./useUndoRedoHotkeys";
 import _ from "lodash";
 
 const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, events, chatMessages, sendChatMessage}) {
@@ -282,6 +283,16 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     // drag) and disable every turn control. Mirrors the allJoined / endPhase
     // logic without changing it.
     const waiting = isWaitingForPlayers(ctx, matchData);
+
+    // S2-U6: keyboard Undo/Redo. The guards mirror the undoBut/redoBut disabled
+    // conditions exactly so the shortcuts only fire on your turn when there is
+    // something to undo/redo. handlers are stable so the listener isn't churned.
+    const canUndo = !!G.gameStateStack.length && !ctx.gameover && ctx.currentPlayer === playerID && !waiting;
+    const canRedo = !!G.redoMoveStack.length && !ctx.gameover && ctx.currentPlayer === playerID && !waiting;
+    const onUndoKey = useCallback(() => moves.undo(), [moves]);
+    const onRedoKey = useCallback(() => moves.redo(), [moves]);
+    useUndoRedoHotkeys({canUndo, canRedo, onUndo: onUndoKey, onRedo: onRedoKey});
+
     // Pass button, used only when there's nothing to submit and no tile to draw.
     const endBut = (<button disabled={!isMyTurn || waiting}
                             className={'rummikub-button'}
