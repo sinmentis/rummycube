@@ -11,7 +11,7 @@ import {
 import Sidebar from "./Sidebar";
 import TableSeats from "./TableSeats";
 import PlayerAvatarWithTimer from "./PlayerAvatar";
-import {useTurnTimer} from "../hooks/useTurnTimer";
+import TurnDeadlineWatcher from "./TurnDeadlineWatcher";
 import {extractSeqs, isBoardHasNewTiles, isBoardValid, isSubmitAccepted, submitRejectReason} from "../moveValidation";
 import {submitReasonText} from "../submitReasonText";
 import {buildGridsFromTilePositions, getSecTs, isSequenceValid, count2dArrItems} from "../util";
@@ -314,12 +314,6 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
 
     const allJoined = (matchData || []).length && _.every(matchData, (item) => item.name)
     const showTurnTimer = (matchData || []).length && !ctx.gameover && allJoined
-    const timeLeft = useTurnTimer({
-        timerExpireAt: showTurnTimer ? G.timerExpireAt : null,
-        timePerTurn: G.timePerTurn,
-        onTimeout: onTurnTimeout,
-        isActivePlayer: playerID === ctx.currentPlayer,
-    })
     const sidebar = (
         <Sidebar
             matchData={matchData || []}
@@ -337,7 +331,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             matchData={matchData || []}
             matchID={matchID}
             hands={hands}
-            timeLeft={timeLeft}
+            timerExpireAt={showTurnTimer ? G.timerExpireAt : null}
             timePerTurn={G.timePerTurn}
             showTurnTimer={showTurnTimer}
         />
@@ -352,7 +346,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                                    seatId={Number(playerID)}
                                    tiles={count2dArrItems(hands[playerID])}
                                    isConnected={selfData.isConnected}
-                                   timeLeft={timeLeft}
+                                   timerExpireAt={showTurnTimer ? G.timerExpireAt : null}
                                    totalTime={G.timePerTurn}
                                    showTurnTimer={showTurnTimer}/>
         </div>
@@ -386,6 +380,9 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             {sidebar}
             <div className="board" onClick={onBoardClick}>
                 <ComboOverlay combo={combo} by={comboBy}/>
+                <TurnDeadlineWatcher
+                    timerExpireAt={showTurnTimer ? G.timerExpireAt : null}
+                    onTimeout={onTurnTimeout}/>
                 {tableSeats}
                 {boardGrid}
                 <div className={'hand-buttons'}>

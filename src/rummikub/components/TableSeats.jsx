@@ -6,7 +6,7 @@ import {tablePositions} from "../seats/tableLayout";
 // Opponent avatars laid out around the felt like a mahjong table (top/left/right
 // by seat order). Self is rendered next to the rack, not here. Renders as a
 // non-interactive overlay inside .board so it never blocks tile dragging.
-const TableSeats = function ({currentPlayer, playerID, matchData, matchID, hands, timeLeft, timePerTurn, showTurnTimer}) {
+const TableSeats = function ({currentPlayer, playerID, matchData, matchID, hands, timerExpireAt, timePerTurn, showTurnTimer}) {
     const positions = tablePositions(matchData.length, Number(playerID));
 
     return (
@@ -24,7 +24,7 @@ const TableSeats = function ({currentPlayer, playerID, matchData, matchID, hands
                                                      seatId={data.id}
                                                      tiles={tiles}
                                                      isConnected={data.isConnected}
-                                                     timeLeft={timeLeft}
+                                                     timerExpireAt={timerExpireAt}
                                                      totalTime={timePerTurn}
                                                      showTurnTimer={showTurnTimer}/>
                             : <div className="player-pending">Seat {data.id + 1}<br/>waiting…</div>}

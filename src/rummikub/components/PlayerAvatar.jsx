@@ -1,14 +1,19 @@
 import React, {useEffect, useState} from "react";
 import {stringToColor} from "../util";
 import {catAvatarUrl} from "../avatars/catAvatar";
+import {useCountdown} from "../hooks/useCountdown";
 
 const RADIUS = 45;
 const STROKE = 6;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-const PlayerAvatarWithTimer = ({name, matchId, seatId, tiles, isActive, isConnected, timeLeft, totalTime, showTurnTimer}) => {
+const PlayerAvatarWithTimer = ({name, matchId, seatId, tiles, isActive, isConnected, timerExpireAt, totalTime, showTurnTimer}) => {
     const [dashOffset, setDashOffset] = useState(CIRCUMFERENCE);
     const [strokeColor, setStrokeColor] = useState("#00f");
+
+    // Only the active avatar runs its own countdown, so a 400ms tick re-renders
+    // just this subtree — never Board. Non-active avatars pass null and idle.
+    const timeLeft = useCountdown(isActive && showTurnTimer ? timerExpireAt : null, totalTime);
 
 
     useEffect(() => {
