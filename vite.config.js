@@ -12,6 +12,7 @@ export default defineConfig(({mode}) => {
             devServerPlugin(),
             sourcemapPlugin(),
             buildPathPlugin(),
+            dropConsolePlugin(),
             basePlugin(),
             importPrefixPlugin(),
             htmlPlugin(mode),
@@ -116,6 +117,21 @@ function buildPathPlugin() {
                     outDir: BUILD_PATH || "build",
                 },
             };
+        },
+    };
+}
+
+// Strip console.* and debugger statements from the production bundle only.
+// esbuild's `drop` runs during the build transform; gating on command === "build"
+// keeps console output intact during local dev (`vite serve`).
+// https://esbuild.github.io/api/#drop
+function dropConsolePlugin() {
+    return {
+        name: "drop-console-plugin",
+        config(_, {command}) {
+            return command === "build"
+                ? {esbuild: {drop: ["console", "debugger"]}}
+                : {};
         },
     };
 }
