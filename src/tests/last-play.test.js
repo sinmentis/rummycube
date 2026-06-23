@@ -39,7 +39,10 @@ test('a valid submit records G.lastPlay so every client can celebrate it', () =>
     const {G} = c1.getState();
     expect(G.lastPlay).toBeTruthy();
     expect(G.lastPlay.seat).toBe('0');
-    expect(G.lastPlay.count).toBe(3);
+    expect(G.lastPlay.count).toBe(6); // manipulation: 3*1 group + 0 rearrange + 1*3 placed
+    expect(G.lastPlay.manipulation).toBe(6);
+    expect(G.lastPlay.placed).toBe(3);
+    expect(G.lastPlay.rearranged).toBe(0);
     expect(G.lastPlay.points).toBe(15); // 4 + 5 + 6
     expect(G.lastPlay.groups.length).toBe(1);
     expect(G.lastPlay.groups[0].slice().sort((a, b) => a - b)).toEqual([red4, red5, red6].sort((a, b) => a - b));

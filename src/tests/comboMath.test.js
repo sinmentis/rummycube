@@ -1,4 +1,19 @@
-import {comboLabel, particleCount} from '../rummikub/juice/comboMath';
+import {comboLabel, particleCount, manipulationScore} from '../rummikub/juice/comboMath';
+
+test('manipulationScore weights groups + rearrange over raw tile count', () => {
+    // A surgical 1-tile play that forms 2 groups beats a 3-tile flat dump.
+    expect(manipulationScore({groups: 2, rearranged: 0, placed: 1}))
+        .toBeGreaterThan(manipulationScore({groups: 1, rearranged: 0, placed: 3}));
+    // A rearrange-heavy play also beats a flat dump of the same tile count.
+    expect(manipulationScore({groups: 1, rearranged: 3, placed: 1}))
+        .toBeGreaterThan(manipulationScore({groups: 1, rearranged: 0, placed: 1}));
+    // Starting weights: W_GROUP=3, W_INTEG=2, W_PLACE=1.
+    expect(manipulationScore({groups: 2, rearranged: 0, placed: 1})).toBe(7);
+    expect(manipulationScore({groups: 1, rearranged: 0, placed: 3})).toBe(6);
+    // Defaults to 0 when given nothing.
+    expect(manipulationScore({})).toBe(0);
+});
+
 test('comboLabel tiers at 3/5/7', () => {
   expect(comboLabel(2)).toBe('');
   expect(comboLabel(3)).toBe('NICE');

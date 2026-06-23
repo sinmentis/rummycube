@@ -21,6 +21,7 @@ import {current} from 'immer';
 
 import {pushTilesToGrid} from "./orderTiles.js";
 import {orderTilesBySource} from "./dndUtil.js";
+import {manipulationScore} from "./juice/comboMath.js";
 
 import { INVALID_MOVE } from 'boardgame.io/dist/cjs/core.js';
 
@@ -233,11 +234,25 @@ function applyValidMove({G, ctx, events}) {
     const groups = getFormedGroups(G)
     const tmp = Object.values(G.tilePositions).filter(p => p && p.gridId === BOARD_GRID_ID && p.tmp)
     const points = tmp.reduce((s, p) => s + (isJoker(p.id) ? 0 : getTileValue(p.id)), 0)
+    // Manipulation score rewards groups formed + existing board tiles rearranged
+    // this turn over a raw tile dump. prevTilePositions is the turn-start baseline
+    // and is reset next turn, so this must run here, pre-freeze.
+    const placed = tmp.length
+    const baseline = G.prevTilePositions || {}
+    const rearranged = Object.values(G.tilePositions).filter(p => {
+        if (!p || p.gridId !== BOARD_GRID_ID || p.tmp) return false
+        const prev = baseline[p.id]
+        return prev && prev.gridId === BOARD_GRID_ID && (prev.col !== p.col || prev.row !== p.row)
+    }).length
+    const score = manipulationScore({groups: groups.length, rearranged, placed})
     G.lastPlay = {
         seat: player,
-        count: tmp.length,
+        count: score,
         points: points,
+        manipulation: score,
         groups: groups.map(seq => seq.map(Number)),
+        rearranged: rearranged,
+        placed: placed,
         ts: getSecTs(),
     }
     freezeTmpTiles(G)
