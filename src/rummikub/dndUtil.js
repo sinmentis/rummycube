@@ -1,3 +1,5 @@
+import {HAND_GRID_ID} from "./constants";
+
 export function makeSlotId(gridId, col, row) {
     return `${gridId}:${col}:${row}`;
 }
@@ -31,13 +33,21 @@ export function orderTilesBySource(tileIds, tilePositions) {
 // Pure: a cell counts as occupied iff some tile of `gridId` whose id is NOT in
 // excludeIds sits at that col/row. excludeIds removes the dragged selection so a
 // tile can land on (or run through) the cells it currently occupies.
-export function buildRowOccupancy(tilePositions, gridId, excludeIds) {
+//
+// Hand grids are per-player but share `gridId === HAND_GRID_ID` and col/row ranges,
+// and there is no playerView (every client holds the full G.tilePositions, opponents'
+// hands included). So for the hand grid we must scope occupancy to `playerID` — only
+// the current player's own hand tiles count. The board grid is shared/unpartitioned,
+// so playerID is ignored there.
+export function buildRowOccupancy(tilePositions, gridId, excludeIds, playerID) {
     const exclude = new Set(excludeIds);
+    const scopeToPlayer = gridId === HAND_GRID_ID;
     const taken = new Set();
     for (const tileId in tilePositions) {
         if (exclude.has(tileId)) continue;
         const pos = tilePositions[tileId];
         if (pos.gridId !== gridId) continue;
+        if (scopeToPlayer && String(pos.playerID) !== String(playerID)) continue;
         taken.add(`${pos.col}:${pos.row}`);
     }
     return (col, row) => taken.has(`${col}:${row}`);

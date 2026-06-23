@@ -106,7 +106,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         // tile(s) from occupancy so a selection can land where it already sits.
         const selectionLength = selectedTiles.length || 1;
         const excludeIds = selectedTiles.length ? selectedTiles : [id];
-        const isOccupied = buildRowOccupancy(gRef.current.tilePositions, gridId, excludeIds);
+        const isOccupied = buildRowOccupancy(gRef.current.tilePositions, gridId, excludeIds, playerID);
         const maxCols = gridId === BOARD_GRID_ID ? BOARD_COLS : HAND_COLS;
         const result = resolveDropSlot({gridId, col, row}, isOccupied, selectionLength, maxCols);
         if (!result.ok) {
@@ -119,7 +119,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         moves.moveTiles(result.cols[0], row, gridId, {id}, selectedTiles);
         play('place');
         setState({selectedTiles: [], lastSelectedTileId: null});
-    }, [moves]);
+    }, [moves, playerID]);
     const [showInvalidTiles, setShowInvalidTiles] = useState(false);
     const [validTiles, setValidTiles] = useState([])
     // Inline English reason for the last rejected submit. Non-destructive: tiles
