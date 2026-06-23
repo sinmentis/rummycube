@@ -38,7 +38,7 @@ class GameLobbyClient {
     }
 
     async playAgain(matchId, playerMetaData) {
-        return await this.client.playAgain(GAME_NAME, matchId, playerMetaData)
+        return await this.client.playAgain(GAME_NAME, matchId, {...playerMetaData, unlisted: true})
     }
 }
 

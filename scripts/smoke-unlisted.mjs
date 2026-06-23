@@ -52,5 +52,28 @@ const assert = (cond, msg) => {
     }));
     assert(typeof joined.playerCredentials === 'string', 'join seat 0 returns credentials');
 
-    console.log('SMOKE OK: unlisted matches are private but joinable by ID');
+    // 5) "Play again": boardgame.io's playAgain reads `unlisted` from the
+    //    REQUEST BODY, not the parent match metadata, so the next match would
+    //    be LISTED unless we thread the flag through. Exercise the exact body
+    //    the client now sends and assert the next match is ALSO unlisted.
+    const again = await j(await fetch(`${BASE}/games/${GAME}/${matchID}/playAgain`, {
+        method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({playerID: '0', credentials: joined.playerCredentials, unlisted: true}),
+    }));
+    const nextMatchID = again.nextMatchID;
+    assert(typeof nextMatchID === 'string' && nextMatchID.length > 0, `playAgain returns a next match ID (${nextMatchID})`);
+    assert(nextMatchID !== matchID, 'playAgain creates a distinct next match');
+
+    // 6) public list must NOT contain the next match either.
+    const listAfter = await j(await fetch(`${BASE}/games/${GAME}`));
+    const idsAfter = (listAfter.matches || []).map((m) => m.matchID);
+    assert(!idsAfter.includes(nextMatchID), `public GET /games/${GAME} does NOT list the playAgain match`);
+
+    // 7) the next match is still reachable by ID (players can move on).
+    const nextMatch = await j(await fetch(`${BASE}/games/${GAME}/${nextMatchID}`));
+    assert(nextMatch && nextMatch.matchID === nextMatchID, `GET /games/${GAME}/<nextId> still returns the match`);
+    assert(Array.isArray(nextMatch.players), 'next match returns the seat list (join path intact)');
+
+    console.log('SMOKE OK: unlisted matches (incl. playAgain) are private but joinable by ID');
 })().catch((e) => { console.error('SMOKE ERROR', e); process.exit(1); });
