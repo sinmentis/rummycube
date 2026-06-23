@@ -10,6 +10,15 @@ export const GameLobby = function () {
 
     return (
         <div className='lobby-page'>
+            <div className="lobby-hero">
+                <h1 className="lobby-hero-title">RummyCube</h1>
+                <p className="lobby-hero-tagline">Play rummy tiles with friends in your browser.</p>
+                <ul className="lobby-hero-points">
+                    <li>Create a room and share the code, or join with a friend's code.</li>
+                    <li>Build runs and sets, then race to empty your rack first.</li>
+                    <li>New here? Hit "How to play" up top for the quick rules.</li>
+                </ul>
+            </div>
             <div className="lobby-card">
                 <div className="lobby-tabs">
                     <button onClick={() => setToggle(true)}
