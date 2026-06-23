@@ -740,7 +740,12 @@ svg.fa-smile-beam {
         padding: 1vh 2vw 1.2vh;
     }
 
-    .hand-buttons > div:first-child {
+    /* Hand grid wrapper: scroll horizontally so all 22 columns stay
+       reachable on a narrow phone (the .grid-container below sets a fixed
+       track width that overflows the rack). Targets the GridContainer
+       wrapper directly (.hand-grid) — the avatar/banner render before it,
+       so a positional selector would miss the grid. */
+    .hand-buttons .hand-grid {
         width: 100% !important;
         margin: 0 !important;
         overflow-x: auto;

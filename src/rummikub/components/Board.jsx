@@ -369,6 +369,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     const handGrid = (
         <GridContainer rows={HAND_ROWS}
                        cols={HAND_COLS}
+                       className="hand-grid"
                        tiles2dArray={hands[playerID]}
                        gridId={HAND_GRID_ID}
                        canDnD={!waiting}

@@ -1,8 +1,9 @@
 import React from 'react';
 import GridSlot from "./GridSlot";
 
-const Centered = function ({cols, colWidth, children}) {
+const Centered = function ({cols, colWidth, className, children}) {
     return <div
+        className={className}
         style={{
             "width": `${cols * colWidth}vw`,
             "margin": `0 auto`,
@@ -30,7 +31,8 @@ const GridContainer = function ({
                                     highlightTiles,
                                     selectedTiles,
                                     handleTileSelection,
-                                    newlyAdded
+                                    newlyAdded,
+                                    className
                                 }) {
 
     let colWidth = 2.2
@@ -66,7 +68,7 @@ const GridContainer = function ({
         }
     }
     return (
-        <Centered cols={cols} colWidth={colWidth}>
+        <Centered cols={cols} colWidth={colWidth} className={className}>
             <Grid colWidth={colWidth} cols={cols} rows={rows}>{gridItems}</Grid>
         </Centered>
     )
