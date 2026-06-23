@@ -10,6 +10,7 @@ const GridSlot = React.memo(({
                                  row,
                                  gridId,
                                  canDnD,
+                                 isDragActive,
                                  isSelected,
                                  isValid,
                                  isNewlyAdded,
@@ -34,7 +35,7 @@ const GridSlot = React.memo(({
     return <div
         ref={setNodeRef}
         style={{backgroundColor: (canDnD && isOver) ? 'rgba(71,179,86,0.43)' : ''}}
-        className='grid-item'/>
+        className={'grid-item' + (isDragActive && canDnD ? ' slot-valid' : '')}/>
 })
 
 

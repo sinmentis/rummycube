@@ -24,6 +24,7 @@ const GridContainer = function ({
                                     rows,
                                     cols,
                                     canDnD,
+                                    isDragActive,
                                     gridId,
                                     validTiles,
                                     highlightTiles,
@@ -49,6 +50,7 @@ const GridContainer = function ({
                 : !!newlyAdded
             let gridTile = <GridSlot
                 canDnD={canDnD}
+                isDragActive={isDragActive}
                 handleTileSelection={handleTileSelection}
                 gridId={gridId}
                 row={y}

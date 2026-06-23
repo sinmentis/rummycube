@@ -27,6 +27,22 @@ export function orderTilesBySource(tileIds, tilePositions) {
     });
 }
 
+// Build an isOccupied(col,row) predicate for a single grid from tilePositions.
+// Pure: a cell counts as occupied iff some tile of `gridId` whose id is NOT in
+// excludeIds sits at that col/row. excludeIds removes the dragged selection so a
+// tile can land on (or run through) the cells it currently occupies.
+export function buildRowOccupancy(tilePositions, gridId, excludeIds) {
+    const exclude = new Set(excludeIds);
+    const taken = new Set();
+    for (const tileId in tilePositions) {
+        if (exclude.has(tileId)) continue;
+        const pos = tilePositions[tileId];
+        if (pos.gridId !== gridId) continue;
+        taken.add(`${pos.col}:${pos.row}`);
+    }
+    return (col, row) => taken.has(`${col}:${row}`);
+}
+
 // Snap a drop to legal slot(s) in the target row. Pure: no mutation, deterministic.
 // SINGLE (selectionLength <= 1): use the target cell if free, else the nearest free
 // col in the same row (tie -> lower col). MULTI (>= 2): need that many contiguous

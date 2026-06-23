@@ -3,7 +3,7 @@ import './board.css';
 import '../theme/classic.css';
 import GridContainer from "./GridContainer";
 import {DndContext, DragOverlay, MouseSensor, TouchSensor, useSensor, useSensors} from '@dnd-kit/core'
-import {parseSlotId, orderTilesBySource} from "../dndUtil";
+import {parseSlotId, orderTilesBySource, resolveDropSlot, buildRowOccupancy} from "../dndUtil";
 import {TilePreview} from "./Tile";
 import {
     HAND_GRID_ID, BOARD_GRID_ID, BOARD_ROWS, BOARD_COLS, HAND_ROWS, HAND_COLS
@@ -51,6 +51,9 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     const [state, setState] = useState({selectedTiles: [], lastSelectedTileId: null})
 
     const [activeTile, setActiveTile] = useState(null);
+    // True between onDragStart and onDragEnd. Threaded down so empty board cells
+    // can show the .slot-valid droppable cue while a drag is in flight.
+    const [isDragActive, setIsDragActive] = useState(false);
     const stateRef = useRef(state);
     useEffect(() => { stateRef.current = state; }, [state]);
     const gRef = useRef(G);
@@ -89,14 +92,31 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     const onDragStart = useCallback((e) => {
         const id = e.active.id;
         setActiveTile(id);
+        setIsDragActive(true);
         setState(prev => prev.selectedTiles.includes(id) ? prev : {selectedTiles: [id], lastSelectedTileId: id});
     }, []);
     const onDragEnd = useCallback((e) => {
         setActiveTile(null);
+        setIsDragActive(false);
         if (!e.over) return;
         const {gridId, col, row} = parseSlotId(String(e.over.id));
         const id = e.active.id;
-        moves.moveTiles(col, row, gridId, {id}, stateRef.current.selectedTiles);
+        const selectedTiles = stateRef.current.selectedTiles;
+        // Validate/snap the drop before touching the server. Exclude the dragged
+        // tile(s) from occupancy so a selection can land where it already sits.
+        const selectionLength = selectedTiles.length || 1;
+        const excludeIds = selectedTiles.length ? selectedTiles : [id];
+        const isOccupied = buildRowOccupancy(gRef.current.tilePositions, gridId, excludeIds);
+        const maxCols = gridId === BOARD_GRID_ID ? BOARD_COLS : HAND_COLS;
+        const result = resolveDropSlot({gridId, col, row}, isOccupied, selectionLength, maxCols);
+        if (!result.ok) {
+            // No legal landing (e.g. a multi-selection onto insufficient space).
+            // Reject non-destructively: no server call, light buzz, clear selection.
+            buzz();
+            setState({selectedTiles: [], lastSelectedTileId: null});
+            return;
+        }
+        moves.moveTiles(result.cols[0], row, gridId, {id}, selectedTiles);
         play('place');
         setState({selectedTiles: [], lastSelectedTileId: null});
     }, [moves]);
@@ -281,6 +301,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             tiles2dArray={board}
             gridId={BOARD_GRID_ID}
             canDnD={ctx.currentPlayer === playerID}
+            isDragActive={isDragActive}
             moveTiles={moveTilesUseCb}
             highlightTiles={showInvalidTiles}
             validTiles={validTiles}
