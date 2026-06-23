@@ -216,6 +216,25 @@ function redo({G, ctx, playerID}) {
     console.log('redo done')
 }
 
+function applyValidMove({G, ctx, events}) {
+    let player = ctx.currentPlayer
+    G.firstMoveDone[player] = true
+    // Record the play so EVERY client can celebrate the combo (not just the
+    // player who made it). Computed before freezing while tiles are still tmp.
+    const groups = getFormedGroups(G)
+    const tmp = Object.values(G.tilePositions).filter(p => p && p.gridId === BOARD_GRID_ID && p.tmp)
+    const points = tmp.reduce((s, p) => s + (isJoker(p.id) ? 0 : getTileValue(p.id)), 0)
+    G.lastPlay = {
+        seat: player,
+        count: tmp.length,
+        points: points,
+        groups: groups.map(seq => seq.map(Number)),
+        ts: getSecTs(),
+    }
+    freezeTmpTiles(G)
+    events.endTurn()
+}
+
 function validatePlayerMove(G, ctx, playerID, events) {
     let player = ctx.currentPlayer
     console.debug('VALIDATE PLAYER MOVE', player)
@@ -229,25 +248,24 @@ function validatePlayerMove(G, ctx, playerID, events) {
     }
     if (moveValid) {
         console.debug('MOVE VALID')
-        G.firstMoveDone[player] = true
-        // Record the play so EVERY client can celebrate the combo (not just the
-        // player who made it). Computed before freezing while tiles are still tmp.
-        const groups = getFormedGroups(G)
-        const tmp = Object.values(G.tilePositions).filter(p => p && p.gridId === BOARD_GRID_ID && p.tmp)
-        const points = tmp.reduce((s, p) => s + (isJoker(p.id) ? 0 : getTileValue(p.id)), 0)
-        G.lastPlay = {
-            seat: player,
-            count: tmp.length,
-            points: points,
-            groups: groups.map(seq => seq.map(Number)),
-            ts: getSecTs(),
-        }
-        freezeTmpTiles(G)
-        events.endTurn()
+        applyValidMove({G, ctx, events})
     } else {
         console.debug('MOVE INVALID')
         drawTile({G, ctx, playerID, events})
     }
+}
+
+function submitMeld({G, ctx, playerID, events}) {
+    if (playerID !== ctx.currentPlayer) return INVALID_MOVE
+    if (!isBoardHasNewTiles(G)) return INVALID_MOVE
+    const valid = isFirstMove(G, ctx) ? isFirstMoveValid(G, ctx) : isMoveValid(G, ctx)
+    if (!valid) {
+        // NO-OP: returning INVALID_MOVE makes the framework discard the immer
+        // draft, so G (tiles, hands, pool) and currentPlayer stay unchanged.
+        // No rollback, no penalty draw, no endTurn — unlike the timeout path.
+        return INVALID_MOVE
+    }
+    applyValidMove({G, ctx, events})
 }
 
 function onPlayPhaseBegin({G, ctx}) {
@@ -296,6 +314,7 @@ export {
     forceEndTurn,
     moveTiles,
     validatePlayerMove,
+    submitMeld,
     onTurnBegin,
     onTurnEnd,
     onPlayPhaseBegin,
