@@ -6,6 +6,9 @@ import {useCountdown} from "../hooks/useCountdown";
 const RADIUS = 45;
 const STROKE = 6;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+// timeLeft is in milliseconds (timePerTurn = seconds * 1000). Warn in the final
+// 5 seconds with a motion-gated pulse — a second cue beyond the ring colour.
+const LOW_TIME_MS = 5000;
 
 const PlayerAvatarWithTimer = ({name, matchId, seatId, tiles, isActive, isConnected, timerExpireAt, totalTime, showTurnTimer}) => {
     const [dashOffset, setDashOffset] = useState(CIRCUMFERENCE);
@@ -36,7 +39,7 @@ const PlayerAvatarWithTimer = ({name, matchId, seatId, tiles, isActive, isConnec
                  }}>
                  {isConnected === false &&
                      <span className="avatar-offline" title="Disconnected" aria-label="Disconnected">🔌</span>}
-                {isActive && showTurnTimer ? <svg className="timer-ring" width="100" height="100" viewBox="0 0 100 100">
+                {isActive && showTurnTimer ? <svg className={`timer-ring ${timeLeft <= LOW_TIME_MS ? "timer-low" : ""}`} width="100" height="100" viewBox="0 0 100 100">
                     <circle
                         className="timer-bg"
                         r={RADIUS}
@@ -58,6 +61,17 @@ const PlayerAvatarWithTimer = ({name, matchId, seatId, tiles, isActive, isConnec
                         strokeDashoffset={dashOffset}
                         strokeLinecap="round"
                     />
+                    {/* Remaining whole seconds as a non-color (colorblind-safe) cue.
+                        The ring is rotated -90deg in CSS, so .timer-seconds
+                        counter-rotates in CSS to keep the text upright. */}
+                    <text
+                        className="timer-seconds"
+                        x="50"
+                        y="50"
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        aria-hidden="true"
+                    >{Math.ceil(timeLeft / 1000)}</text>
                 </svg> : ''}
                 <span className="username">{name}</span>
                 <span className="tile-count">{tiles}</span>

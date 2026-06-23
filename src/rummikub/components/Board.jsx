@@ -15,6 +15,7 @@ import TurnDeadlineWatcher from "./TurnDeadlineWatcher";
 import {extractSeqs, isBoardHasNewTiles, isBoardValid, isSubmitAccepted, submitRejectReason} from "../moveValidation";
 import {submitReasonText} from "../submitReasonText";
 import {waitingLabel, isWaitingForPlayers} from "../waitingRoom";
+import {turnBannerLabel} from "../turnBanner";
 import {buildGridsFromTilePositions, getSecTs, isSequenceValid, count2dArrItems} from "../util";
 import GameOverModal from "./GameOverModal";
 import {handleTileSelection, handleLongPress} from "../boardUtil";
@@ -28,6 +29,31 @@ import _ from "lodash";
 
 const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, events, chatMessages, sendChatMessage}) {
     const [recentlyDrawnTiles, setRecentlyDrawnTiles] = useState([]);
+
+    // S2-U4: the "what the ring means" microcopy shows once, during the player's
+    // very first turn, then is remembered as seen via localStorage.
+    const FIRST_TURN_HINT_KEY = 'rummycube:firstTurnHintSeen';
+    const [firstTurnHintSeen, setFirstTurnHintSeen] = useState(() => {
+        try {
+            return typeof localStorage !== 'undefined' && localStorage.getItem(FIRST_TURN_HINT_KEY) === '1';
+        } catch (e) {
+            return false;
+        }
+    });
+    const firstTurnActiveRef = useRef(false);
+    useEffect(() => {
+        if (ctx.gameover) return;
+        const myTurn = ctx.currentPlayer === playerID;
+        if (myTurn && !firstTurnHintSeen) {
+            firstTurnActiveRef.current = true;
+        } else if (!myTurn && firstTurnActiveRef.current) {
+            firstTurnActiveRef.current = false;
+            setFirstTurnHintSeen(true);
+            try {
+                localStorage.setItem(FIRST_TURN_HINT_KEY, '1');
+            } catch (e) { /* private mode / no storage: hint just shows again */ }
+        }
+    }, [ctx.currentPlayer, playerID, ctx.gameover, firstTurnHintSeen]);
 
     useEffect(() => {
         if (playerID === '0' && ctx.phase === 'playersJoin' && _.every(matchData, (item) => item.name)) {
@@ -371,6 +397,9 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     )
 
     const selfData = (matchData || [])[Number(playerID)]
+    const bannerLabel = showTurnTimer ? turnBannerLabel(ctx.currentPlayer, playerID, matchData) : null
+    const isMyTurnBanner = ctx.currentPlayer === playerID
+    const showFirstTurnHint = !firstTurnHintSeen && isMyTurnBanner && !ctx.gameover && !waiting
     const selfAvatar = selfData && selfData.name ? (
         <div className="rack-self">
             <PlayerAvatarWithTimer isActive={ctx.currentPlayer === playerID}
@@ -384,6 +413,20 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                                    timerExpireAt={showTurnTimer ? G.timerExpireAt : null}
                                    totalTime={G.timePerTurn}
                                    showTurnTimer={showTurnTimer}/>
+        </div>
+    ) : null
+
+    const turnBanner = bannerLabel ? (
+        <div className={`turn-banner ${isMyTurnBanner ? "is-my-turn" : ""}`}
+             role="status" aria-live="polite">
+            <span className="turn-dot" aria-hidden="true"/>
+            <span className="turn-banner-label">{bannerLabel}</span>
+        </div>
+    ) : null
+
+    const firstTurnHint = showFirstTurnHint ? (
+        <div className="turn-hint" role="note">
+            When the ring runs out, your turn ends automatically.
         </div>
     ) : null
 
@@ -431,6 +474,8 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                 {boardGrid}
                 <div className={'hand-buttons'}>
                     {selfAvatar}
+                    {turnBanner}
+                    {firstTurnHint}
                     {handGrid}
                     <div className="controls-wrapper">
                         <button disabled={ctx.gameover || waiting}

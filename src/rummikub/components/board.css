@@ -363,6 +363,70 @@ svg.fa-smile-beam {
     transition: stroke-dashoffset 1s ease;
 }
 
+/* Remaining-seconds readout in the ring center — a non-color cue. The ring SVG
+   is rotated -90deg; the text counter-rotates (in JSX) to stay upright. */
+.timer-seconds {
+    font-family: 'Segoe UI', sans-serif;
+    font-weight: 800;
+    font-size: 30px;
+    fill: #fffaf0;
+    paint-order: stroke;
+    stroke: rgba(0, 0, 0, .55);
+    stroke-width: 3px;
+    pointer-events: none;
+    /* Counter-rotate the -90deg ring so the digits read upright. */
+    transform-box: fill-box;
+    transform-origin: center;
+    transform: rotate(90deg);
+}
+
+/* Turn banner near the rack: the text states whose turn it is (non-color cue).
+   The leading dot is decorative. */
+.turn-banner {
+    position: absolute;
+    left: 6px;
+    bottom: calc(100% + 56px);
+    z-index: 7;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: rgba(20, 16, 10, .82);
+    color: #fffaf0;
+    font-family: 'Segoe UI', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .4);
+    white-space: nowrap;
+}
+.turn-banner .turn-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #9aa0a6;
+}
+.turn-banner.is-my-turn .turn-dot {
+    background: #57d977;
+}
+
+/* First-turn microcopy: one-line hint under the banner. */
+.turn-hint {
+    position: absolute;
+    left: 6px;
+    bottom: calc(100% + 30px);
+    z-index: 7;
+    max-width: 280px;
+    padding: 5px 12px;
+    border-radius: 10px;
+    background: rgba(20, 16, 10, .7);
+    color: #ffe9b8;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 12.5px;
+    line-height: 1.3;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, .35);
+}
+
 .rummikub-button {
     font-family: 'Segoe UI', sans-serif;
     font-weight: bold;
@@ -838,4 +902,17 @@ svg.fa-smile-beam {
 }
 @keyframes waiting-spin {
     to { transform: rotate(360deg); }
+}
+
+/* S2-U4 last-seconds warning pulse: a second cue beyond the ring colour. The
+   numeric seconds stay legible at reduced motion; only the pulse is gated. */
+@keyframes timer-low-pulse {
+    0%   { transform: rotate(90deg) scale(1); }
+    50%  { transform: rotate(90deg) scale(1.16); }
+    100% { transform: rotate(90deg) scale(1); }
+}
+@media (prefers-reduced-motion: no-preference) {
+    .timer-ring.timer-low .timer-seconds {
+        animation: timer-low-pulse .8s ease-in-out infinite;
+    }
 }
