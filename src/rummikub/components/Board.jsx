@@ -272,6 +272,9 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     // move and you have placed something (otherwise the button stays neutral).
     const endHasPending = ctx.currentPlayer === playerID && !ctx.gameover && isBoardHasNewTiles(G);
     const endStateClass = endHasPending ? (isSubmitAccepted(G, ctx) ? ' end-valid' : ' end-invalid') : '';
+    // Non-color second channel mirroring endStateClass so the submit button's
+    // accept/reject state is distinguishable in grayscale.
+    const endStateGlyph = endStateClass === ' end-valid' ? '✓ ' : endStateClass === ' end-invalid' ? '✕ ' : '';
     const isMyTurn = ctx.currentPlayer === playerID && !ctx.gameover;
     const hasStaged = isBoardHasNewTiles(G);
 
@@ -294,7 +297,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                                title={'Submit your placed tiles as a meld'}
                                onClick={() => {
                                    onSubmitMeld()
-                               }}>Submit meld
+                               }}>{endStateGlyph}Submit meld
     </button>)
 
     // Explicit forfeit, shown only when you have staged tiles to give back.

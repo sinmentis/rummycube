@@ -5,7 +5,7 @@
   --tile-border: rgba(120,90,40,.25);
   --tile-shadow: 0 7px 9px rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.95), inset 0 -4px 7px rgba(120,90,40,.18);
   --tile-shadow-lift: 0 18px 22px rgba(0,0,0,.5), inset 0 2px 0 rgba(255,255,255,.95);
-  --c-red:#b3162a; --c-black:#1c1c1c; --c-blue:#13478f; --c-orange:#cc7a14;
+  --c-red:#b3162a; --c-black:#1c1c1c; --c-blue:#13478f; --c-orange:#a85c08;
   --rack: linear-gradient(180deg,#8a5a2b,#5e3a18);
   --set-glow: radial-gradient(closest-side, rgba(120,255,150,.55), rgba(120,255,150,0));
 

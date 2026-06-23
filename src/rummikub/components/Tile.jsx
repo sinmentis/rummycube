@@ -28,12 +28,13 @@ function TilePreview({tile, isSelected, isDragging, isValid, position, boardGriB
         if (!(isXWithinBounds && isYWithinBounds)) return null
     }
     let val = isJoker(tile) ? <FontAwesomeIcon icon={faSmileBeam}/> : getTileValue(tile)
+    let validGlyph = isValid === true ? '✓' : isValid === false ? '✕' : ''
     return (
         <div
             style={getTileStyle(isSelected, isDragging, isValid, position, index, newlyAdded)}
             className={"tile tile-clickable border-dark" + (newlyAdded === true ? " tile-drawn" : "")}>
             <div className={"tile-text tile-" + COLORS[getTileColor(tile)]}>{val}</div>
-            <div className={"tile-subscript"}></div>
+            <div className={"tile-subscript"} aria-hidden="true">{validGlyph}</div>
         </div>
     )
 }
