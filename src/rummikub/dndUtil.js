@@ -1,4 +1,4 @@
-import {HAND_GRID_ID} from "./constants";
+import {HAND_GRID_ID} from "./constants.js";
 
 export function makeSlotId(gridId, col, row) {
     return `${gridId}:${col}:${row}`;
