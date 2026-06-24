@@ -16,6 +16,9 @@
   1. **WS-E 采用「并入 CoachCard」**(UX + 游戏设计强烈推荐),而非「分离提示 + 自动消失」。结构上根治「重叠」+「永不消失」两个 bug,
      免去 `firstTurnHintSeen` 状态机与 `FIRST_TURN_HINT_MS`。已据此删除草拟的 `src/tests/first-turn-hint.test.js`。
   2. **超时公告 `timeoutToastText`** 合并两位专家文案:**solo 去掉自相矛盾的「turn passed」**(游戏设计),多人保留(UX),见 T2 文案表。
+     瞬时态携带**实际抽牌数 `drawCount`**(首出后超时会抽 **2** 张,`moves.js:38`),文案按 `{n} tile(s)` 复数化,而非写死单数(rubber-duck 复核 #1)。
+  6. **GameOver 抑制**(rubber-duck 复核 #2):若超时的自动提交直接结束对局,其后无 `onTurnBegin` 再清 `lastTimeout` → 会在 GameOver 画面残留一条语义错误的「turn passed」。
+     故 `TimeoutAnnouncement` 在 `ctx.gameover` 为真时**不显示**(GameOverModal 已接管画面);持久态里残留的 `lastTimeout` 对已结束对局无害(无泄露)。
   3. **可出牌 pill 文案**用 UX 的 `💡 {n} tiles fit the table`(直接消解「playable 没看懂」),开关按状态显示 `💡 Show hints`/`💡 Hints on`。
   4. **WS-A.3 计时环脉冲已存在**(`.timer-low` + `@keyframes timer-low-pulse`,已 `prefers-reduced-motion` 门控,`board.css:1014`),本轮**仅核验**,UI 的红环晕增强为可选。
   5. **公告时长**采 UX 差异化:本人 4500ms、旁观 3000ms([PLACEHOLDER])。
@@ -65,7 +68,7 @@
 
 **Files:** Modify `src/rummikub/moves.js`(`forceEndTurn` ~145、`onTurnBegin` ~420)、`src/rummikub/Game.js`(`setup` ~46)。Test `src/tests/force-end-turn.test.js`(扩)、`src/tests/player-view.test.js`(扩)。
 
-**Interfaces — Produces:** `G.lastTimeout: {seat:number, drew:boolean, id:number} | null`。`seat=Number(ctx.currentPlayer)`;`drew=` 牌堆是否减少;`id=ctx.turn`。
+**Interfaces — Produces:** `G.lastTimeout: {seat:number, drawCount:number, id:number} | null`。`seat=Number(ctx.currentPlayer)`;`drawCount=` 本次实际抽到的张数(牌堆长度差,首出后超时为 2,牌堆空为 0,合法提交为 0);`id=ctx.turn`。
 
 **关键代码(写入,deadline 守卫之后):**
 ```js
@@ -73,7 +76,7 @@ const player = ctx.currentPlayer
 const poolBefore = G.tilesPool.length
 if (isBoardHasNewTiles(G)) { validatePlayerMove(G, ctx, player, events) }
 else { drawTile({G, ctx, playerID: player, events}, !isBoardValid(G)) }
-G.lastTimeout = { seat: Number(player), drew: G.tilesPool.length < poolBefore, id: ctx.turn }
+G.lastTimeout = { seat: Number(player), drawCount: poolBefore - G.tilesPool.length, id: ctx.turn }
 ```
 **关键代码(`onTurnBegin` 末尾,陈旧守卫清除 —— 不可省):**
 ```js
@@ -85,7 +88,7 @@ if (G.lastTimeout && typeof G.lastTimeout.id === 'number' && G.lastTimeout.id <=
 ```
 **`Game.js` setup:** 紧挨 `lastPlay: null,` 加 `lastTimeout: null,`。
 
-- [ ] **Step 1 失败测试:** 在 `force-end-turn.test.js` 加:过期 deadline 下非当前玩家 `forceEndTurn` 后,对端读 `G.lastTimeout` = `{seat, drew:true, id}`(干净盘);摆一组合法暂存牌 → `drew:false`;再驱动一整回合 → `lastTimeout===null`,但**超时那回合内**非空;deadline 前 `forceEndTurn` → `INVALID_MOVE` 且 `lastTimeout` 仍 `null`。在 `player-view.test.js` 断言 `view.lastTimeout` 深拷贝存在且无 tile/手牌字段。
+- [ ] **Step 1 失败测试:** 在 `force-end-turn.test.js` 加:过期 deadline 下非当前玩家 `forceEndTurn` 后,对端读 `G.lastTimeout` = `{seat, drawCount:1, id}`(干净盘、首出前);**`firstMoveDone[seat]=true` 干净盘超时 → `drawCount:2`**;摆一组合法暂存牌 → `drawCount:0`(提交不抽);再驱动一整回合 → `lastTimeout===null`,但**超时那回合内**非空;deadline 前 `forceEndTurn` → `INVALID_MOVE` 且 `lastTimeout` 仍 `null`。在 `player-view.test.js` 断言 `view.lastTimeout` 深拷贝存在且无 tile/手牌字段。
 - [ ] **Step 2 跑测试确认失败**(`npx jest force-end-turn player-view`)。
 - [ ] **Step 3 实现**:上面三段改动。
 - [ ] **Step 4 跑测试确认通过**;并 `node src/server.js` 起服 + `/games` 验证可启动。
@@ -99,19 +102,19 @@ if (G.lastTimeout && typeof G.lastTimeout.id === 'number' && G.lastTimeout.id <=
 
 **Files:** Create `src/rummikub/timeoutToastText.js`、`src/tests/timeout-toast-text.test.js`。可与 T1 并行(不碰 Board)。
 
-**Interface — Produces:** `timeoutToastText(lastTimeout:{seat,drew}, playerID, matchData) => string`。「本人」= `String(seat)===String(playerID)`;solo = `matchData.length===1`;无 name 回退 `Player {seat+1}`。
+**Interface — Produces:** `timeoutToastText(lastTimeout:{seat,drawCount}, playerID, matchData) => string`。「本人」= `String(seat)===String(playerID)`;solo = `matchData.length===1`;无 name 回退 `Player {seat+1}`;复数 `{s} = drawCount === 1 ? '' : 's'`。
 
-**文案表(全英文):**
+**文案表(全英文,`{n}=drawCount`):**
 | 条件 | 文案 |
 |---|---|
-| solo & drew | `⏱ Time's up — you auto-drew a tile (+1 to your rack).` |
-| solo & !drew | `⏱ Time's up.` |
-| 多人·本人·drew | `⏱ Time's up — you drew a tile, turn passed.` |
-| 多人·本人·!drew | `⏱ Time's up — turn passed.` |
-| 多人·他人·drew | `⏱ Time's up — {name} drew a tile, turn passed.` |
-| 多人·他人·!drew | `⏱ Time's up — {name}'s turn passed.` |
+| solo & `drawCount>=1` | `⏱ Time's up — you auto-drew {n} tile{s} (+{n} to your rack).` |
+| solo & `drawCount===0` | `⏱ Time's up.` |
+| 多人·本人·`drawCount>=1` | `⏱ Time's up — you drew {n} tile{s}, turn passed.` |
+| 多人·本人·`drawCount===0` | `⏱ Time's up — turn passed.` |
+| 多人·他人·`drawCount>=1` | `⏱ Time's up — {name} drew {n} tile{s}, turn passed.` |
+| 多人·他人·`drawCount===0` | `⏱ Time's up — {name}'s turn passed.` |
 
-- [ ] **Step 1 失败测试**:六分支 + name 回退(纯 jest,仿 `submit-reason-text.test.js`)。
+- [ ] **Step 1 失败测试**:六分支 + 复数(`drawCount` 1 vs 2 → `tile` vs `tiles`)+ name 回退(纯 jest,仿 `submit-reason-text.test.js`)。
 - [ ] **Step 2 跑测试确认失败**。
 - [ ] **Step 3 实现** 纯函数。
 - [ ] **Step 4 跑测试确认通过**。
@@ -124,11 +127,11 @@ if (G.lastTimeout && typeof G.lastTimeout.id === 'number' && G.lastTimeout.id <=
 **Files:** Create `src/rummikub/components/TimeoutAnnouncement.jsx`、`src/tests/timeout-announcement.test.js`;Modify `Board.jsx`(接线,与 `connectionCue` 同区 ~590)、`board.css`(`.timeout-toast` + `.top-cue-stack`)。**依赖 T1(形状)+ T2(文案)。**
 
 **Interface — Consumes:** `G.lastTimeout`(T1)、`timeoutToastText`(T2)。
-**Props:** `{lastTimeout, playerID, matchData, durationMs?}`。内部 `seenTimeoutIdRef`(init=`lastTimeout?.id`,忽略 mount 值)+ `useEffect`(键 `lastTimeout?.id`)→ 设文案 + `setVisible(true)` + `setTimeout(hide, durationMs)`;卸载清定时器。Board 传 `durationMs = isSelf ? 4500 : 3000`。
+**Props:** `{lastTimeout, playerID, matchData, durationMs?}`。内部 `seenTimeoutIdRef`(init=`lastTimeout?.id`,忽略 mount 值)+ `useEffect`(键 `lastTimeout?.id`)→ 设文案 + `setVisible(true)` + `setTimeout(hide, durationMs)`;卸载清定时器。Board 传 `durationMs = isSelf ? 4500 : 3000`。**GameOver 抑制(rubber-duck #2):** Board 仅在 `!ctx.gameover` 时渲染 `<TimeoutAnnouncement>`(或 gameover 时传 `lastTimeout={null}`),避免结束画面残留错误公告。
 
 **渲染:** `<div className="timeout-toast" role="status" aria-live={isSelf?'assertive':'polite'}>{text}</div>`(可见时)。滑入/淡出进 `@media (prefers-reduced-motion: no-preference)`;reduced-motion 下文本仍立即可读。**CSS:** 顶部居中琥珀(对比 ≥AA),收进 `.top-cue-stack` 与 `connection-cue` 纵向排开、互不重叠;绝对定位、不挡牌、不拦输入(`pointer-events:none`)。详见 review-3-ui。
 
-- [ ] **Step 1 失败测试**(RTL):`lastTimeout=null` 无 toast;rerender 新 `{…id}` → 文案匹配;`advanceTimersByTime(durationMs)` → 消失;**同 id** rerender 不再弹;**新 id** 再弹一次。
+- [ ] **Step 1 失败测试**(RTL):`lastTimeout=null` 无 toast;rerender 新 `{…id}` → 文案匹配;`advanceTimersByTime(durationMs)` → 消失;**同 id** rerender 不再弹;**新 id** 再弹一次;**`ctx.gameover` 为真时不渲染 toast**。
 - [ ] **Step 2 跑测试确认失败**。
 - [ ] **Step 3 实现** 组件 + CSS + Board 接线。
 - [ ] **Step 4 跑测试确认通过**(+ 全量 jest 不回归)。
@@ -215,5 +218,6 @@ const playableHint = hintsOn ? (
 - WS-D Undo/Redo 图标移角 → T6。✅
 - WS-E 首回合提示修复 → T7(并入 CoachCard,根治 overlap + 永不消失)。✅
 - 不变量(服务器权威/playerView/门控/英文/无新依赖/可启动/timePerTurn 毫秒)→ Global Constraints + 各任务 acceptance。✅
-- 类型一致性:`G.lastTimeout {seat:number,drew:boolean,id:number}` 在 T1 写、T2/T3 读,签名一致。✅
+- 类型一致性:`G.lastTimeout {seat:number,drawCount:number,id:number}` 在 T1 写、T2/T3 读,签名一致。✅
+- rubber-duck(gpt-5.5)复核:#1 `drawCount` 计数化(首出后超时抽 2 张)、#2 `ctx.gameover` 抑制公告——均已并入 T1/T2/T3。✅
 - 占位扫描:无 TODO/TBD;所有文案、class、参数均给定值。✅
