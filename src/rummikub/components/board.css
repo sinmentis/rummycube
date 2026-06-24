@@ -1067,3 +1067,61 @@ svg.fa-smile-beam {
     50%  { opacity: .4; transform: scale(.7); }
     100% { opacity: 1; transform: scale(1); }
 }
+
+/* ===== WS-10 playable-tile hint (highlight-only) =====
+   Colorblind-safe: the cue is a SHAPE (a ringed corner dot) plus a solid
+   outline ring on the tile, not a red/green fill — so it stays distinct from the
+   valid/invalid feedback for colour-vision-deficient players. The "{n} playable"
+   count below is the text second channel. */
+div.tile.tile-playable {
+    outline: 2px solid var(--c-blue);
+    outline-offset: 1px;
+}
+
+.tile-playable-mark {
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--c-blue);
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px var(--c-blue);
+    pointer-events: none;
+    z-index: 2;
+}
+
+.playable-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    align-self: center;
+    margin: 2px 0;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: rgba(19, 71, 143, .12);
+    color: var(--c-blue);
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-weight: 700;
+    font-size: clamp(11px, 1vw, 14px);
+    line-height: 1.4;
+}
+
+.playable-hint__dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--c-blue);
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px var(--c-blue);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .tile-playable-mark { animation: playablePulse 1.6s ease-in-out infinite; }
+}
+
+@keyframes playablePulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50%      { transform: scale(1.25); opacity: .75; }
+}

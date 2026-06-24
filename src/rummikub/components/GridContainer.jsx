@@ -29,6 +29,7 @@ const GridContainer = function ({
                                     gridId,
                                     validTiles,
                                     highlightTiles,
+                                    playableTiles,
                                     selectedTiles,
                                     handleTileSelection,
                                     newlyAdded,
@@ -37,12 +38,14 @@ const GridContainer = function ({
 
     let colWidth = 2.2
     const selectedSet = new Set(selectedTiles)
+    const playableSet = new Set(playableTiles)
     let gridItems = []
     let key = 0
     for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
             let tile = tiles2dArray[y] && tiles2dArray[y][x]
             let isSelected = tile ? selectedSet.has(tile) : false
+            let isPlayable = tile ? playableSet.has(tile) : false
             let isValid
             if (tile && highlightTiles) {
                 isValid = validTiles.indexOf(tile) !== -1
@@ -61,6 +64,7 @@ const GridContainer = function ({
                 tile={tile}
                 isSelected={isSelected}
                 isValid={isValid}
+                isPlayable={isPlayable}
                 isNewlyAdded={isNewlyAdded}
             />
             gridItems.push(gridTile)

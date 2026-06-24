@@ -16,7 +16,8 @@ import {extractSeqs, isBoardHasNewTiles, isBoardValid, isSubmitAccepted, submitR
 import {submitReasonText} from "../submitReasonText";
 import {waitingLabel, isWaitingForPlayers} from "../waitingRoom";
 import {turnBannerLabel} from "../turnBanner";
-import {buildGridsFromTilePositions, getSecTs, isSequenceValid, count2dArrItems} from "../util";
+import {buildGridsFromTilePositions, getSecTs, isSequenceValid, count2dArrItems, getPlayerHandTiles} from "../util";
+import {playableTiles} from "../planning";
 const GameOverModal = lazy(() => import("./GameOverModal"));
 import {handleTileSelection, handleLongPress} from "../boardUtil";
 import {play, place, milestone, buzz} from "../sound/sfx";
@@ -398,6 +399,16 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     </button>)
     const {board, hands} = buildGridsFromTilePositions(G.tilePositions, ctx.numPlayers)
 
+    // WS-10 highlight-only: mark the rack tiles that could extend a valid board
+    // group right now, plus a "{n} playable" count. Computed locally from the
+    // viewer's own hand + the live board groups, so it stays useful on opponents'
+    // turns too. Jokers are excluded from the set/count for v1 (see planning.js).
+    const myHandTiles = getPlayerHandTiles(G, playerID);
+    const playableTileList = playerID != null
+        ? Array.from(playableTiles(myHandTiles, extractSeqs(G)))
+        : [];
+    const playableCount = playableTileList.length;
+
     const boardGrid = (<div className="ref">
         <GridContainer
             rows={BOARD_ROWS}
@@ -427,6 +438,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                        gridId={HAND_GRID_ID}
                        canDnD={!waiting}
                        highlightTiles={false}
+                       playableTiles={playableTileList}
                        moveTiles={moveTilesUseCb}
                        selectedTiles={state.selectedTiles}
                        onTileDragEnd={onTileDragEnd}
@@ -481,6 +493,13 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                                    timerExpireAt={showTurnTimer ? G.timerExpireAt : null}
                                    totalTime={G.timePerTurn}
                                    showTurnTimer={showTurnTimer}/>
+        </div>
+    ) : null
+
+    const playableHint = playableCount > 0 ? (
+        <div className="playable-hint" role="status" aria-live="polite">
+            <span className="playable-hint__dot" aria-hidden="true"/>
+            <span className="playable-hint__label">{playableCount} playable</span>
         </div>
     ) : null
 
@@ -558,6 +577,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                     {selfAvatar}
                     {turnBanner}
                     {firstTurnHint}
+                    {playableHint}
                     {handGrid}
                     {coachCard}
                     <div className="controls-wrapper">

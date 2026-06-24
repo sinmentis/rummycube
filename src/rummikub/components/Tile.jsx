@@ -13,7 +13,7 @@ function getAbsolutePosition(relativePosition) {
     };
 }
 
-function TilePreview({tile, isSelected, isDragging, isValid, position, boardGriBoundingBox, index, newlyAdded}) {
+function TilePreview({tile, isSelected, isDragging, isValid, isPlayable, position, boardGriBoundingBox, index, newlyAdded}) {
     if (!tile) return null
     if (position && boardGriBoundingBox) {
         let absPos = getAbsolutePosition(position);
@@ -32,7 +32,9 @@ function TilePreview({tile, isSelected, isDragging, isValid, position, boardGriB
     return (
         <div
             style={getTileStyle(isSelected, isDragging, isValid, position, index, newlyAdded)}
-            className={"tile tile-clickable border-dark" + (newlyAdded === true ? " tile-drawn" : "")}>
+            className={"tile tile-clickable border-dark" + (newlyAdded === true ? " tile-drawn" : "") + (isPlayable === true ? " tile-playable" : "")}>
+            {isPlayable === true &&
+                <span className="tile-playable-mark" aria-hidden="true"/>}
             <div className={"tile-text tile-" + COLORS[getTileColor(tile)]}>{val}</div>
             <div className={"tile-subscript"} aria-hidden="true">{validGlyph}</div>
         </div>
@@ -83,7 +85,7 @@ function getTileStyle(selected, isDragging, isValid, position, index, newlyAdded
     return result
 }
 
-const Tile = React.memo(function Tile({tile, canDnD, isSelected, isValid, handleTileSelection, isNewlyAdded}) {
+const Tile = React.memo(function Tile({tile, canDnD, isSelected, isValid, isPlayable, handleTileSelection, isNewlyAdded}) {
     const {attributes, listeners, setNodeRef, isDragging} = useDraggable({id: tile, disabled: !canDnD});
 
     const onClick = useCallback((e) => {
@@ -91,15 +93,18 @@ const Tile = React.memo(function Tile({tile, canDnD, isSelected, isValid, handle
     }, [tile, handleTileSelection])
 
     const jokerLabel = isJoker(tile) ? 'Joker (wildcard)' : undefined
+    const playableLabel = isPlayable === true ? 'Playable: can extend a board group' : undefined
+    const ariaLabel = [jokerLabel, playableLabel].filter(Boolean).join('. ') || undefined
 
     return (
         <div ref={setNodeRef} {...listeners} {...attributes} onClick={onClick} id={tile}
-             aria-label={jokerLabel} title={jokerLabel}
+             aria-label={ariaLabel} title={ariaLabel}
              style={{touchAction: 'none', opacity: isDragging ? 0.4 : 1, cursor: canDnD ? 'grab' : 'default'}}>
             <TilePreview
                 tile={tile}
                 isSelected={isSelected}
                 isValid={isValid}
+                isPlayable={isPlayable}
                 newlyAdded={isNewlyAdded}
             />
         </div>

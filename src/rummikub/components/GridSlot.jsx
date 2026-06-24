@@ -13,6 +13,7 @@ const GridSlot = React.memo(({
                                  isDragActive,
                                  isSelected,
                                  isValid,
+                                 isPlayable,
                                  isNewlyAdded,
                                  handleTileSelection
                              }) => {
@@ -26,6 +27,7 @@ const GridSlot = React.memo(({
                     canDnD={canDnD}
                     isValid={isValid}
                     isSelected={isSelected}
+                    isPlayable={isPlayable}
                     isNewlyAdded={isNewlyAdded}
                     handleTileSelection={handleTileSelection}
                 />
