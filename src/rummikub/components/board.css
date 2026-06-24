@@ -19,6 +19,18 @@ body {
     overflow: hidden;
 }
 
+/* WS-3: on desktop the chat panel is always docked top-right (position:fixed,
+   300px wide); it only folds to a corner FAB at <=820px (see chat.css). Reserve a
+   matching right gutter on the match column so the centred rack and the .ref
+   horizontal-scroll region end at the chat's left edge instead of sliding under it.
+   Padding the shared container narrows both at once (the rack re-centres via its
+   auto margins, the scroll region recomputes its width). The 821px floor is the
+   exact complement of the chat's 820px fold breakpoint, so there is never a
+   "docked AND overlapping" or "folded AND gutter" dead-band. */
+@media (min-width: 821px) {
+    .board-container { padding-right: calc(300px + 16px); }
+}
+
 .game-navbar {
     height: 40px;
 }
@@ -558,8 +570,8 @@ svg.fa-smile-beam {
    The leading dot is decorative. */
 .turn-banner {
     position: absolute;
-    left: 6px;
-    bottom: calc(100% + 56px);
+    left: 92px;
+    bottom: calc(100% + 26px);
     z-index: 7;
     display: flex;
     align-items: center;
@@ -943,6 +955,13 @@ svg.fa-smile-beam {
 
     .avatar .username {
         font-size: .62rem;
+    }
+
+    /* WS-4: the avatar shrinks to 46px here, so re-anchor the banner beside it
+       (6 + 46 + ~6 gap) and lower it to sit level with the smaller avatar. */
+    .turn-banner {
+        left: 58px;
+        bottom: calc(100% + 14px);
     }
 
     /* Opponent side-seats: the rack is much taller on a phone (two hand rows +
