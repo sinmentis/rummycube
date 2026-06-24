@@ -29,7 +29,7 @@ import CoachCard from "./CoachCard";
 import {useUndoRedoHotkeys} from "./useUndoRedoHotkeys";
 import every from "lodash/every";
 
-const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, events, chatMessages, sendChatMessage}) {
+const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, events, chatMessages, sendChatMessage, isConnected}) {
     const [recentlyDrawnTiles, setRecentlyDrawnTiles] = useState([]);
 
     // S2-U4: the "what the ring means" microcopy shows once, during the player's
@@ -115,6 +115,18 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     const [comboBy, setComboBy] = useState('');
     const comboTimer = useRef(null);
     const seenPlayRef = useRef(undefined);
+    // S3-U2: a light, time-boxed "syncing…" cue. The local player triggers it on
+    // a move (tile drop / submit); it clears on the next authoritative G update
+    // (G.lastPlay below or a tilePositions change) or after a short timeout, so it
+    // never lingers and never blocks input.
+    const [syncing, setSyncing] = useState(false);
+    const syncTimer = useRef(null);
+    const markSyncing = useCallback(() => {
+        setSyncing(true);
+        clearTimeout(syncTimer.current);
+        syncTimer.current = setTimeout(() => setSyncing(false), 1200);
+    }, []);
+    useEffect(() => () => clearTimeout(syncTimer.current), []);
     // Everyone celebrates a valid submit: the server records it in G.lastPlay and
     // every client (not just the scorer) fires the combo/spotlight off its ts.
     useEffect(() => {
@@ -123,6 +135,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         if (seenPlayRef.current === undefined) { seenPlayRef.current = ts; return; } // ignore the one present at mount/reconnect
         if (ts === null || ts === seenPlayRef.current) return;
         seenPlayRef.current = ts;
+        setSyncing(false);
         const n = lp.count || 0;
         const by = (matchData && matchData[lp.seat] && matchData[lp.seat].name) || `Player ${Number(lp.seat) + 1}`;
         const cx = window.innerWidth / 2, cy = window.innerHeight * 0.4;
@@ -171,9 +184,10 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             return;
         }
         moves.moveTiles(result.cols[0], row, gridId, {id}, selectedTiles);
+        markSyncing();
         play('place');
         setState({selectedTiles: [], lastSelectedTileId: null});
-    }, [moves, playerID]);
+    }, [moves, playerID, markSyncing]);
     const [showInvalidTiles, setShowInvalidTiles] = useState(false);
     const [validTiles, setValidTiles] = useState([])
     // Inline English reason for the last rejected submit. Non-destructive: tiles
@@ -251,6 +265,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         if (isSubmitAccepted(G, ctx)) {
             setSubmitReason('')
             moves.submitMeld()
+            markSyncing()
             return
         }
         const placed = countPlacedThisTurn(G.tilePositions, BOARD_GRID_ID);
@@ -303,6 +318,24 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     // drag) and disable every turn control. Mirrors the allJoined / endPhase
     // logic without changing it.
     const waiting = isWaitingForPlayers(ctx, matchData);
+
+    // S3-U2: surface the boardgame.io socket status. Only while an in-play match
+    // is live (not gameover, not the join phase) and the prop is explicitly false
+    // do we show a non-blocking "Reconnecting…" pill; a brief "Syncing…" pill
+    // appears after a local move. Neither blocks input.
+    const inPlay = !ctx.gameover && ctx.phase !== 'playersJoin';
+    const showReconnecting = inPlay && isConnected === false;
+    const showSyncing = inPlay && isConnected !== false && syncing;
+    const connectionCue = (showReconnecting || showSyncing) ? (
+        <div
+            className={'connection-cue ' + (showReconnecting ? 'connection-cue--offline' : 'connection-cue--syncing')}
+            role="status"
+            aria-live="polite"
+        >
+            <span className="connection-cue__dot" aria-hidden="true"/>
+            {showReconnecting ? 'Reconnecting…' : 'Syncing…'}
+        </div>
+    ) : null;
 
     // S2-U6: keyboard Undo/Redo. The guards mirror the undoBut/redoBut disabled
     // conditions exactly so the shortcuts only fire on your turn when there is
@@ -504,6 +537,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             {sidebar}
             <div className="board" onClick={onBoardClick}>
                 <div className="board-kick-layer">
+                {connectionCue}
                 {waiting &&
                     <div className="waiting-overlay" role="status" aria-live="polite">
                         <div className="waiting-card">

@@ -1016,3 +1016,54 @@ svg.fa-smile-beam {
         animation: timer-low-pulse .8s ease-in-out infinite;
     }
 }
+
+/* ============================================================
+   S3-U2 / WS-13b connection cues. A small, non-blocking pill near
+   the top of the board. "Reconnecting…" while the boardgame.io
+   socket is down (isConnected === false), and a brief "Syncing…"
+   after a local move. Sits above the board, never intercepts input.
+   ============================================================ */
+.connection-cue {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 7;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .2px;
+    color: var(--cream, #f7eed8);
+    background: rgba(12, 32, 20, .82);
+    border: 1px solid rgba(0, 0, 0, .35);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, .4);
+    pointer-events: none;
+}
+.connection-cue__dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: currentColor;
+}
+.connection-cue--offline {
+    color: #ffd9a8;
+    border-color: rgba(214, 130, 40, .6);
+}
+.connection-cue--syncing {
+    color: #cfe8ff;
+}
+/* Juice gated: the dot only pulses when motion is allowed. */
+@media (prefers-reduced-motion: no-preference) {
+    .connection-cue__dot {
+        animation: connection-cue-pulse 1s ease-in-out infinite;
+    }
+}
+@keyframes connection-cue-pulse {
+    0%   { opacity: 1; transform: scale(1); }
+    50%  { opacity: .4; transform: scale(.7); }
+    100% { opacity: 1; transform: scale(1); }
+}
