@@ -1,1 +1,15 @@
 node_modules/
+
+# Host-local env overrides must NOT enter the image build. Vite's *.local env
+# files take precedence over .env.production, so a developer's local override
+# (e.g. REACT_APP_SERVER_HOST=127.0.0.1) would otherwise get baked into the
+# production bundle and break the deployed site. The image must build from the
+# committed .env.production only.
+.env
+.env.*.local
+.env.local
+
+# Build artifacts / VCS — not needed in the build context.
+build/
+data/
+.git/
