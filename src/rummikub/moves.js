@@ -368,19 +368,87 @@ function submitMeld({G, ctx, playerID, events}) {
     applyValidMove({G, ctx, events})
 }
 
+// Disconnected-seat tuning. Both are [PLACEHOLDER] pending Game Design / Product:
+// GRACE_MS is the (short) deadline a disconnected seat's turn gets instead of the
+// full timePerTurn, so an honest opponent's forceEndTurn nudge advances it fast.
+// N_FORFEIT_TURNS is how many consecutive disconnected turn-begins a seat may rack
+// up before it is forfeited (its hand scored, the seat skipped).
+const GRACE_MS = 5000
+const N_FORFEIT_TURNS = 3
+
+// SERVER-AUTHORITATIVE connection mirror. The seat is ALWAYS the authenticated
+// caller (playerID, resolved by the server transport from the socket) — never a
+// move argument — so a client can only ever flip its OWN flag, and a genuine
+// socket disconnect/sync event (server.js) overrides it. Marking yourself offline
+// only shortens your own turn (self-harm, not an exploit); marking yourself online
+// is corrected by the next real disconnect event. This satisfies global-constraints:
+// never trust a client-supplied connection flag.
+function _setConnection({G, ctx, playerID}, connected) {
+    if (playerID === undefined || playerID === null) return INVALID_MOVE
+    const seat = Number(playerID)
+    if (!Array.isArray(G.connected)) G.connected = []
+    if (!Array.isArray(G.disconnectTurns)) G.disconnectTurns = []
+    G.connected[seat] = !!connected
+    // Reconnect clears any accrued disconnect penalty immediately (brief: reset on reconnect).
+    if (connected) G.disconnectTurns[seat] = 0
+}
+
 function onPlayPhaseBegin({G, ctx}) {
     console.log('PLAY PHASE BEGIN', new Date())
     G.timerExpireAt = getSecTs() + G.timePerTurn
     return G
 }
 
-function onTurnBegin({G, ctx}) {
+// When a seat reaches N_FORFEIT_TURNS disconnected turn-begins, retire it: mark it
+// forfeited and, if only one seat is still in play, end the match scoring remaining
+// hands with the standard helper (reuses countPoints/findWinner; no rule relaxed).
+function forfeitSeat(G, ctx, seat, events) {
+    if (!Array.isArray(G.forfeited)) G.forfeited = []
+    G.forfeited[seat] = true
+    const remaining = []
+    for (let i = 0; i < ctx.numPlayers; i++) {
+        if (!G.forfeited[i]) remaining.push(i)
+    }
+    if (remaining.length <= 1 && events) {
+        const hands = getHandsTilesGrid(G, ctx.numPlayers)
+        const winner = remaining.length === 1 ? remaining[0] : findWinner(hands)
+        const points = countPoints(hands, winner)
+        events.endGame({winner: winner.toString(), points: points})
+    }
+}
+
+function onTurnBegin({G, ctx, events}) {
     console.log('ON TURN BEGIN', new Date())
-    G.timerExpireAt = getSecTs() + G.timePerTurn
+    const seat = ctx.currentPlayer
+    const seatIdx = Number(seat)
+    // Defensive defaults so matches created before WS-12 (no connected arrays) still run.
+    if (!Array.isArray(G.connected)) G.connected = []
+    if (!Array.isArray(G.disconnectTurns)) G.disconnectTurns = []
+    if (!Array.isArray(G.forfeited)) G.forfeited = []
+
+    if (G.forfeited[seatIdx]) {
+        // Already retired: nothing to wait for, let an opponent force-advance at once.
+        G.timerExpireAt = getSecTs()
+    } else if (G.connected[seatIdx] === false) {
+        G.disconnectTurns[seatIdx] = (G.disconnectTurns[seatIdx] ?? 0) + 1
+        if (G.disconnectTurns[seatIdx] >= N_FORFEIT_TURNS) {
+            forfeitSeat(G, ctx, seatIdx, events)
+            G.timerExpireAt = getSecTs()
+        } else {
+            // Collapse the deadline: the disconnected seat's turn ends within GRACE_MS,
+            // not the full timePerTurn. The forceEndTurn deadline guard is untouched.
+            G.timerExpireAt = getSecTs() + GRACE_MS
+        }
+    } else {
+        // Connected (or reconnected): full budget, and clear any accrued disconnect count.
+        G.disconnectTurns[seatIdx] = 0
+        G.timerExpireAt = getSecTs() + G.timePerTurn
+    }
+
     G.gameStateStack = []
     G.redoMoveStack = []
     if (G.lastCircle.length) {
-        G.lastCircle.push(ctx.currentPlayer)
+        G.lastCircle.push(seat)
     }
     G.prevTilePositions = original(G.tilePositions)
     return G
@@ -423,5 +491,8 @@ export {
     drawTile,
     undo,
     redo,
-    checkGameOver
+    checkGameOver,
+    _setConnection,
+    GRACE_MS,
+    N_FORFEIT_TURNS,
 }

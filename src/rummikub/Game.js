@@ -1,6 +1,6 @@
 import {Stage} from 'boardgame.io/dist/cjs/core.js';
 import {getTiles, playerView} from './util.js'
-import {drawTile, endTurn, forceEndTurn, forfeitTurn, moveTiles, onPlayPhaseBegin, onTurnBegin, onTurnEnd, redo, retrieveJoker, submitMeld, undo} from "./moves.js";
+import {drawTile, endTurn, forceEndTurn, forfeitTurn, moveTiles, onPlayPhaseBegin, onTurnBegin, onTurnEnd, redo, retrieveJoker, submitMeld, undo, _setConnection} from "./moves.js";
 import {GAME_NAME, HAND_COLS, HAND_GRID_ID, HAND_ROWS, TILES_TO_DRAW} from "./constants.js";
 import {orderByColorVal, orderByValColor} from "./orderTiles.js";
 
@@ -44,6 +44,11 @@ const Rummikub = {
             lastCircle: [],
             recentlyDrawnTiles: [],
             lastPlay: null,
+            // WS-12: authoritative per-seat connection state, written ONLY by the
+            // server transport via the _setConnection move (never client-trusted).
+            connected: Array(ctx.numPlayers).fill(true),
+            disconnectTurns: Array(ctx.numPlayers).fill(0),
+            forfeited: Array(ctx.numPlayers).fill(false),
         }
     },
     phases: {
@@ -55,6 +60,7 @@ const Rummikub = {
                 moveTiles,
                 undo,
                 redo,
+                _setConnection,
             },
             next: 'play'
         },
@@ -74,6 +80,7 @@ const Rummikub = {
         retrieveJoker,
         undo,
         redo,
+        _setConnection,
         clearRecentlyDrawnTiles: ({G, ctx}) => {
             G.recentlyDrawnTiles = []
         }
