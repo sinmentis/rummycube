@@ -28,6 +28,7 @@ const ComboOverlay = lazy(() => import("./ComboOverlay"));
 import ChatPanel from "./ChatPanel";
 import CoachCard from "./CoachCard";
 import HintsToggle from "./HintsToggle";
+import IconButton from "./IconButton";
 import TimeoutAnnouncement from "./TimeoutAnnouncement";
 import {useUndoRedoHotkeys} from "./useUndoRedoHotkeys";
 import every from "lodash/every.js";
@@ -404,9 +405,10 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         />
     ) : null;
 
-    // S2-U6: keyboard Undo/Redo. The guards mirror the undoBut/redoBut disabled
-    // conditions exactly so the shortcuts only fire on your turn when there is
-    // something to undo/redo. handlers are stable so the listener isn't churned.
+    // S2-U6 / WS-D: canUndo/canRedo are the single source of truth shared by the
+    // keyboard shortcuts (below) and the corner Undo/Redo icon buttons (.rack-tools),
+    // so the shortcuts only fire on your turn when there is something to undo/redo.
+    // handlers are stable so the listener isn't churned.
     const canUndo = !!G.gameStateStack.length && !ctx.gameover && ctx.currentPlayer === playerID && !waiting;
     const canRedo = !!G.redoMoveStack.length && !ctx.gameover && ctx.currentPlayer === playerID && !waiting;
     const onUndoKey = useCallback(() => moves.undo(), [moves]);
@@ -447,21 +449,6 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         onClick={() => {
             drawTile()
         }}>Draw
-    </button>)
-    const undoBut = (<button disabled={!G.gameStateStack.length || ctx.gameover || ctx.currentPlayer !== playerID || waiting}
-                             className={'rummikub-button'}
-                             title={'Undo last action'}
-                             onClick={() => {
-                                 moves.undo()
-                             }}>Undo
-    </button>)
-
-    const redoBut = (<button disabled={!G.redoMoveStack.length || ctx.gameover || ctx.currentPlayer !== playerID || waiting}
-                             className={'rummikub-button'}
-                             title={'Redo last action'}
-                             onClick={() => {
-                                 moves.redo()
-                             }}>Redo
     </button>)
     const {board, hands} = buildGridsFromTilePositions(G.tilePositions, ctx.numPlayers)
 
@@ -650,6 +637,10 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                 {boardGrid}
                 <div className={'hand-buttons'}>
                     {selfAvatar}
+                    <div className="rack-tools">
+                        <IconButton glyph="↶" label="Undo" disabled={!canUndo} onClick={() => moves.undo()}/>
+                        <IconButton glyph="↷" label="Redo" disabled={!canRedo} onClick={() => moves.redo()}/>
+                    </div>
                     {turnBanner}
                     {firstTurnHint}
                     {playableHint}
@@ -675,8 +666,6 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                         </div>
                         <div className="controls-tools">
                             <HintsToggle on={hintsOn} onToggle={toggleHints}/>
-                            {undoBut}
-                            {redoBut}
                         </div>
                     </div>
                     {submitReason &&
