@@ -11,6 +11,9 @@
 # production
 /build
 
+# FlatFile persistence (local default dir)
+/data
+
 # misc
 .DS_Store
 .env

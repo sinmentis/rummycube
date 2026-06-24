@@ -11,7 +11,13 @@ podman build -t shunlyu-rummycube:latest ~/work/rummycube
 
 ## 2. Install and start the service (Quadlet)
 
+The container persists matches and `/api/stats` counts to FlatFile under
+`/app/data`, backed by a rootless named volume so a restart/redeploy no longer
+wipes in-progress games. Create the volume once before first start:
+
 ```bash
+podman volume create rummycube-data
+
 cp deploy/shunlyu-rummycube.container ~/.config/containers/systemd/
 systemctl --user daemon-reload
 systemctl --user start shunlyu-rummycube.service
@@ -19,7 +25,13 @@ systemctl --user start shunlyu-rummycube.service
 ```
 
 The unit publishes the container (port 9119) on `127.0.0.1:8093`, injects the
-public origin env, and caps resources (`MemoryMax=512M`, `CPUQuota=100%`).
+public origin env, sets `FLATFILE_DIR=/app/data` with the `rummycube-data`
+volume mounted there, and caps resources (`MemoryMax=512M`, `CPUQuota=100%`).
+
+> Needs a real deploy to verify: the named volume mount, persistence across a
+> container restart, and reconnect-across-restart can only be confirmed on the
+> VM. After restarting, `podman volume inspect rummycube-data` should show the
+> mountpoint populated with `*:metadata`, `*:initial`, and `*:log` files.
 
 ## 3. Wire up Cloudflare
 
