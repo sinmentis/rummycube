@@ -1,0 +1,86 @@
+/* S2-U11 / T2-2: first-turn coach card. Lives in its own file (not board.css)
+   to keep this onboarding change cleanly scoped. Reuses the parchment/card look
+   from HowToPlay.css. Anchored near the action area; it never covers the board. */
+
+.coach-card {
+    position: relative;
+    align-self: center;
+    max-width: 360px;
+    width: 100%;
+    margin: 6px auto 0;
+    padding: 12px 36px 12px 14px;
+    box-sizing: border-box;
+    background: var(--parchment, linear-gradient(180deg, #fbf6e8, #f1e6cb));
+    border: 2px solid var(--parchment-border, #cbae7e);
+    border-radius: 14px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .6);
+    color: var(--ink, #3b2c1a);
+    text-align: left;
+}
+
+.coach-card-close {
+    position: absolute;
+    top: 4px;
+    right: 8px;
+    border: none;
+    background: transparent;
+    font-size: 1.35rem;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--ink-soft, #6f5b3e);
+    padding: 0 .25rem;
+}
+
+.coach-card-close:hover {
+    color: var(--ink, #3b2c1a);
+}
+
+.coach-card-body {
+    margin: 0;
+}
+
+.coach-card-objective {
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-weight: 700;
+    font-size: .95rem;
+    margin: 0 0 4px;
+    color: #205233;
+}
+
+.coach-card-rule {
+    font-size: .9rem;
+    line-height: 1.4;
+    margin: 0;
+    color: var(--ink, #3b2c1a);
+}
+
+.coach-card-confirm {
+    margin-top: 10px;
+    border: 1px solid rgba(32, 82, 51, .5);
+    background: rgba(32, 82, 51, .12);
+    color: #205233;
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-weight: 600;
+    font-size: .85rem;
+    padding: 5px 14px;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: background-color .15s ease, transform .12s ease;
+}
+
+.coach-card-confirm:hover {
+    background: rgba(32, 82, 51, .2);
+}
+
+.coach-card-confirm:active {
+    transform: translateY(1px);
+}
+
+@keyframes coachCardIn {
+    0% { transform: translateY(8px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .coach-card { animation: coachCardIn .3s ease both; }
+}

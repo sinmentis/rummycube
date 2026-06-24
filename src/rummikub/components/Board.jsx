@@ -25,6 +25,7 @@ import {resolveJuice} from "../juice/gating";
 import {countPlacedThisTurn} from "../juice/comboMath";
 import ComboOverlay from "./ComboOverlay";
 import ChatPanel from "./ChatPanel";
+import CoachCard from "./CoachCard";
 import {useUndoRedoHotkeys} from "./useUndoRedoHotkeys";
 import _ from "lodash";
 
@@ -55,6 +56,25 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             } catch (e) { /* private mode / no storage: hint just shows again */ }
         }
     }, [ctx.currentPlayer, playerID, ctx.gameover, firstTurnHintSeen]);
+
+    // S2-U11: one-time first-turn coach card. Unlike the ring hint above it gates
+    // on the server's firstMoveDone (the player's initial meld is still pending)
+    // and persists "seen" the moment the player dismisses it, so it shows once per
+    // device and never reappears on later turns or matches.
+    const COACH_SEEN_KEY = 'rummycube.coachSeen';
+    const [coachSeen, setCoachSeen] = useState(() => {
+        try {
+            return typeof localStorage !== 'undefined' && localStorage.getItem(COACH_SEEN_KEY) === '1';
+        } catch (e) {
+            return false;
+        }
+    });
+    const dismissCoach = useCallback(() => {
+        setCoachSeen(true);
+        try {
+            localStorage.setItem(COACH_SEEN_KEY, '1');
+        } catch (e) { /* private mode / no storage: card just shows again */ }
+    }, []);
 
     useEffect(() => {
         if (playerID === '0' && ctx.phase === 'playersJoin' && _.every(matchData, (item) => item.name)) {
@@ -445,6 +465,15 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         </div>
     ) : null
 
+    // S2-U11: first turn only — your move, initial meld not yet done, match
+    // underway (not joining), not over, and not previously dismissed.
+    const showCoachCard = !coachSeen
+        && isMyTurnBanner
+        && !ctx.gameover
+        && !waiting
+        && !(G.firstMoveDone && G.firstMoveDone[playerID])
+    const coachCard = showCoachCard ? <CoachCard onDismiss={dismissCoach}/> : null
+
     // Turn controls:
     //  - staged tiles on your turn -> Submit meld (active) + Draw (disabled, with
     //    a tooltip explaining why) + Give up turn.
@@ -492,6 +521,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                     {turnBanner}
                     {firstTurnHint}
                     {handGrid}
+                    {coachCard}
                     <div className="controls-wrapper">
                         <button disabled={ctx.gameover || waiting}
                                 title={'Order by runs'}
