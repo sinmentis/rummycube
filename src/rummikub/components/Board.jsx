@@ -27,6 +27,7 @@ import {countPlacedThisTurn} from "../juice/comboMath";
 const ComboOverlay = lazy(() => import("./ComboOverlay"));
 import ChatPanel from "./ChatPanel";
 import CoachCard from "./CoachCard";
+import TimeoutAnnouncement from "./TimeoutAnnouncement";
 import {useUndoRedoHotkeys} from "./useUndoRedoHotkeys";
 import every from "lodash/every.js";
 
@@ -368,6 +369,19 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         </div>
     ) : null;
 
+    // T3 / WS-A: the all-visible "time's up" toast, fed by the server-authoritative
+    // G.lastTimeout transient. Suppressed on gameover so a stale "turn passed"
+    // announcement can't linger on the end screen. Self gets a longer dwell.
+    const timeoutIsSelf = !!G.lastTimeout && String(G.lastTimeout.seat) === String(playerID);
+    const timeoutAnnouncement = !ctx.gameover ? (
+        <TimeoutAnnouncement
+            lastTimeout={G.lastTimeout}
+            playerID={playerID}
+            matchData={matchData}
+            durationMs={timeoutIsSelf ? 4500 : 3000}
+        />
+    ) : null;
+
     // S2-U6: keyboard Undo/Redo. The guards mirror the undoBut/redoBut disabled
     // conditions exactly so the shortcuts only fire on your turn when there is
     // something to undo/redo. handlers are stable so the listener isn't churned.
@@ -588,7 +602,10 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             {sidebar}
             <div className="board" onClick={onBoardClick}>
                 <div className="board-kick-layer">
-                {connectionCue}
+                <div className="top-cue-stack">
+                    {connectionCue}
+                    {timeoutAnnouncement}
+                </div>
                 {waiting &&
                     <div className="waiting-overlay" role="status" aria-live="polite">
                         <div className="waiting-card">

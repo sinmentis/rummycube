@@ -1024,11 +1024,7 @@ svg.fa-smile-beam {
    after a local move. Sits above the board, never intercepts input.
    ============================================================ */
 .connection-cue {
-    position: absolute;
-    top: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 7;
+    position: static;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -1066,6 +1062,53 @@ svg.fa-smile-beam {
     0%   { opacity: 1; transform: scale(1); }
     50%  { opacity: .4; transform: scale(.7); }
     100% { opacity: 1; transform: scale(1); }
+}
+
+/* ===========================================================
+   T3 / WS-A — timeout announcement toast + shared top-cue stack.
+   The all-visible "time's up" pill reuses the connection-cue
+   top-centered capsule language in a warmer amber to read as a
+   distinct channel; the ⏱ glyph comes from the copy itself. Both
+   cues share one vertical stack so they never overlap. Absolutely
+   positioned, never intercepts input.
+   =========================================================== */
+.top-cue-stack {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 8;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+}
+.timeout-toast {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .2px;
+    color: #ffe1a8;
+    background: rgba(36, 26, 10, .92);
+    border: 1px solid rgba(214, 160, 60, .6);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, .45);
+    pointer-events: none;
+    white-space: nowrap;
+}
+/* Motion gated: reduced-motion shows the text immediately, no slide/fade. */
+@media (prefers-reduced-motion: no-preference) {
+    .timeout-toast {
+        animation: timeout-toast-in .22s ease both;
+    }
+}
+@keyframes timeout-toast-in {
+    0%   { opacity: 0; transform: translateY(-6px); }
+    100% { opacity: 1; transform: translateY(0); }
 }
 
 /* ===== WS-10 playable-tile hint (highlight-only) =====
