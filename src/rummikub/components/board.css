@@ -100,15 +100,78 @@ body {
 }
 
 .controls-wrapper {
-    display: flex;
-    justify-content: center;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
+    gap: 10px;
     margin-top: 1.6vh; /* adjust spacing as needed */
 }
 
-.controls-wrapper button {
+/* WS-C: three weight tiers across the row — secondary cluster (left), the
+   dominant primary actions truly centered (the auto middle column is sized
+   to its content, independent of the side groups' width), and the utility
+   tools (hints + undo/redo) to the right. */
+.controls-secondary {
+    grid-column: 1;
+    justify-self: start;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.controls-primary {
+    grid-column: 2;
+    justify-self: center;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.controls-tools {
+    grid-column: 3;
+    justify-self: end;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Phones/tablets: stack the three clusters, surfacing the dominant actions
+   first. This shares the <= 820px boundary where the layout's ancestors set
+   overflow:hidden — below it the 3-column row (widest in the staged
+   Submit + Draw + Give-up state) would clip horizontally and the col-3 tools
+   (undo/redo) become unreachable on touch. Each cluster fills its row and
+   wraps, so nothing is ever cut off, down to the narrowest phones. */
+@media (max-width: 820px) {
+    .controls-wrapper {
+        grid-template-columns: 1fr;
+    }
+
+    .controls-secondary,
+    .controls-primary,
+    .controls-tools {
+        grid-column: 1;
+        justify-self: stretch;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .controls-primary {
+        order: 1;
+    }
+
+    .controls-secondary {
+        order: 2;
+    }
+
+    .controls-tools {
+        order: 3;
+    }
+}
+
+/* cheva stays on the legacy controls (Give up turn, hints toggle); the new
+   primary/secondary action buttons opt out so their Poppins (the app's base
+   face) applies. */
+.controls-wrapper button:not(.primary-action):not(.secondary-action) {
     font-family: cheva;
 }
 
@@ -526,6 +589,98 @@ svg.fa-smile-beam {
     background-color: #ffc1c1;
     color: #8a1414;
     box-shadow: 0 4px 0 #d98686, 0 0 12px rgba(220, 70, 70, .55);
+}
+
+/* ============================================================
+   WS-C — primary / secondary action hierarchy.
+   .primary-action (Draw / Submit meld / End): brass, larger, strong 3D
+   shadow + warm glow, dark ink (>= WCAG AA). .secondary-action (Sort: *):
+   flat muted parchment, smaller. Both keep the .rummikub-button base class
+   (and so its <= 820px >= 44px hit-area rule). Defined after .rummikub-button*
+   so these equal-specificity rules win the cascade.
+   ============================================================ */
+.primary-action {
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-weight: 800;
+    font-size: 18px;
+    letter-spacing: .2px;
+    min-height: 52px;          /* > 44px hit area */
+    padding: 13px 28px;
+    min-width: 120px;
+    border: none;
+    border-radius: 12px;
+    color: #2a2012;            /* dark ink on brass = 6.75:1 */
+    background: linear-gradient(180deg, #e7c66b 0%, #cda24b 100%);
+    box-shadow: 0 4px 0 #9c7a33, 0 6px 16px rgba(0, 0, 0, .42),
+                inset 0 1px 0 rgba(255, 255, 255, .45);
+    cursor: pointer;
+    transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+}
+
+.primary-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 #9c7a33, 0 9px 20px rgba(0, 0, 0, .48),
+                inset 0 1px 0 rgba(255, 255, 255, .5);
+}
+
+.primary-action:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 0 #876a2c, 0 3px 8px rgba(0, 0, 0, .35);
+}
+
+.primary-action:disabled {
+    /* drop the brass gradient (a background-image, so .rummikub-button:disabled's
+       background-color:#ddd !important can't override it on its own) -> disabled
+       reads as inactive grey, not active. */
+    background-image: none;
+    filter: saturate(.35) brightness(.92);
+    opacity: .5;
+    box-shadow: 0 2px 0 #9c7a33;
+    transform: none;
+    cursor: not-allowed;
+}
+
+/* Submit meld keeps the accept/reject second channel (colour + ✓/✕ glyph);
+   these override the brass base when tiles are staged, mirroring endStateClass. */
+.primary-action.end-valid {
+    background: linear-gradient(180deg, #c8f5c8 0%, #b6efb6 100%);
+    color: #0a5a0a;            /* 6.46:1 */
+    box-shadow: 0 4px 0 #6cbf6c, 0 0 16px rgba(70, 200, 70, .6);
+}
+
+.primary-action.end-invalid {
+    background: linear-gradient(180deg, #ffd2d2 0%, #ffc1c1 100%);
+    color: #8a1414;            /* 6.23:1 */
+    box-shadow: 0 4px 0 #d98686, 0 0 14px rgba(220, 70, 70, .5);
+}
+
+.secondary-action {
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    min-height: 44px;          /* still >= hit area; demoted via colour/size, not target */
+    padding: 8px 14px;
+    border: 1px solid var(--parchment-border, #cbae7e);
+    border-radius: 10px;
+    color: #5b4a2e;            /* on muted parchment = 6.68:1 */
+    background: #efe3c4;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .28);
+    cursor: pointer;
+    transition: background-color .12s ease, transform .1s ease;
+}
+
+.secondary-action:hover {
+    background: #e7d8b4;
+}
+
+.secondary-action:active {
+    transform: translateY(1px);
+}
+
+.secondary-action:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+    box-shadow: none;
 }
 
 .submit-reason {

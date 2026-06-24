@@ -415,7 +415,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
 
     // Pass button, used only when there's nothing to submit and no tile to draw.
     const endBut = (<button disabled={!isMyTurn || waiting}
-                            className={'rummikub-button'}
+                            className={'rummikub-button primary-action'}
                             title={'Pass your turn'}
                             onClick={() => {
                                 endTurn()
@@ -424,7 +424,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
 
     // Non-destructive submit. Disabled until at least one tile is staged.
     const submitBut = (<button disabled={!isMyTurn || !hasStaged || waiting}
-                               className={'rummikub-button' + endStateClass}
+                               className={'rummikub-button primary-action' + endStateClass}
                                title={'Submit your placed tiles as a meld'}
                                onClick={() => {
                                    onSubmitMeld()
@@ -443,7 +443,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     const drawBut = (<button
         disabled={!(ctx.currentPlayer === playerID && G.tilesPool.length) || ctx.gameover || waiting || hasStaged}
         title={hasStaged ? 'Clear your placed tiles to draw instead' : 'Take a tile and skip the turn'}
-        className={'rummikub-button'}
+        className={'rummikub-button primary-action'}
         onClick={() => {
             drawTile()
         }}>Draw
@@ -656,22 +656,28 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                     {handGrid}
                     {coachCard}
                     <div className="controls-wrapper">
-                        <button disabled={ctx.gameover || waiting}
-                                title={'Order by runs'}
-                                className={'rummikub-button'} onClick={() => {
-                            onOrderByColorClicked()
-                        }}>Sort: runs
-                        </button>
-                        <button disabled={ctx.gameover || waiting}
-                                title={'Order by sets'}
-                                className={'rummikub-button'} onClick={() => {
-                            onOrderByValColor()
-                        }}>Sort: colours
-                        </button>
-                        <HintsToggle on={hintsOn} onToggle={toggleHints}/>
-                        {drawOrEnd}
-                        {undoBut}
-                        {redoBut}
+                        <div className="controls-secondary">
+                            <button disabled={ctx.gameover || waiting}
+                                    title={'Order by runs'}
+                                    className={'rummikub-button secondary-action'} onClick={() => {
+                                onOrderByColorClicked()
+                            }}>Sort: runs
+                            </button>
+                            <button disabled={ctx.gameover || waiting}
+                                    title={'Order by sets'}
+                                    className={'rummikub-button secondary-action'} onClick={() => {
+                                onOrderByValColor()
+                            }}>Sort: colours
+                            </button>
+                        </div>
+                        <div className="controls-primary">
+                            {drawOrEnd}
+                        </div>
+                        <div className="controls-tools">
+                            <HintsToggle on={hintsOn} onToggle={toggleHints}/>
+                            {undoBut}
+                            {redoBut}
+                        </div>
                     </div>
                     {submitReason &&
                         <div className="submit-reason" role="alert">{submitReason}</div>}
