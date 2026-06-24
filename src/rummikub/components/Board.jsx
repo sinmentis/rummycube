@@ -3,7 +3,8 @@ import './board.css';
 import '../theme/classic.css';
 import GridContainer from "./GridContainer";
 import {DndContext, DragOverlay, MouseSensor, TouchSensor, useSensor, useSensors} from '@dnd-kit/core'
-import {parseSlotId, orderTilesBySource, resolveDropSlot, buildRowOccupancy} from "../dndUtil";
+import {parseSlotId, orderTilesBySource, resolveDropSlot, buildRowOccupancy, isRunFree, boardRowTiles} from "../dndUtil";
+import {insertWithPush} from "../insertPush";
 import {TilePreview} from "./Tile";
 import {
     HAND_GRID_ID, BOARD_GRID_ID, BOARD_ROWS, BOARD_COLS, HAND_ROWS, HAND_COLS
@@ -176,6 +177,28 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         const excludeIds = selectedTiles.length ? selectedTiles : [id];
         const isOccupied = buildRowOccupancy(gRef.current.tilePositions, gridId, excludeIds, playerID);
         const maxCols = gridId === BOARD_GRID_ID ? BOARD_COLS : HAND_COLS;
+        // T4 (WS-6): a board drop whose in-bounds run lands on an occupied span routes
+        // to the authoritative insert/push move. Split out-of-bounds from occupied —
+        // only push when inBounds && occupied; a free target, the hand, or an
+        // out-of-bounds run falls through to resolveDropSlot's near-edge snap below.
+        // The client only decides the path and gives an instant buzz on a hopeless
+        // push; the server move (insertTilesWithPush) is the authority.
+        const inBounds = col >= 0 && col + selectionLength <= maxCols;
+        const occupiedInRun = inBounds && !isRunFree(isOccupied, col, selectionLength, row, maxCols);
+        if (gridId === BOARD_GRID_ID && occupiedInRun) {
+            const rowTiles = boardRowTiles(gRef.current.tilePositions, row, excludeIds);
+            const plan = insertWithPush(rowTiles, col, selectionLength, BOARD_COLS - 1);
+            if (!plan) {
+                buzz();
+                setState({selectedTiles: [], lastSelectedTileId: null});
+                return;
+            }
+            moves.insertTilesWithPush(col, row, gridId, {id}, orderTilesBySource(excludeIds, gRef.current.tilePositions));
+            markSyncing();
+            play('place');
+            setState({selectedTiles: [], lastSelectedTileId: null});
+            return;
+        }
         const result = resolveDropSlot({gridId, col, row}, isOccupied, selectionLength, maxCols);
         if (!result.ok) {
             // No legal landing (e.g. a multi-selection onto insufficient space).
@@ -236,6 +259,25 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         const selectionLength = selectedTiles.length;
         const isOccupied = buildRowOccupancy(gRef.current.tilePositions, gridId, selectedTiles, playerID);
         const maxCols = gridId === BOARD_GRID_ID ? BOARD_COLS : HAND_COLS;
+        // T4 (WS-6): same board split as the drag drop — a tapped empty cell whose
+        // N-wide run overlaps occupants to its right must push too; out-of-bounds and
+        // the hand stay on the resolveDropSlot snap below.
+        const inBounds = col >= 0 && col + selectionLength <= maxCols;
+        const occupiedInRun = inBounds && !isRunFree(isOccupied, col, selectionLength, row, maxCols);
+        if (gridId === BOARD_GRID_ID && occupiedInRun) {
+            const rowTiles = boardRowTiles(gRef.current.tilePositions, row, selectedTiles);
+            const plan = insertWithPush(rowTiles, col, selectionLength, BOARD_COLS - 1);
+            if (!plan) {
+                buzz();
+                setState({selectedTiles: [], lastSelectedTileId: null});
+                return;
+            }
+            moves.insertTilesWithPush(col, row, gridId, {id: selectedTiles[0]}, orderTilesBySource(selectedTiles, gRef.current.tilePositions));
+            markSyncing();
+            play('place');
+            setState({selectedTiles: [], lastSelectedTileId: null});
+            return;
+        }
         const result = resolveDropSlot({gridId, col, row}, isOccupied, selectionLength, maxCols);
         if (!result.ok) {
             buzz();
