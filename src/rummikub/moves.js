@@ -1,4 +1,4 @@
-import {BOARD_GRID_ID, HAND_COLS, HAND_GRID_ID, HAND_ROWS} from "./constants.js";
+import {BOARD_COLS, BOARD_GRID_ID, HAND_COLS, HAND_GRID_ID, HAND_ROWS} from "./constants.js";
 import flatten from "lodash/flatten.js";
 import some from "lodash/some.js";
 import {
@@ -23,6 +23,7 @@ import {current} from 'immer';
 
 import {pushTilesToGrid} from "./orderTiles.js";
 import {orderTilesBySource} from "./dndUtil.js";
+import {insertWithPush} from "./insertPush.js";   // explicit .js so node src/server.js boots
 import {manipulationScore} from "./juice/comboMath.js";
 
 import { INVALID_MOVE } from 'boardgame.io/dist/cjs/core.js';
@@ -98,6 +99,7 @@ function moveTiles({G, ctx, playerID}, col, row, destGridId, tileIdObj, selected
 
         if (fromHandToBoard) {
             if (playerID !== ctx.currentPlayer || ctx.phase === 'playersJoin') return INVALID_MOVE
+            if (String(currPos.playerID) !== String(playerID)) return INVALID_MOVE
             flags = {tmp: true, playerID: null}
         } else if (fromHandToHand) {
             flags = {tmp: false, playerID: currPos.playerID}
@@ -124,6 +126,63 @@ function moveTiles({G, ctx, playerID}, col, row, destGridId, tileIdObj, selected
         })
     } else {
         insertTile(tileId, destGridId, row, col)
+    }
+}
+
+// Authoritative "auto-snap + insert/push": drop N dragged tiles onto a single board
+// row, rippling the colliding run aside (T1's insertWithPush). Mirrors moveTiles'
+// signature. Geometric only — it never calls isOverlap/isBoardValid; run/group
+// validity stays a submit-time concern. The whole cascade is one reducer pass and one
+// undo entry; an INVALID_MOVE discards the immer draft so G is untouched.
+function insertTilesWithPush({G, ctx, playerID}, col, row, destGridId, tileIdObj, selectedTiles) {
+    const T = col;
+    if (playerID !== ctx.currentPlayer) return INVALID_MOVE;
+    if (destGridId !== BOARD_GRID_ID) return INVALID_MOVE;
+
+    const tileId = tileIdObj.id;
+    const selection = (selectedTiles.length && selectedTiles.indexOf(tileId) !== -1)
+        ? orderTilesBySource(selectedTiles, G.tilePositions)
+        : [tileId];
+    const N = selection.length;
+    const sel = new Set(selection.map(String));
+
+    // The target row's existing occupants, excluding the dragged selection.
+    const rowTiles = [];
+    for (const id in G.tilePositions) {
+        const p = G.tilePositions[id];
+        if (!p || p.gridId !== BOARD_GRID_ID || p.row !== row) continue;
+        if (sel.has(String(id))) continue;
+        rowTiles.push({tileId: id, col: p.col});
+    }
+
+    const plan = insertWithPush(rowTiles, T, N, BOARD_COLS - 1);
+    if (!plan) return INVALID_MOVE;
+
+    // Only push after a feasible plan: one snapshot => one undo restores the whole
+    // arrangement (mirrors moveTiles:79 semantics).
+    if (ctx.currentPlayer === playerID) G.gameStateStack.push(getGameState(G));
+
+    // (1) Pushed board tiles: change ONLY col, keep id/row/gridId/tmp/playerID.
+    for (const id in plan.shifts) {
+        const p = G.tilePositions[id];
+        G.tilePositions[id] = {...p, col: plan.shifts[id]};
+    }
+    // (2) Dragged tiles land at newCols with moveTiles' flags (no isOverlap call).
+    for (let i = 0; i < selection.length; i++) {
+        const id = selection[i];
+        const p = G.tilePositions[id];
+        if (!p) return INVALID_MOVE;
+        let flags;
+        if (p.gridId === HAND_GRID_ID) {            // hand -> board
+            if (String(p.playerID) !== String(playerID)) return INVALID_MOVE;   // must: reject moving an opponent's hand tile
+            if (ctx.phase === 'playersJoin') return INVALID_MOVE;   // same as moveTiles
+            flags = {tmp: true, playerID: null};
+        } else if (p.gridId === BOARD_GRID_ID) {    // board -> board (re-arrange committed/tmp tiles)
+            flags = {tmp: p.tmp, playerID: p.playerID};
+        } else {
+            return INVALID_MOVE;
+        }
+        G.tilePositions[id] = {id: p.id, col: plan.newCols[i], row, gridId: BOARD_GRID_ID, ...flags};
     }
 }
 
@@ -499,6 +558,7 @@ export {
     forceEndTurn,
     forfeitTurn,
     moveTiles,
+    insertTilesWithPush,
     validatePlayerMove,
     submitMeld,
     retrieveJoker,
