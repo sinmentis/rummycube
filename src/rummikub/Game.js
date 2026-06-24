@@ -44,6 +44,7 @@ const Rummikub = {
             lastCircle: [],
             recentlyDrawnTiles: [],
             lastPlay: null,
+            lastTimeout: null,
             // WS-12: authoritative per-seat connection state, written ONLY by the
             // server transport via the _setConnection move (never client-trusted).
             connected: Array(ctx.numPlayers).fill(true),

@@ -147,3 +147,18 @@ test('playerView keeps player 1 own hand when viewing as player 1', () => {
     expect(view.tilePositions).not.toHaveProperty(String(ids.p0a));
     expect(view.tilePositions).not.toHaveProperty(String(ids.p0b));
 });
+
+test('playerView passes G.lastTimeout through (deep-copied) without leaking tiles or hands', () => {
+    const {G} = buildG();
+    G.lastTimeout = {seat: 1, drawCount: 2, id: 4};
+    const view = playerView({G, ctx: CTX, playerID: '0'});
+
+    expect(view.lastTimeout).toEqual({seat: 1, drawCount: 2, id: 4});
+    expect(view.lastTimeout).not.toBe(G.lastTimeout); // deep-copied, not the same reference
+    expect(Object.keys(view.lastTimeout).sort()).toEqual(['drawCount', 'id', 'seat']);
+    // the timeout announcement carries no tile / hand fields
+    expect(view.lastTimeout).not.toHaveProperty('tilePositions');
+    expect(view.lastTimeout).not.toHaveProperty('playerID');
+    expect(view.lastTimeout).not.toHaveProperty('gridId');
+    expect(view.lastTimeout).not.toHaveProperty('tiles');
+});

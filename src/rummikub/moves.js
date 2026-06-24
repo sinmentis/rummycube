@@ -152,11 +152,19 @@ function forceEndTurn({G, ctx, events}) {
         return INVALID_MOVE
     }
     const player = ctx.currentPlayer
+    const poolBefore = G.tilesPool.length
     if (isBoardHasNewTiles(G)) {
         validatePlayerMove(G, ctx, player, events)
     } else {
         drawTile({G, ctx, playerID: player, events}, !isBoardValid(G))
     }
+    // Server-authoritative "time's up" announcement, written ONLY after the
+    // deadline guard so a pre-deadline force-end returns INVALID_MOVE above and
+    // leaves G untouched (the immer draft is discarded). drawCount is the real
+    // pool delta: 2 after the player's first meld, 1 before it, 0 for a kept
+    // submit. Every client renders it via playerView; onTurnBegin clears it once
+    // a whole turn has passed (staleness guard there).
+    G.lastTimeout = {seat: Number(player), drawCount: poolBefore - G.tilesPool.length, id: ctx.turn}
 }
 
 function forfeitTurn({G, ctx, playerID, events}) {
@@ -451,6 +459,15 @@ function onTurnBegin({G, ctx, events}) {
         G.lastCircle.push(seat)
     }
     G.prevTilePositions = original(G.tilePositions)
+
+    // forceEndTurn writes G.lastTimeout then its own endTurn fires the NEXT
+    // onTurnBegin inside the SAME state update, where G.lastTimeout.id ===
+    // ctx.turn - 1. An unconditional clear would wipe the transient before any
+    // client renders it, so keep it for a full turn and drop it only once stale.
+    if (G.lastTimeout && typeof G.lastTimeout.id === 'number' && G.lastTimeout.id <= ctx.turn - 2) {
+        G.lastTimeout = null
+    }
+
     return G
 }
 
