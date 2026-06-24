@@ -54,6 +54,17 @@
     color: var(--ink, #3b2c1a);
 }
 
+.coach-card-rule + .coach-card-rule {
+    margin-top: 6px;
+}
+
+.coach-card-pointer {
+    font-size: .85rem;
+    line-height: 1.4;
+    margin: 6px 0 0;
+    color: var(--ink-soft, #6f5b3e);
+}
+
 .coach-card-confirm {
     margin-top: 10px;
     border: 1px solid rgba(32, 82, 51, .5);

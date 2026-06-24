@@ -1,5 +1,5 @@
 import React from 'react';
-import {render, screen, fireEvent} from '@testing-library/react';
+import {render, screen, fireEvent, within} from '@testing-library/react';
 
 // S2-U11 / T2-2: the one-time first-turn coach card. On the player's FIRST turn
 // of a match (their first move not yet done, their turn, match underway) a small
@@ -95,5 +95,25 @@ describe('First-turn coach card', () => {
     test('is not shown when it is not the player turn', () => {
         renderBoard({currentPlayer: '1'});
         expect(screen.queryByText(/first meld/i)).not.toBeInTheDocument();
+    });
+
+    // T7: the first-turn ring microcopy is folded into the coach card (the buggy
+    // standalone .turn-hint is gone), so both the corrected ring line and a
+    // pointer to the opt-in hints toggle live inside the one card.
+    test('folds the corrected ring microcopy into the first-turn card', () => {
+        renderBoard();
+        const card = screen.getByRole('note', {name: /first turn tips/i});
+        expect(within(card).getByText(/ring runs out/i)).toBeInTheDocument();
+    });
+
+    test('points first-turn players at the opt-in hints toggle', () => {
+        renderBoard();
+        const card = screen.getByRole('note', {name: /first turn tips/i});
+        expect(within(card).getByText(/turn on .*hints/i)).toBeInTheDocument();
+    });
+
+    test('no longer renders the standalone .turn-hint element', () => {
+        const {container} = renderBoard();
+        expect(container.querySelector('.turn-hint')).toBeNull();
     });
 });

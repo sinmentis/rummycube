@@ -22,6 +22,12 @@ export default function CoachCard({onDismiss}) {
                 <p className="coach-card-rule">
                     Your first meld must total at least 30 points in runs/sets.
                 </p>
+                <p className="coach-card-rule">
+                    When the ring runs out, you draw a tile and your turn passes.
+                </p>
+                <p className="coach-card-pointer">
+                    Stuck? Turn on 💡 Hints below.
+                </p>
             </div>
             <button
                 type="button"
