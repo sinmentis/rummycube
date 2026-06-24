@@ -2,6 +2,7 @@ import {Server, Origins, FlatFile} from 'boardgame.io/dist/cjs/server.js';
 import path from 'path';
 import serve from 'koa-static';
 import {Rummikub} from "./rummikub/Game.js";
+import {ConnAwareSocketIO} from "./rummikub/connTransport.js";
 import {FRONTEND_ADDR, GAME_NAME} from "./rummikub/constants.js";
 import {computeServerStats} from "./rummikub/serverStats.js";
 
@@ -21,6 +22,9 @@ const server = Server({
     apiOrigins: allowedOrigins,
     origins: allowedOrigins,
     db,
+    // WS-12: mirror socket connect/disconnect into authoritative G.connected so the
+    // turn logic can collapse a disconnected seat's grace window and forfeit it.
+    transport: new ConnAwareSocketIO(),
 });
 const PORT = process.env.PORT || 9119;
 
