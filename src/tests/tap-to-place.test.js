@@ -76,7 +76,7 @@ test('two taps (select tile, then tap empty board cell) place the tile with no d
         const tilePositions = {};
         tilePositions[red5] = {id: red5, col: 0, row: 0, gridId: HAND_GRID_ID, playerID: '0'};
         return {
-            timePerTurn: 60, tilesPool: getTiles(), tilePositions,
+            timePerTurn: 600000, tilesPool: getTiles(), tilePositions,
             prevTilePositions: tilePositions, firstMoveDone: [true, true],
             gameStateStack: [], redoMoveStack: [], lastCircle: [], recentlyDrawnTiles: [], lastPlay: null,
         };
@@ -131,7 +131,7 @@ test('a multi-select onto a row with no contiguous space is rejected — no move
             id++;
         }
         return {
-            timePerTurn: 60, tilesPool: getTiles(), tilePositions,
+            timePerTurn: 600000, tilesPool: getTiles(), tilePositions,
             prevTilePositions: tilePositions, firstMoveDone: [true, true],
             gameStateStack: [], redoMoveStack: [], lastCircle: [], recentlyDrawnTiles: [], lastPlay: null,
         };
