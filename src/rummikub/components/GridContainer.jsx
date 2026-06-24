@@ -31,6 +31,7 @@ const GridContainer = function ({
                                     highlightTiles,
                                     playableTiles,
                                     selectedTiles,
+                                    onCellTap,
                                     handleTileSelection,
                                     newlyAdded,
                                     className
@@ -39,6 +40,7 @@ const GridContainer = function ({
     let colWidth = 2.2
     const selectedSet = new Set(selectedTiles)
     const playableSet = new Set(playableTiles)
+    const hasSelection = selectedSet.size > 0
     let gridItems = []
     let key = 0
     for (let y = 0; y < rows; y++) {
@@ -56,6 +58,8 @@ const GridContainer = function ({
             let gridTile = <GridSlot
                 canDnD={canDnD}
                 isDragActive={isDragActive}
+                hasSelection={hasSelection}
+                onCellTap={onCellTap}
                 handleTileSelection={handleTileSelection}
                 gridId={gridId}
                 row={y}
