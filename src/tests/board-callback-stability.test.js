@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import { render, screen } from '@testing-library/react';
 
-// U11 part B: Board.jsx stabilizes handleTileSelectionCb/handleLongPressCb by
+// U11 part B: Board.jsx stabilizes handleTileSelectionCb by
 // reading G/state from refs (gRef.current / stateRef.current) instead of
 // closing over them, so useCallback deps drop G/state and the callback keeps a
 // stable identity across re-renders. A stable identity is what lets React.memo

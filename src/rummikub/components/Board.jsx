@@ -19,7 +19,7 @@ import {turnBannerLabel} from "../turnBanner";
 import {buildGridsFromTilePositions, getSecTs, isSequenceValid, count2dArrItems, getPlayerHandTiles} from "../util";
 import {playableTiles} from "../planning";
 const GameOverModal = lazy(() => import("./GameOverModal"));
-import {handleTileSelection, handleLongPress} from "../boardUtil";
+import {handleTileSelection, contiguousGroup} from "../boardUtil";
 import {play, place, milestone, buzz} from "../sound/sfx";
 import * as fx from "../juice/effects";
 import {resolveJuice} from "../juice/gating";
@@ -195,7 +195,6 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     // stay on the board; this just tells the player what to fix.
     const [submitReason, setSubmitReason] = useState('')
     const [hoverPosition, setHoverPosition] = useState({})
-    let longPressTimeoutId = useRef(null)
 
     // Clear the inline reason whenever the board changes (a rejected submit is a
     // no-op so tilePositions is unchanged and the message persists; moving or
@@ -208,9 +207,17 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     const handleTileSelectionCb = useCallback((tileId, shiftKey, ctrlKey) => {
         handleTileSelection(gRef.current, stateRef.current, setState, playerID, tileId, shiftKey, ctrlKey)
     }, [playerID])
-    const handleLongPressCb = useCallback((tileId, timeout) => {
-        handleLongPress(gRef.current, playerID, setState, longPressTimeoutId, tileId, timeout)
-    }, [playerID])
+    // Long-press fired in a Tile: select the whole contiguous run it sits in, then
+    // let the existing distance:6 multi-drag pipeline carry the selection. Ids are
+    // normalized to strings to match the rest of the selection code (tile ids reach
+    // the UI as object keys, i.e. strings, so includes()/=== checks in onDragStart
+    // and the DragOverlay stay type-consistent and never drop a tile).
+    const onLongPressCb = useCallback((tileId) => {
+        setState({
+            selectedTiles: contiguousGroup(gRef.current.tilePositions, tileId).map(String),
+            lastSelectedTileId: String(tileId),
+        })
+    }, [])
 
     const onTileDragEnd = useCallback(() => {
         setState({selectedTiles: [], lastSelectedTileId: null})
@@ -245,13 +252,6 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     // focusable cell/roving-tabindex grid + a visible focus ring, which is more
     // than the "only if cheap" bar. The tap path above is the touch on-ramp; the
     // keyboard cursor is a follow-up.
-
-    const onLongPressMouseUp = useCallback(() => {
-        console.debug('LONG PRESS MOUSE UP REGISTERED')
-        if (longPressTimeoutId.current) {
-            clearTimeout(longPressTimeoutId.current)
-        }
-    }, [longPressTimeoutId])
 
     function onBoardClick(e) {
         const classList = e.target.className?.split?.(' ') || [];
@@ -454,8 +454,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             selectedTiles={state.selectedTiles}
             onTileDragEnd={onTileDragEnd}
             handleTileSelection={handleTileSelectionCb}
-            handleLongPress={handleLongPressCb}
-            onLongPressMouseUp={onLongPressMouseUp}
+            onLongPress={onLongPressCb}
             hoverPosition={hoverPosition}
             setHoverPosition={setHoverPosition}
             newlyAdded={[]}
@@ -475,8 +474,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                        selectedTiles={state.selectedTiles}
                        onTileDragEnd={onTileDragEnd}
                        handleTileSelection={handleTileSelectionCb}
-                       handleLongPress={handleLongPressCb}
-                       onLongPressMouseUp={onLongPressMouseUp}
+                       onLongPress={onLongPressCb}
                        hoverPosition={hoverPosition}
                        setHoverPosition={setHoverPosition}
                        newlyAdded={recentlyDrawnTiles}

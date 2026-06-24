@@ -17,7 +17,8 @@ const GridSlot = React.memo(({
                                  isValid,
                                  isPlayable,
                                  isNewlyAdded,
-                                 handleTileSelection
+                                 handleTileSelection,
+                                 onLongPress
                              }) => {
     const {setNodeRef, isOver} = useDroppable({id: makeSlotId(gridId, col, row)})
 
@@ -32,6 +33,7 @@ const GridSlot = React.memo(({
                     isPlayable={isPlayable}
                     isNewlyAdded={isNewlyAdded}
                     handleTileSelection={handleTileSelection}
+                    onLongPress={onLongPress}
                 />
             </div>
         )

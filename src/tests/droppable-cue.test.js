@@ -27,8 +27,7 @@ function renderGrid({isDragActive, canDnD}) {
                 selectedTiles={[]}
                 moveTiles={() => {}}
                 onTileDragEnd={() => {}}
-                onLongPressMouseUp={() => {}}
-                handleLongPress={() => {}}
+                onLongPress={() => {}}
                 handleTileSelection={() => {}}
                 hoverPosition={null}
                 setHoverPosition={() => {}}

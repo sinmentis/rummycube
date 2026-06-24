@@ -33,6 +33,7 @@ const GridContainer = function ({
                                     selectedTiles,
                                     onCellTap,
                                     handleTileSelection,
+                                    onLongPress,
                                     newlyAdded,
                                     className
                                 }) {
@@ -61,6 +62,7 @@ const GridContainer = function ({
                 hasSelection={hasSelection}
                 onCellTap={onCellTap}
                 handleTileSelection={handleTileSelection}
+                onLongPress={onLongPress}
                 gridId={gridId}
                 row={y}
                 col={x}

@@ -24,6 +24,7 @@ const joker = RedJoker;
 const tiles2dArray = [[t1, t2, joker, null, null, null]];
 
 const handleTileSelection = () => {};
+const onLongPress = () => {};
 
 function renderGrid(selectedTiles) {
   return (
@@ -39,8 +40,7 @@ function renderGrid(selectedTiles) {
         selectedTiles={selectedTiles}
         moveTiles={() => {}}
         onTileDragEnd={() => {}}
-        onLongPressMouseUp={() => {}}
-        handleLongPress={() => {}}
+        onLongPress={onLongPress}
         handleTileSelection={handleTileSelection}
         hoverPosition={null}
         setHoverPosition={() => {}}

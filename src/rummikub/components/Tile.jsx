@@ -1,9 +1,17 @@
-import React, {useCallback} from 'react';
+import React, {useCallback, useEffect, useRef} from 'react';
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {faSmileBeam} from "@fortawesome/free-solid-svg-icons";
 import {getTileValue, isJoker, getTileColor} from "../util";
 import {useDraggable} from '@dnd-kit/core';
 import {COLORS, TILE_WIDTH} from "../constants";
+
+// Long-press to pick up a whole contiguous group (WS-5). The press-timer is kept
+// entirely local to the leaf Tile so cancellation never has to reach across the
+// tree: a hold of LONG_PRESS_MS with movement under MOVE_CANCEL_PX fires
+// onLongPress(tile). MOVE_CANCEL_PX matches the dnd-kit activation distance (6)
+// so a real drag and a long-press never both win.
+const LONG_PRESS_MS = 250;
+const MOVE_CANCEL_PX = 6;
 
 
 function getAbsolutePosition(relativePosition) {
@@ -85,19 +93,65 @@ function getTileStyle(selected, isDragging, isValid, position, index, newlyAdded
     return result
 }
 
-const Tile = React.memo(function Tile({tile, canDnD, isSelected, isValid, isPlayable, handleTileSelection, isNewlyAdded}) {
+const Tile = React.memo(function Tile({tile, canDnD, isSelected, isValid, isPlayable, handleTileSelection, isNewlyAdded, onLongPress}) {
     const {attributes, listeners, setNodeRef, isDragging} = useDraggable({id: tile, disabled: !canDnD});
 
+    const pressTimer = useRef(null);
+    const startXY = useRef(null);
+    const firedRef = useRef(false);
+
+    const clearPressTimer = useCallback(() => {
+        if (pressTimer.current) {
+            clearTimeout(pressTimer.current);
+            pressTimer.current = null;
+        }
+    }, []);
+
+    // Pointer events (not onMouseDown/onTouchStart, which are the dnd-kit
+    // Mouse/Touch sensor activators in {...listeners}); pointer handlers coexist
+    // without clobbering them. On a still hold we arm the whole group; the
+    // firedRef then swallows the click that the OS sends after pointerup so the
+    // group isn't immediately toggled back to a single tile.
+    const onPointerDown = useCallback((e) => {
+        if (!canDnD) return;
+        firedRef.current = false;
+        startXY.current = {x: e.clientX, y: e.clientY};
+        clearPressTimer();
+        pressTimer.current = setTimeout(() => {
+            firedRef.current = true;
+            pressTimer.current = null;
+            onLongPress?.(tile);
+        }, LONG_PRESS_MS);
+    }, [canDnD, tile, onLongPress, clearPressTimer]);
+
+    const onPointerMove = useCallback((e) => {
+        if (!pressTimer.current || !startXY.current) return;
+        const dx = e.clientX - startXY.current.x;
+        const dy = e.clientY - startXY.current.y;
+        if (dx * dx + dy * dy > MOVE_CANCEL_PX * MOVE_CANCEL_PX) {
+            clearPressTimer();
+        }
+    }, [clearPressTimer]);
+
     const onClick = useCallback((e) => {
+        if (firedRef.current) {
+            firedRef.current = false;
+            return;
+        }
         handleTileSelection(tile, e.shiftKey, e.ctrlKey || e.metaKey)
     }, [tile, handleTileSelection])
+
+    useEffect(() => () => clearPressTimer(), [clearPressTimer]);
 
     const jokerLabel = isJoker(tile) ? 'Joker (wildcard)' : undefined
     const playableLabel = isPlayable === true ? 'Playable: can extend a board group' : undefined
     const ariaLabel = [jokerLabel, playableLabel].filter(Boolean).join('. ') || undefined
 
     return (
-        <div ref={setNodeRef} {...listeners} {...attributes} onClick={onClick} id={tile}
+        <div ref={setNodeRef} {...listeners} {...attributes} onClick={onClick}
+             onPointerDown={onPointerDown} onPointerMove={onPointerMove}
+             onPointerUp={clearPressTimer} onPointerCancel={clearPressTimer}
+             onPointerLeave={clearPressTimer} id={tile}
              aria-label={ariaLabel} title={ariaLabel}
              style={{touchAction: 'none', opacity: isDragging ? 0.4 : 1, cursor: canDnD ? 'grab' : 'default'}}>
             <TilePreview

@@ -28,8 +28,7 @@ function renderHand(playableTiles) {
                 selectedTiles={[]}
                 moveTiles={() => {}}
                 onTileDragEnd={() => {}}
-                onLongPressMouseUp={() => {}}
-                handleLongPress={() => {}}
+                onLongPress={() => {}}
                 handleTileSelection={() => {}}
                 hoverPosition={null}
                 setHoverPosition={() => {}}
