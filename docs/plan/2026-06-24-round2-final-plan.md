@@ -23,7 +23,7 @@
 ## File Structure
 
 **新建:** `src/rummikub/insertPush.js`(纯 `insertWithPush`)、`src/rummikub/components/ExitButton.jsx`、对应测试。
-**修改:** `dndUtil.js`(+`isRunFree`/`boardRowTiles`)、`moves.js`(+`insertTilesWithPush`)、`Game.js`(注册)、`Board.jsx`(落点分流 + 长按回调 + give-up 状态机)、`boardUtil.js`(+`contiguousGroup`,删死代码 `handleLongPress`/`getNextTile`)、`Tile.jsx`/`GridSlot.jsx`/`GridContainer.jsx`(长按透传)、`App.jsx`(挂 ExitButton)、`GameOverModal.jsx`(Back to home)、`board.css`(give-up armed + 聊天留白 + 横幅)。
+**修改:** `dndUtil.js`(+`isRunFree`/`boardRowTiles`)、`moves.js`(+`insertTilesWithPush`,并加固 `insertTile` 的 hand 归属校验)、`Game.js`(注册)、`Board.jsx`(落点分流 + 长按回调 + give-up 状态机)、`boardUtil.js`(+`contiguousGroup`,删死代码 `handleLongPress`/`getNextTile`)、`Tile.jsx`/`GridSlot.jsx`/`GridContainer.jsx`(长按透传)、`src/App.jsx`(挂 ExitButton 顶栏)、`GameOverModal.jsx`(Back to home)、`board.css`(give-up armed + 聊天留白 + 横幅)。
 
 ## 可调参数([PLACEHOLDER],playtest 可调)
 
@@ -94,9 +94,10 @@ function tryLeft(asc, T, N, maxCol) {
 
 **Interface — Produces:**
 ```js
-export function isRunFree(isOccupied, T, N, maxCols) {  // maxCols=排他计数(BOARD_COLS=32)
+// buildRowOccupancy(dndUtil.js:42-53) 返回的是 (col,row)=>bool(两参!)——必须带 row
+export function isRunFree(isOccupied, T, N, row, maxCols) {  // maxCols=排他计数(BOARD_COLS=32)
     if (T < 0 || T + N > maxCols) return false;
-    for (let c = T; c < T + N; c++) if (isOccupied(c)) return false;  // 注:沿用 buildRowOccupancy 的 (col)=>bool
+    for (let c = T; c < T + N; c++) if (isOccupied(c, row)) return false;
     return true;
 }
 export function boardRowTiles(tilePositions, row, excludeIds) {  // -> [{tileId,col}]
@@ -109,7 +110,7 @@ export function boardRowTiles(tilePositions, row, excludeIds) {  // -> [{tileId,
     return out;
 }
 ```
-> 注:核对 `buildRowOccupancy`(`dndUtil.js:42-54`)的返回签名;若它返回 `(col,row)=>bool` 则 `isRunFree` 形参随之带 `row`。以现有签名为准,保持一致。
+> **(rubber-duck 修正)** `isOccupied` 是 `(col,row)=>bool`,**必须传 `row`**,否则 `isOccupied(c)` 退化成查 `"c:undefined"`、占位格被当空格 → 误派 `moveTiles` 落占位 → 服务端 `INVALID_MOVE` 静默 no-op。T2/T4 测试都要带 `row`。
 
 - [ ] **Step 1 失败测试**:`isRunFree` 边界(T<0、T+N>maxCols、命中占位、全空);`boardRowTiles` 排除集 + 只取本行 board 牌。
 - [ ] **Step 2 跑测试确认失败**。
@@ -127,7 +128,17 @@ export function boardRowTiles(tilePositions, row, excludeIds) {  // -> [{tileId,
 
 **实现(见 review-1 §2.2;要点):** 守卫 `playerID===ctx.currentPlayer` 且 `destGridId==='b'`,否则 `INVALID_MOVE`;`selection` = 含 `tileIdObj.id` 时 `orderTilesBySource(selectedTiles,…)` 否则 `[id]`;收集本行 board 占位(排除 selection)→ `insertWithPush(rowTiles, col, N, BOARD_COLS-1)`;`null`→`INVALID_MOVE`;否则**先 push 一条** `G.gameStateStack.push(getGameState(G))`,再①把 `shifts` 里被推牌只改 `col`,②新牌落 `newCols`(hand→board 置 `{tmp:true,playerID:null}` 且 `playersJoin` 阶段拒绝;board→board 保留 `tmp/playerID`)。全程**不调 `isOverlap`/合法性**。`Game.js`:`import` + 顶层 `moves` 注册(`playersJoin.phase` 不注册)。完整代码见 review-1 §2.2/§2.3,**逐字采用**。
 
-- [ ] **Step 1 失败测试**(reducer,`Local()`,setup 给毫秒 timePerTurn):级联写入正确(被推牌新 col + 新牌 newCols + tmp);**原子**;`INVALID_MOVE` 路径 `_.cloneDeep` 比对 G 不变(仿 `forfeit-turn.test.js` 第二例);`undo` 一步还原整组;**anti-cheat**(非当前玩家→`INVALID_MOVE` 且 currentPlayer 不变);`destGridId!=='b'`→`INVALID_MOVE`;hand→board 在 `playersJoin` 拒绝。
+> **(rubber-duck 修正 · 反作弊)** hand→board 分支**必须校验牌的归属**——`insertTile`(`moves.js:99-101`)只查「mover 是当前玩家」、**没查「这张手牌是 mover 自己的」**(`currPos.playerID===playerID`),理论上当前玩家猜到对手手牌 id 即可移动它。新 move 的 hand→board 分支要加:
+> ```js
+> if (p.gridId === HAND_GRID_ID) {
+>     if (String(p.playerID) !== String(playerID)) return INVALID_MOVE;  // 必须:防移动对手手牌
+>     if (ctx.phase === 'playersJoin') return INVALID_MOVE;
+>     flags = {tmp: true, playerID: null};
+> }
+> ```
+> **并同步加固既有 `moveTiles` 的 `insertTile` fromHandToBoard 分支(同一行检查,`moves.js:99-101`)**——这是与新代码紧耦合的既有反作弊缺口,本任务一并补。reducer 测试加一条:当前玩家试图插入「`playerID` 非本人」的手牌 → `INVALID_MOVE` 且 G 不变。
+
+- [ ] **Step 1 失败测试**(reducer,`Local()`,setup 给毫秒 timePerTurn):级联写入正确(被推牌新 col + 新牌 newCols + tmp);**原子**;`INVALID_MOVE` 路径 `_.cloneDeep` 比对 G 不变(仿 `forfeit-turn.test.js` 第二例);`undo` 一步还原整组;**anti-cheat**(非当前玩家→`INVALID_MOVE` 且 currentPlayer 不变;**插入「`playerID` 非本人」的手牌→`INVALID_MOVE` 且 G 不变**);`destGridId!=='b'`→`INVALID_MOVE`;hand→board 在 `playersJoin` 拒绝。
 - [ ] **Step 2 跑测试确认失败**。
 - [ ] **Step 3 实现** move + 注册。
 - [ ] **Step 4 跑测试确认通过**;并 `node src/server.js` 启动核验(`insertPush.js` 显式 `.js` import)。
@@ -141,7 +152,21 @@ export function boardRowTiles(tilePositions, row, excludeIds) {  // -> [{tileId,
 
 **Interface — Consumes:** `insertWithPush`(T1)、`isRunFree`/`boardRowTiles`(T2)、`moves.insertTilesWithPush`(T3)。
 
-**实现(见 review-1 §2.4,逐字采用):** board 落点先判 `isRunFree`;命中占位 → `insertWithPush` 预判(`null`→`buzz`+清选区,**不发 move**),否则 `moves.insertTilesWithPush(T,row,'b',{id},ordered)`;全空目标/hand 行 → 沿用现有 `resolveDropSlot`+`moveTiles`。`onCellTap` 同样 board 分流(空格 tap 右侧可能占位 → 同判)。保持「失败=非破坏性 buzz+回弹」。
+**实现(见 review-1 §2.4):** board 落点先判**「在界内 且 run 命中占位」**才走挤位;否则(全空目标 / 越界 / hand 行)沿用现有 `resolveDropSlot`+`moveTiles`。命中占位 → `insertWithPush` 预判(`null`→`buzz`+清选区,**不发 move**),否则 `moves.insertTilesWithPush(T,row,'b',{id},ordered)`。保持「失败=非破坏性 buzz+回弹」。
+
+> **(rubber-duck 修正)** 必须把**「越界」与「占位」分开**——只有 `inBounds && occupiedInRun` 才走挤位,否则回退到 `resolveDropSlot`(它对越界/边界会就近吸附到合法 run,不能误判为「拒绝」):
+> ```js
+> const inBounds = T >= 0 && T + N <= maxCols;          // maxCols=BOARD_COLS(32)
+> const occupiedInRun = inBounds && !isRunFree(isOccupied, T, N, row, maxCols);
+> if (gridId === BOARD_GRID_ID && occupiedInRun) {
+>     const rowTiles = boardRowTiles(gRef.current.tilePositions, row, selection);
+>     const plan = insertWithPush(rowTiles, T, N, BOARD_COLS - 1);   // 闭区间末列 31
+>     if (!plan) { buzz(); /* 清选区 */ return; }
+>     moves.insertTilesWithPush(T, row, gridId, {id}, orderTilesBySource(selection, …)); /* markSyncing/play */ return;
+> }
+> // 否则:现有 resolveDropSlot + moveTiles(含越界就近吸附与其自身的拒绝)
+> ```
+> `onCellTap`(`Board.jsx:226-242`)做同样的 board 分流(空格 tap 右侧可能占位 → 同判)。`buildRowOccupancy` 是 `(col,row)=>bool`(T2)。
 
 - [ ] **Step 1 失败测试**(RTL,mock `moves`):board 占位目标拖放 → 调 `moves.insertTilesWithPush`(对的参数);全空目标 → 调 `moves.moveTiles`;`insertWithPush` 返回 null 的目标 → `buzz`、不调 move;hand 行 → 仍 `moveTiles`。
 - [ ] **Step 2 跑测试确认失败**。
@@ -167,7 +192,9 @@ export function boardRowTiles(tilePositions, row, excludeIds) {  // -> [{tileId,
 
 ## Task T6 — 长按 press-timer + 透传链路(WS-5 接线)
 
-**Files:** Modify `src/rummikub/components/Tile.jsx`(pointer press-timer + `firedRef` 抑制 click)、`GridSlot.jsx`/`GridContainer.jsx`(透传 `onLongPress`)、`Board.jsx`(`onLongPressCb` + `onDragStart` 兜底清计时;删旧死透传);改 4 个传旧 prop 的测试。**依赖 T5;Board 串行段②。**
+**Files:** Modify `src/rummikub/components/Tile.jsx`(pointer press-timer + `firedRef` 抑制 click)、`GridSlot.jsx`/`GridContainer.jsx`(透传 `onLongPress`)、`Board.jsx`(`onLongPressCb`;删旧死透传);改 4 个传旧 prop 的测试。**依赖 T5;Board 串行段②。**
+
+> **(rubber-duck 修正)** 计时器**完全局部于 `Tile`**——用 `onPointerMove`(超 6px)/`onPointerUp`/`onPointerCancel`/`onPointerLeave` 清;**不要**让 Board 的 `onDragStart` 去清(它够不到 Tile 内的 ref)。`onPointerLeave` 必加,防按住后指针滑出本格而计时器悬挂。
 
 **实现(见 review-1 §3.2/3.3,逐字采用):** Tile 用 **`onPointerDown/Move/Up/Cancel`**(避开 sensor 的 `onMouseDown`/`onTouchStart`),`LONG_PRESS_MS=250`、`MOVE_CANCEL_PX=6`;触发 `onLongPress(tile)`,`firedRef` 抑制其后的 `onClick`(否则整组被 toggle 回单张);移动超 6px 清计时;Board `onLongPressCb` 设 `selectedTiles=contiguousGroup(...)`。透传 `Board→GridContainer→GridSlot→Tile` 加 `onLongPress`;删 `Board.jsx` 对 `handleLongPress`/`onLongPressMouseUp`/`longPressTimeoutId`/`handleLongPressCb` 的旧透传与 import;改 `playable-marker`/`turn-timer-render`/`droppable-cue`/`grid-memo` 四个测试里传的旧 dummy prop(换 `onLongPress={()=>{}}`)。
 
@@ -184,7 +211,7 @@ export function boardRowTiles(tilePositions, row, excludeIds) {  // -> [{tileId,
 **Files:** Create `src/rummikub/components/ExitButton.jsx`;Modify `App.jsx`(挂顶栏)、`GameOverModal.jsx`(Back to home);Test `src/tests/exit-button.test.js`、扩 GameOver 测试。**独立文件,可并行。不碰 Board。**
 
 **实现:**
-- `ExitButton.jsx`:内用 `useNavigate()`+`useLocation()`;仅 `pathname.startsWith('/match/')` 时渲染 `<button className="exit-button" onClick={()=>navigate('/')}>Exit</button>`(单击、非破坏性、可重连;不清座位凭证)。挂在 `App.jsx` `.navbar`(`App.jsx:35-39`,How to play/Mute 旁)。
+- `ExitButton.jsx`:内用 `useNavigate()`+`useLocation()`;仅 `pathname.startsWith('/match/')` 时渲染 `<button className="exit-button" onClick={()=>navigate('/')}>Exit</button>`(单击、非破坏性、可重连;不清座位凭证)。挂在 `src/App.jsx` `.navbar`(`src/App.jsx:35-39`,How to play/Mute 旁;该文件恒在 `BrowserRouter` 内,`useNavigate` 安全)。
 - `GameOverModal.jsx`:在 `Play Again` 旁加 `<button className="gameover-button gameover-button--secondary" onClick={onBackHome}>Back to home</button>`,`onBackHome` 清 `localStorage['rummycube:match:'+matchId]` 后 `navigate('/')`。
 
 - [ ] **Step 1 失败测试**(RTL + `MemoryRouter`):`ExitButton` 在 `/match/m1` 渲染、在 `/` 不渲染、点击 navigate('/')(mock useNavigate);`GameOverModal` 的 `Back to home` 清 `localStorage['rummycube:match:m1']` + navigate('/')。
@@ -215,6 +242,8 @@ const onForfeitTurn = useCallback(() => {
     giveUpTimer.current = setTimeout(() => setGiveUpArmed(false), GIVEUP_CONFIRM_MS);
 }, [giveUpArmed, disarm, moves]);
 useEffect(() => { disarm(); }, [ctx.currentPlayer, ctx.gameover, disarm]);
+// (rubber-duck 修正) 牌面/暂存变化也复位 —— 否则 arm 后移牌/撤销改变了暂存态,armed 仍生效会确认到「另一个局面」
+useEffect(() => { if (giveUpArmed) disarm(); }, [G.tilePositions, hasStaged, giveUpArmed, disarm]);
 useEffect(() => () => clearTimeout(giveUpTimer.current), []);
 ```
 按钮:`giveUpArmed ? 'Click again to confirm' : 'Give up turn'` + armed 加 `is-arming`(琥珀 + `⚠` 字形;脉冲动画进 `@media (prefers-reduced-motion: no-preference)`)。提交成功(`onSubmitMeld` 接受分支)也 `disarm()`。文案英文。
@@ -256,3 +285,4 @@ useEffect(() => () => clearTimeout(giveUpTimer.current), []);
 - 不变量(服务器权威/合法性提交时裁定/几何不校验数字/门控/英文/无新依赖/可启动/maxCol 差一/useNavigate 不入 Board/timePerTurn 毫秒)→ Global Constraints + 各任务 acceptance。✅
 - 类型一致性:`insertWithPush`→`{shifts,newCols}|null` 在 T1 定、T3/T4 用;`contiguousGroup`→`tileId[]` 在 T5 定、T6 用;`insertTilesWithPush` 签名 T3 定、T4 调,一致。✅
 - 占位扫描:无 TODO/TBD;所有代码、文案、参数均给定值。✅
+- rubber-duck(gpt-5.5)复核已并入:① `isRunFree` 带 `row`(`isOccupied(c,row)`);② 新 move + 既有 `insertTile` 加 hand 归属校验(反作弊);③ T4 越界与占位分流(保留 `resolveDropSlot` 就近吸附);④ give-up 牌面变化复位;⑤ Exit 在 `src/App.jsx`;⑥ 长按计时器全局部于 Tile(含 `onPointerLeave`)。✅
