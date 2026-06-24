@@ -1,4 +1,4 @@
-import React, {useState, useCallback, useRef, useEffect} from "react";
+import React, {useState, useCallback, useRef, useEffect, lazy, Suspense} from "react";
 import './board.css';
 import '../theme/classic.css';
 import GridContainer from "./GridContainer";
@@ -17,17 +17,17 @@ import {submitReasonText} from "../submitReasonText";
 import {waitingLabel, isWaitingForPlayers} from "../waitingRoom";
 import {turnBannerLabel} from "../turnBanner";
 import {buildGridsFromTilePositions, getSecTs, isSequenceValid, count2dArrItems} from "../util";
-import GameOverModal from "./GameOverModal";
+const GameOverModal = lazy(() => import("./GameOverModal"));
 import {handleTileSelection, handleLongPress} from "../boardUtil";
 import {play, place, milestone, buzz} from "../sound/sfx";
 import * as fx from "../juice/effects";
 import {resolveJuice} from "../juice/gating";
 import {countPlacedThisTurn} from "../juice/comboMath";
-import ComboOverlay from "./ComboOverlay";
+const ComboOverlay = lazy(() => import("./ComboOverlay"));
 import ChatPanel from "./ChatPanel";
 import CoachCard from "./CoachCard";
 import {useUndoRedoHotkeys} from "./useUndoRedoHotkeys";
-import _ from "lodash";
+import every from "lodash/every";
 
 const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, events, chatMessages, sendChatMessage}) {
     const [recentlyDrawnTiles, setRecentlyDrawnTiles] = useState([]);
@@ -77,7 +77,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     }, []);
 
     useEffect(() => {
-        if (playerID === '0' && ctx.phase === 'playersJoin' && _.every(matchData, (item) => item.name)) {
+        if (playerID === '0' && ctx.phase === 'playersJoin' && every(matchData, (item) => item.name)) {
             console.log('ALL PLAYERS JOINED', new Date())
             events.endPhase()
         }
@@ -405,7 +405,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                        newlyAdded={recentlyDrawnTiles}
         />)
 
-    const allJoined = (matchData || []).length && _.every(matchData, (item) => item.name)
+    const allJoined = (matchData || []).length && every(matchData, (item) => item.name)
     const showTurnTimer = (matchData || []).length && !ctx.gameover && allJoined
     const sidebar = (
         <Sidebar
@@ -492,12 +492,14 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
 
         <div className={'container-float board-container'}>
             {ctx.gameover &&
-                <GameOverModal
-                    gameover={ctx.gameover}
-                    matchId={matchID}
-                    playerID={playerID}
-                    matchData={matchData}
-                />}
+                <Suspense fallback={null}>
+                    <GameOverModal
+                        gameover={ctx.gameover}
+                        matchId={matchID}
+                        playerID={playerID}
+                        matchData={matchData}
+                    />
+                </Suspense>}
 
             {sidebar}
             <div className="board" onClick={onBoardClick}>
@@ -510,7 +512,9 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                             <div className="waiting-count">{waitingLabel(matchData)} joined</div>
                         </div>
                     </div>}
-                <ComboOverlay combo={combo} by={comboBy}/>
+                <Suspense fallback={null}>
+                    <ComboOverlay combo={combo} by={comboBy}/>
+                </Suspense>
                 <TurnDeadlineWatcher
                     timerExpireAt={showTurnTimer ? G.timerExpireAt : null}
                     onTimeout={onTurnTimeout}/>

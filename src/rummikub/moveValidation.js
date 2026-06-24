@@ -1,4 +1,4 @@
-import _ from "lodash";
+import find from "lodash/find";
 import {countSeqScore, isSequenceValid} from "./util.js";
 import {FIRST_MOVE_SCORE_LIMIT, BOARD_GRID_ID} from "./constants.js";
 
@@ -101,7 +101,7 @@ function seqIsMixed(G, seq) {
 // Regular-move evaluator: needs at least one newly placed tile, then every
 // sequence on the board must be valid. Returns a reason object.
 function _evaluateRegularMove(G, seqs) {
-    let newFound = _.find(seqs, (seq) => seqHasNewTile(G, seq))
+    let newFound = find(seqs, (seq) => seqHasNewTile(G, seq))
     if (!newFound) {
         return {code: 'NO_NEW_TILE'}
     }
@@ -116,7 +116,7 @@ function _evaluateRegularMove(G, seqs) {
 // First-move evaluator: no mixed (old+new) sequence, every sequence valid, and
 // the score of the newly placed sequences meets FIRST_MOVE_SCORE_LIMIT.
 function _evaluateFirstMove(G, seqs) {
-    let mixed = _.find(seqs, (seq) => seqIsMixed(G, seq))
+    let mixed = find(seqs, (seq) => seqIsMixed(G, seq))
     if (mixed) {
         return {code: 'MIXED_FIRST_MOVE', group: mixed.map(Number)}
     }

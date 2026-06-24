@@ -1,4 +1,3 @@
-import confetti from 'canvas-confetti';
 import {particleCount} from './comboMath';
 
 export const INTENSITY = 'balanced'; // 'subtle' | 'balanced' | 'max'
@@ -12,19 +11,22 @@ export function reduced() {
 export function burstAt(x, y, combo = 1) {
     if (reduced()) return;
     const n = Math.min(particleCount(INTENSITY) + combo * 2, 80);
-    try {
-        confetti({
-            particleCount: n,
-            startVelocity: 26 + Math.min(combo, 8) * 2,
-            spread: 360,
-            ticks: 60,
-            gravity: 1.1,
-            scalar: 0.85,
-            colors: ['#fffdf4', '#e9dcc0', '#c5a050', '#b3162a', '#13478f', '#cc7a14'],
-            origin: {x: x / window.innerWidth, y: y / window.innerHeight},
-            disableForReducedMotion: true,
-        });
-    } catch (e) { /* never break gameplay */ }
+    // Loaded on demand so canvas-confetti stays out of the main chunk.
+    import('canvas-confetti').then(({default: confetti}) => {
+        try {
+            confetti({
+                particleCount: n,
+                startVelocity: 26 + Math.min(combo, 8) * 2,
+                spread: 360,
+                ticks: 60,
+                gravity: 1.1,
+                scalar: 0.85,
+                colors: ['#fffdf4', '#e9dcc0', '#c5a050', '#b3162a', '#13478f', '#cc7a14'],
+                origin: {x: x / window.innerWidth, y: y / window.innerHeight},
+                disableForReducedMotion: true,
+            });
+        } catch (e) { /* never break gameplay */ }
+    }).catch(() => { /* never break gameplay */ });
 }
 
 // brief board shake; amplitude grows mildly with combo (capped). Targets a thin

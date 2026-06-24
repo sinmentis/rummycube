@@ -1,4 +1,5 @@
-import _ from "lodash";
+import compact from "lodash/compact";
+import flatten from "lodash/flatten";
 import {
     getTileColor,
     getTileValue,
@@ -63,7 +64,7 @@ function compareTilesByValColor(a, b) {
 
 
 function orderByFunc(tiles, sortingFunc) {
-    let flattened = _.compact(_.flatten(tiles))
+    let flattened = compact(flatten(tiles))
     flattened.sort(sortingFunc);
     return flattened
 }

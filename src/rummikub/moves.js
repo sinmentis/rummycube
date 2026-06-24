@@ -1,5 +1,6 @@
 import {BOARD_GRID_ID, HAND_COLS, HAND_GRID_ID, HAND_ROWS} from "./constants.js";
-import _ from "lodash";
+import flatten from "lodash/flatten";
+import some from "lodash/some";
 import {
     isBoardHasNewTiles,
     isFirstMoveValid,
@@ -399,8 +400,8 @@ function checkGameOver(G, ctx, events) {
         events.endGame({winner: winner.toString(), points: points})
     }
 
-    let flattened = _.flatten(hands[ctx.currentPlayer])
-    let tilesLeft = _.some(flattened, Boolean)
+    let flattened = flatten(hands[ctx.currentPlayer])
+    let tilesLeft = some(flattened, Boolean)
     if (!tilesLeft && isBoardValid(G)) {
         let points = countPoints(hands, ctx.currentPlayer)
         events.endGame({winner: ctx.currentPlayer, points: points})

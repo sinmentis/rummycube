@@ -6,7 +6,7 @@ import {FRONTEND_PORT, LOBBY_SERVER_HOST, LOBBY_SERVER_PROTO} from "../constants
 import {copyToClipboard} from "../util";
 import GameLobbyClient from "../lobbyClient";
 import {useNavigate} from "react-router-dom";
-import _ from "lodash";
+import shuffle from "lodash/shuffle";
 
 const GameOverModal = ({gameover, matchId, playerID, matchData}) => {
     const client = new GameLobbyClient()
@@ -37,7 +37,7 @@ const GameOverModal = ({gameover, matchId, playerID, matchData}) => {
                 client.listSeats(result.nextMatchID).then(matchData => {
                     let seat = 0
                     console.debug(matchData)
-                    for (let playerSeat of _.shuffle(matchData.players)) {
+                    for (let playerSeat of shuffle(matchData.players)) {
                         if (!playerSeat.name) {
                             seat = playerSeat.id
                             break

@@ -12,6 +12,7 @@ export default defineConfig(({mode}) => {
             devServerPlugin(),
             sourcemapPlugin(),
             buildPathPlugin(),
+            chunkSplitPlugin(),
             dropConsolePlugin(),
             basePlugin(),
             importPrefixPlugin(),
@@ -115,6 +116,38 @@ function buildPathPlugin() {
             return {
                 build: {
                     outDir: BUILD_PATH || "build",
+                },
+            };
+        },
+    };
+}
+
+// Split heavy third-party code out of the app entry so the main chunk stays
+// small and vendor code can be cached across deploys.
+//
+// react/react-dom/react-router and boardgame.io share a circular dependency
+// (boardgame.io renders through react-dom). Splitting them into *separate*
+// chunks makes Rollup emit a cross-chunk cycle that throws
+// "Cannot access 'X' before initialization" at load, so they're deliberately
+// kept together in one `vendor` chunk. canvas-confetti is independent and goes
+// to its own `fx` chunk.
+// https://rollupjs.org/configuration-options/#output-manualchunks
+function chunkSplitPlugin() {
+    return {
+        name: "chunk-split-plugin",
+        config() {
+            return {
+                build: {
+                    rollupOptions: {
+                        output: {
+                            manualChunks(id) {
+                                if (!id.includes("node_modules")) return;
+                                if (id.includes("node_modules/canvas-confetti")) return "fx";
+                                if (/node_modules\/(react|react-dom|scheduler|react-router|react-router-dom)\//.test(id)) return "vendor";
+                                if (id.includes("node_modules/boardgame.io")) return "vendor";
+                            },
+                        },
+                    },
                 },
             };
         },

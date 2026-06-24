@@ -1,4 +1,10 @@
-import _ from "lodash";
+import invert from "lodash/invert";
+import range from "lodash/range";
+import uniqBy from "lodash/uniqBy";
+import orderBy from "lodash/orderBy";
+import find from "lodash/find";
+import flatten from "lodash/flatten";
+import cloneDeep from "lodash/cloneDeep";
 import {BOARD_COLS, BOARD_GRID_ID, BOARD_ROWS, COLOR, COLORS, HAND_COLS, HAND_GRID_ID, HAND_ROWS} from "./constants.js";
 import {original} from "immer";
 
@@ -61,7 +67,7 @@ function getTileColor(tile) {
 }
 
 function getTileReadableName(tile) {
-    return `${_.invert(COLOR)[getTileColor(tile)]}::${getTileValue(tile)}`
+    return `${invert(COLOR)[getTileColor(tile)]}::${getTileValue(tile)}`
 }
 
 function setTileValue(tile, value) {
@@ -83,7 +89,7 @@ const BlackJoker = buildTileObj(14, COLOR.black, 0)
 
 function getTiles() {
     let tiles = []
-    const Values = _.range(1, 14)
+    const Values = range(1, 14)
 
     for (let variant = 0; variant < 2; variant++) {
         for (const col of COLORS) {
@@ -113,7 +119,7 @@ function isSameColor(tiles) {
             colors.push(getTileColor(tile))
         }
     }
-    let uniques = _.uniqBy(colors)
+    let uniques = uniqBy(colors)
     return uniques.length > 1 ? false : true
 }
 
@@ -127,7 +133,7 @@ function isDiffColor(tiles) {
             length--
         }
     }
-    let uniques = _.uniqBy(colors)
+    let uniques = uniqBy(colors)
     return uniques.length === length ? true : false
 }
 
@@ -138,13 +144,13 @@ function isSameValue(tiles) {
             values.push(getTileValue(tile))
         }
     }
-    let uniques = _.uniqBy(values)
+    let uniques = uniqBy(values)
     return uniques.length > 1 ? false : true
 }
 
 
 function extractJoker(tiles) {
-    let sorted = _.orderBy(tiles, [(tile) => getTileValue(tile)], ['asc'])
+    let sorted = orderBy(tiles, [(tile) => getTileValue(tile)], ['asc'])
     if (isJoker(sorted[0])) {
         return sorted.slice(1)
     }
@@ -231,7 +237,7 @@ function freezeJokersInRun(tiles) {
 
 function freezeJokersInGroup(tiles) {
     let freezed = []
-    let simpleTile = _.find(tiles, (tile) => !isJoker(tile))
+    let simpleTile = find(tiles, (tile) => !isJoker(tile))
     for (let tile of tiles) {
         let copy = setTileValue(tile, getTileValue(simpleTile))
         freezed.push(copy)
@@ -332,7 +338,7 @@ function countPoints(hands, winnerIndex) {
         let playerPoints = 0
         if (i !== winnerIndex) {
             let hand = hands[i]
-            let flattened = _.flatten(hand)
+            let flattened = flatten(hand)
             for (let tile of flattened) {
                 if (tile) {
                     let tilePoint = isJoker(tile) ? 30 : getTileValue(tile)
@@ -354,7 +360,7 @@ function findWinner(hands) {
     for (let i = 0; i < hands.length; i++) {
         let points = 0
         let hand = hands[i]
-        let flattened = _.flatten(hand)
+        let flattened = flatten(hand)
         for (let tile of flattened) {
             if (tile) {
                 let tilePoint = isJoker(tile) ? 30 : getTileValue(tile)
@@ -374,14 +380,14 @@ function tryOrderTiles(tiles) {
         if (isSequenceValid(tiles)) {
             return tiles
         } else {
-            let sorted = _.orderBy(tiles, [
+            let sorted = orderBy(tiles, [
                 (tile) => getTileColor(tile),
                 (tile) => getTileValue(tile),
             ], ['asc'])
             if (isSequenceValid(sorted)) {
                 return sorted
             }
-            sorted = _.orderBy(tiles, [
+            sorted = orderBy(tiles, [
                 (tile) => getTileValue(tile),
                 (tile) => getTileColor(tile),
             ], ['asc'])
@@ -569,7 +575,7 @@ function playerView({G, ctx, playerID}) {
 
     const handCounts = deriveHandCounts(G.tilePositions);
 
-    const view = _.cloneDeep(G);
+    const view = cloneDeep(G);
     view.handCounts = handCounts;
 
     view.tilePositions = stripHandTilePositions(view.tilePositions, viewerID);
