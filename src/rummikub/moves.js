@@ -7,6 +7,7 @@ import {
     isMoveValid,
     freezeTmpTiles, isBoardValid,
     getFormedGroups,
+    extractSeqs,
 } from "./moveValidation.js";
 import {
     countPoints,
@@ -14,7 +15,7 @@ import {
     getSecTs,
     getGameState,
     getTileReadableName, getHandsTilesGrid,
-    getTileValue, isJoker, freezeSeqJokers,
+    getTileValue, isJoker, freezeSeqJokers, isSequenceValid, deactivateTileVariant,
 } from "./util.js";
 import {original} from "immer"
 import {current} from 'immer';
@@ -291,6 +292,68 @@ function validatePlayerMove(G, ctx, playerID, events) {
     }
 }
 
+// Owner decision #6: a board joker is reclaimable only by handing over TWO
+// physical copies of the tile it represents. Flip to 1 for the classic rule
+// (any single matching tile). [待核实] design point — two copies is restrictive
+// and may rarely be satisfiable in practice; see report.
+const JOKER_RETRIEVE_TILES_NEEDED = 2
+// v1 keeps retrieval independent of any meld this turn. Hook for a future rule
+// that would require the reclaimed joker to be re-melded in the same turn.
+const JOKER_RETRIEVE_REQUIRES_MELD_SAME_TURN = false
+
+// Current-player move: reclaim a frozen board joker by swapping in matching hand
+// tiles. Non-destructive — any ineligibility (wrong player, not a joker, missing
+// copies, or a swap that would invalidate the board) returns INVALID_MOVE, which
+// makes boardgame.io discard the immer draft so G is left untouched (mirrors the
+// submitMeld no-op contract). Does NOT end the turn or draw.
+function retrieveJoker({G, ctx, playerID}, jokerTileId, tileA, tileB) {
+    if (playerID !== ctx.currentPlayer) return INVALID_MOVE
+
+    const jokerId = Number(jokerTileId)
+    const jokerPos = G.tilePositions[jokerId]
+    // Must be a settled (non-tmp) joker on the board.
+    if (!jokerPos || jokerPos.gridId !== BOARD_GRID_ID || jokerPos.tmp || !isJoker(jokerId)) {
+        return INVALID_MOVE
+    }
+    const jokerRow = jokerPos.row
+    const jokerCol = jokerPos.col
+
+    // The joker must live in a currently-valid run/group; its represented value
+    // comes from freezing that sequence.
+    const seq = extractSeqs(G).find(s => s.some(t => Number(t) === jokerId))
+    if (!seq || !isSequenceValid(seq)) return INVALID_MOVE
+    const frozen = freezeSeqJokers(seq)
+    if (!frozen) return INVALID_MOVE
+    const jokerIndex = seq.findIndex(t => Number(t) === jokerId)
+    const representedValue = getTileValue(frozen[jokerIndex])
+
+    // Exactly TILES_NEEDED distinct hand tiles, all the same face (two physical
+    // copies of one tile), all matching the joker's represented value. The
+    // represented COLOUR is enforced by the board-validity check below.
+    const candidates = [Number(tileA), Number(tileB)].slice(0, JOKER_RETRIEVE_TILES_NEEDED)
+    if (new Set(candidates).size !== JOKER_RETRIEVE_TILES_NEEDED) return INVALID_MOVE
+    for (const cid of candidates) {
+        const pos = G.tilePositions[cid]
+        if (!pos || pos.gridId !== HAND_GRID_ID || pos.playerID !== playerID) return INVALID_MOVE
+        if (isJoker(cid)) return INVALID_MOVE
+        if (getTileValue(cid) !== representedValue) return INVALID_MOVE
+    }
+    if (new Set(candidates.map(deactivateTileVariant)).size !== 1) return INVALID_MOVE
+
+    // Swap: one copy takes the joker's board slot, the joker takes that copy's
+    // freed hand slot. Then the board must still be valid, otherwise no-op.
+    const swapTile = candidates[0]
+    const swapHand = G.tilePositions[swapTile]
+    const swapRow = swapHand.row
+    const swapCol = swapHand.col
+    G.tilePositions[swapTile] = {id: swapTile, col: jokerCol, row: jokerRow, gridId: BOARD_GRID_ID, tmp: false, playerID: null}
+    G.tilePositions[jokerId] = {id: jokerId, col: swapCol, row: swapRow, gridId: HAND_GRID_ID, tmp: false, playerID}
+
+    if (!isBoardValid(G)) {
+        return INVALID_MOVE
+    }
+}
+
 function submitMeld({G, ctx, playerID, events}) {
     if (playerID !== ctx.currentPlayer) return INVALID_MOVE
     if (!isBoardHasNewTiles(G)) return INVALID_MOVE
@@ -352,6 +415,7 @@ export {
     moveTiles,
     validatePlayerMove,
     submitMeld,
+    retrieveJoker,
     onTurnBegin,
     onTurnEnd,
     onPlayPhaseBegin,
