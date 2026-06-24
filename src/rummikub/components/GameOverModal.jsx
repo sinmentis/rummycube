@@ -59,6 +59,11 @@ const GameOverModal = ({gameover, matchId, playerID, matchData}) => {
         )
     }
 
+    function onBackHome() {
+        try { localStorage.removeItem(`rummycube:match:${matchId}`); } catch (e) {}
+        navigate('/');
+    }
+
     return (
         <div className="gameover-backdrop">
             <div className="gameover-modal">
@@ -75,9 +80,14 @@ const GameOverModal = ({gameover, matchId, playerID, matchData}) => {
                         ))}
                 </ul>
 
-                <button className="gameover-button" onClick={onPlayAgain}>
-                    🔁 Play Again
-                </button>
+                <div className="gameover-actions">
+                    <button className="gameover-button" onClick={onPlayAgain}>
+                        🔁 Play Again
+                    </button>
+                    <button className="gameover-button gameover-button--secondary" onClick={onBackHome}>
+                        Back to home
+                    </button>
+                </div>
             </div>
         </div>
 

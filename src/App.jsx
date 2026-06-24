@@ -11,6 +11,7 @@ import RummikubBoard from "./rummikub/components/Board";
 import JoinGamePage from "./rummikub/components/JoinGamePage";
 import SoundToggle from "./rummikub/components/SoundToggle";
 import HowToPlay from "./rummikub/components/HowToPlay";
+import ExitButton from "./rummikub/components/ExitButton";
 
 function getTestPlayerClient() {
     let PlayerClient = Client({
@@ -33,6 +34,7 @@ const App = function () {
     return (
         <>
             <div className={"navbar justify-content-center"}>
+                <ExitButton/>
                 <a href="/"><span>RummyCube</span></a>
                 <HowToPlay/>
                 <SoundToggle/>

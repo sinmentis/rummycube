@@ -37,6 +37,7 @@
 .gameover-button {
   background-color: #f9c74f;
   border: none;
+  box-sizing: border-box;
   padding: 0.8rem 1.5rem;
   border-radius: 10px;
   font-size: 1rem;
@@ -48,6 +49,23 @@
 
 .gameover-button:hover {
   background-color: #f9844a;
+}
+
+.gameover-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.gameover-button--secondary {
+  background-color: transparent;
+  color: #7a4a12;
+  border: 2px solid #d4af37;
+}
+
+.gameover-button--secondary:hover {
+  background-color: #f6eccf;
 }
 
 .gameover-score-list {
