@@ -28,7 +28,7 @@ const ComboOverlay = lazy(() => import("./ComboOverlay"));
 import ChatPanel from "./ChatPanel";
 import CoachCard from "./CoachCard";
 import {useUndoRedoHotkeys} from "./useUndoRedoHotkeys";
-import every from "lodash/every";
+import every from "lodash/every.js";
 
 const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, events, chatMessages, sendChatMessage, isConnected}) {
     const [recentlyDrawnTiles, setRecentlyDrawnTiles] = useState([]);

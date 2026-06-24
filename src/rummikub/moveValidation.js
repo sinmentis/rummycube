@@ -1,4 +1,4 @@
-import find from "lodash/find";
+import find from "lodash/find.js";
 import {countSeqScore, isSequenceValid} from "./util.js";
 import {FIRST_MOVE_SCORE_LIMIT, BOARD_GRID_ID} from "./constants.js";
 

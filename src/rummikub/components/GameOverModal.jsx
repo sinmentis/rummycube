@@ -6,7 +6,7 @@ import {FRONTEND_PORT, LOBBY_SERVER_HOST, LOBBY_SERVER_PROTO} from "../constants
 import {copyToClipboard} from "../util";
 import GameLobbyClient from "../lobbyClient";
 import {useNavigate} from "react-router-dom";
-import shuffle from "lodash/shuffle";
+import shuffle from "lodash/shuffle.js";
 
 const GameOverModal = ({gameover, matchId, playerID, matchData}) => {
     const client = new GameLobbyClient()

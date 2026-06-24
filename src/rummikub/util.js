@@ -1,10 +1,10 @@
-import invert from "lodash/invert";
-import range from "lodash/range";
-import uniqBy from "lodash/uniqBy";
-import orderBy from "lodash/orderBy";
-import find from "lodash/find";
-import flatten from "lodash/flatten";
-import cloneDeep from "lodash/cloneDeep";
+import invert from "lodash/invert.js";
+import range from "lodash/range.js";
+import uniqBy from "lodash/uniqBy.js";
+import orderBy from "lodash/orderBy.js";
+import find from "lodash/find.js";
+import flatten from "lodash/flatten.js";
+import cloneDeep from "lodash/cloneDeep.js";
 import {BOARD_COLS, BOARD_GRID_ID, BOARD_ROWS, COLOR, COLORS, HAND_COLS, HAND_GRID_ID, HAND_ROWS} from "./constants.js";
 import {original} from "immer";
 

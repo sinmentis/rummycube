@@ -1,5 +1,5 @@
-import compact from "lodash/compact";
-import flatten from "lodash/flatten";
+import compact from "lodash/compact.js";
+import flatten from "lodash/flatten.js";
 import {
     getTileColor,
     getTileValue,

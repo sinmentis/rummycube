@@ -1,6 +1,6 @@
 import {BOARD_GRID_ID, HAND_COLS, HAND_GRID_ID, HAND_ROWS} from "./constants.js";
-import flatten from "lodash/flatten";
-import some from "lodash/some";
+import flatten from "lodash/flatten.js";
+import some from "lodash/some.js";
 import {
     isBoardHasNewTiles,
     isFirstMoveValid,
