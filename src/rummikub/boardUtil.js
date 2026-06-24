@@ -1,29 +1,26 @@
-import {isSequenceValid, tryOrderTiles} from "./util";
+import {tryOrderTiles} from "./util";
 import {HAND_GRID_ID} from "./constants.js";
 import {toggleSelection} from "./dndUtil";
 
-function getNextTile(G, playerID, tileId) {
-    const currentPos = G.tilePositions[tileId];
-    if (!currentPos) return null;
-
-    const gridId = currentPos.gridId;
-    const sameGridTiles = Object.entries(G.tilePositions)
-        .filter(([_, pos]) => {
-            if (pos.gridId !== gridId) return false;
-            if (gridId === HAND_GRID_ID && pos.playerID !== playerID) return false;
-            return true;
-        });
-
-    const nextTileEntry = sameGridTiles.find(([_, pos]) =>
-        pos.row === currentPos.row && pos.col === currentPos.col + 1
-    );
-
-    if (nextTileEntry) {
-        const [nextTileId] = nextTileEntry;
-        return nextTileId;
+// Pure: the whole contiguous run (extend left + right) sharing the pressed tile's
+// grid + row, in reading order (cols ascending) and including the pressed tile. A gap
+// stops the run. HAND_GRID_ID runs are isolated per playerID; board tiles (playerID:null)
+// are not, so a whole-table run can form.
+export function contiguousGroup(tilePositions, pressedTileId) {
+    const p = tilePositions[pressedTileId];
+    if (!p) return [pressedTileId];
+    const {gridId, row, col, playerID} = p;
+    const byCol = {};
+    for (const id in tilePositions) {
+        const q = tilePositions[id];
+        if (!q || q.gridId !== gridId || q.row !== row) continue;
+        if (gridId === HAND_GRID_ID && String(q.playerID) !== String(playerID)) continue;
+        byCol[q.col] = id;
     }
-
-    return null;
+    const group = [pressedTileId];
+    for (let c = col - 1; byCol[c] != null; c--) group.unshift(byCol[c]);
+    for (let c = col + 1; byCol[c] != null; c++) group.push(byCol[c]);
+    return group;
 }
 
 
@@ -111,46 +108,6 @@ function handleTileSelection(G, state, setState, playerID, tileId, shiftKey, ctr
 }
 
 
-function handleLongPress(G, playerID, setState, longPressTimeoutId, tileId, timeout = 200) {
-    console.debug('LONG PRESS STARTED');
-    let selectedTiles = [tileId];
-
-    function continueSelection(currentTileId) {
-        const nextTileId = getNextTile(G, playerID, currentTileId);
-
-        if (!nextTileId) {
-            console.debug('No next tile found, ending long press.');
-            setState({ selectedTiles });
-            return;
-        }
-
-        selectedTiles.push(nextTileId);
-
-        // Validate after adding the new tile
-        if (selectedTiles.length >= 3) {
-            if (!isSequenceValid(selectedTiles)) {
-                console.debug('Invalid sequence, stopping selection.');
-                selectedTiles.pop(); // Remove invalid tile
-                setState({ selectedTiles });
-                return;
-            }
-        }
-
-        setState({ selectedTiles });
-
-        longPressTimeoutId.current = setTimeout(() => continueSelection(nextTileId), timeout);
-    }
-
-    // First select the tile immediately
-    setState({ selectedTiles });
-
-    // Start selecting the NEXT tile after timeout
-    longPressTimeoutId.current = setTimeout(() => continueSelection(tileId), timeout);
-}
-
-
-
 export {
     handleTileSelection,
-    handleLongPress,
 }
