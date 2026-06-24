@@ -240,6 +240,25 @@ function freezeJokersInGroup(tiles) {
 }
 
 
+// Freeze the jokers of a single, already-valid board sequence to their
+// REPRESENTED tiles (value set; run jokers keep the run's value progression,
+// group jokers take the group's common value). Auto-detects run vs group the
+// same way countSeqScore does. Returns the frozen tiles in the original order,
+// the untouched array if there are no jokers, or null if the sequence is not a
+// recognisable run/group.
+function freezeSeqJokers(tiles) {
+    if (!tiles.some((tile) => isJoker(tile))) {
+        return tiles
+    }
+    if (isSameColor(tiles)) {
+        return freezeJokersInRun(tiles)
+    }
+    if (isDiffColor(tiles) && isSameValue(tiles)) {
+        return freezeJokersInGroup(tiles)
+    }
+    return null
+}
+
 function countSeqScore(tiles) {
     let score = 0
     if (tiles.length < 3) {
@@ -611,6 +630,7 @@ export {
     freezeJokerProp,
     freezeJokersInRun,
     freezeJokersInGroup,
+    freezeSeqJokers,
     countSeqScore,
     arraysEqual,
     transpose,
