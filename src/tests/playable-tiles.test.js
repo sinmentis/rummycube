@@ -83,6 +83,37 @@ describe('playableTiles - jokers', () => {
     });
 });
 
+describe('playableTiles - jokers on the board', () => {
+    // A joker on the board keeps its encoded (black/red) colour even after its
+    // value is frozen, so the run/set colour logic must anchor on the non-joker
+    // tiles, not on the joker. A middle joker has an unambiguous frozen value.
+    test('a joker inside a blue run still highlights the adjacent blue tiles', () => {
+        const board = [blue(5), BlackJoker, blue(7)]; // joker == blue 6
+        const hand = [blue(4), blue(8), red(4)];
+        const set = playableTiles(hand, [board]);
+        expect(set.has(blue(4))).toBe(true);
+        expect(set.has(blue(8))).toBe(true);
+        expect(set.has(red(4))).toBe(false);
+        expect(set.size).toBe(2);
+    });
+
+    test('a joker in a set does not block a tile of the joker\'s encoded colour', () => {
+        const board = [BlackJoker, blue(7), orange(7)]; // joker represents a missing colour
+        const hand = [black(7), red(7), blue(7, 1)];
+        const set = playableTiles(hand, [board]);
+        expect(set.has(black(7))).toBe(true); // joker's black colour must not count as "present"
+        expect(set.has(red(7))).toBe(true);
+        expect(set.has(blue(7, 1))).toBe(false); // blue already really present
+        expect(set.size).toBe(2);
+    });
+
+    test('a full 4-tile set containing a joker still cannot be extended', () => {
+        const board = [BlackJoker, blue(7), orange(7), red(7)];
+        const hand = [black(7)];
+        expect(playableTiles(hand, [board]).size).toBe(0);
+    });
+});
+
 describe('playableTiles - guards', () => {
     test('an invalid board group contributes no playable tiles', () => {
         const broken = [blue(5), red(9), orange(2)];

@@ -3,8 +3,6 @@ import {
     getTileColor,
     isJoker,
     isSequenceValid,
-    isSameColor,
-    isDiffColor,
     isSameValue,
     freezeSeqJokers,
 } from "./util.js";
@@ -27,15 +25,14 @@ import {
 // the playable set/count. A joker can extend almost any group, so counting it
 // would inflate the "{n} playable" hint and mislead; we keep it conservative
 // until the joker-depth work lands. Jokers already on the BOARD are resolved to
-// their represented values via freezeSeqJokers so a run/set ending in a joker
-// still yields the right adjacent values.
+// their represented values via freezeSeqJokers, but a frozen joker keeps its
+// encoded (black/red) colour, so all colour logic anchors on the non-joker
+// tiles (runColor / presentColors), never on the joker itself.
 
-function runExtends(frozenSeq, tile) {
-    const runColor = getTileColor(frozenSeq[0]);
+function runExtends(runColor, values, tile) {
     if (getTileColor(tile) !== runColor) {
         return false;
     }
-    const values = frozenSeq.map((t) => getTileValue(t));
     const min = Math.min(...values);
     const max = Math.max(...values);
     const v = getTileValue(tile);
@@ -43,22 +40,21 @@ function runExtends(frozenSeq, tile) {
     return (v === min - 1 && v >= 1) || (v === max + 1 && v <= 13);
 }
 
-function setExtends(frozenSeq, tile) {
-    if (frozenSeq.length >= 4) {
+function setExtends(number, presentColors, fullSize, tile) {
+    // A 4-tile set is full (jokers already fill the missing colours).
+    if (fullSize >= 4) {
         return false;
     }
-    const number = getTileValue(frozenSeq[0]);
     if (getTileValue(tile) !== number) {
         return false;
     }
-    const presentColors = new Set(frozenSeq.map((t) => getTileColor(t)));
     return !presentColors.has(getTileColor(tile));
 }
 
 function playableTiles(handTiles, boardSeqs) {
     const playable = new Set();
 
-    const frozenSeqs = [];
+    const groups = [];
     for (const seq of boardSeqs || []) {
         if (!isSequenceValid(seq)) {
             continue;
@@ -67,11 +63,28 @@ function playableTiles(handTiles, boardSeqs) {
         if (!frozen) {
             continue;
         }
-        const kind = isSameColor(frozen)
-            ? "run"
-            : (isDiffColor(frozen) && isSameValue(frozen) ? "set" : null);
-        if (kind) {
-            frozenSeqs.push({frozen, kind});
+        // A frozen joker keeps its encoded (black/red) colour, so anchor all
+        // colour logic on the real (non-joker) tiles, never on the joker.
+        const realTiles = seq.filter((t) => !isJoker(t));
+        if (isSameValue(frozen)) {
+            // All values equal -> a set; presentColors are the real colours only.
+            const number = getTileValue(frozen[0]);
+            const presentColors = new Set(realTiles.map((t) => getTileColor(t)));
+            groups.push({
+                kind: "set",
+                number,
+                presentColors,
+                fullSize: frozen.length,
+            });
+        } else {
+            // Distinct values -> a run; runColor is a real tile's colour.
+            const realColors = realTiles.map((t) => getTileColor(t));
+            const allSameColor = realColors.every((c) => c === realColors[0]);
+            if (!allSameColor) {
+                continue;
+            }
+            const values = frozen.map((t) => getTileValue(t));
+            groups.push({kind: "run", runColor: realColors[0], values});
         }
     }
 
@@ -80,8 +93,11 @@ function playableTiles(handTiles, boardSeqs) {
         if (isJoker(tile)) {
             continue;
         }
-        for (const {frozen, kind} of frozenSeqs) {
-            if (kind === "run" ? runExtends(frozen, tile) : setExtends(frozen, tile)) {
+        for (const g of groups) {
+            const ok = g.kind === "run"
+                ? runExtends(g.runColor, g.values, tile)
+                : setExtends(g.number, g.presentColors, g.fullSize, tile);
+            if (ok) {
                 playable.add(tile);
                 break;
             }
