@@ -27,6 +27,7 @@ import {countPlacedThisTurn} from "../juice/comboMath";
 const ComboOverlay = lazy(() => import("./ComboOverlay"));
 import ChatPanel from "./ChatPanel";
 import CoachCard from "./CoachCard";
+import HintsToggle from "./HintsToggle";
 import TimeoutAnnouncement from "./TimeoutAnnouncement";
 import {useUndoRedoHotkeys} from "./useUndoRedoHotkeys";
 import every from "lodash/every.js";
@@ -76,6 +77,27 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         try {
             localStorage.setItem(COACH_SEEN_KEY, '1');
         } catch (e) { /* private mode / no storage: card just shows again */ }
+    }, []);
+
+    // T4 (WS-B): the playable-tile assist (rack markers + count pill) is opt-in.
+    // Default OFF — only the stored value '1' turns it on — and the choice
+    // persists like coachSeen above so it survives reloads and later matches.
+    const HINTS_KEY = 'rummycube:hintsOn';
+    const [hintsOn, setHintsOn] = useState(() => {
+        try {
+            return typeof localStorage !== 'undefined' && localStorage.getItem(HINTS_KEY) === '1';
+        } catch (e) {
+            return false;
+        }
+    });
+    const toggleHints = useCallback(() => {
+        setHintsOn((on) => {
+            const next = !on;
+            try {
+                localStorage.setItem(HINTS_KEY, next ? '1' : '0');
+            } catch (e) { /* private mode / no storage: stays in-memory only */ }
+            return next;
+        });
     }, []);
 
     useEffect(() => {
@@ -443,12 +465,13 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     </button>)
     const {board, hands} = buildGridsFromTilePositions(G.tilePositions, ctx.numPlayers)
 
-    // WS-10 highlight-only: mark the rack tiles that could extend a valid board
-    // group right now, plus a "{n} playable" count. Computed locally from the
-    // viewer's own hand + the live board groups, so it stays useful on opponents'
-    // turns too. Jokers are excluded from the set/count for v1 (see planning.js).
+    // WS-10 highlight-only, T4 opt-in: mark the rack tiles that could extend a
+    // valid board group right now, plus a count pill. Only computed when the
+    // viewer has turned hints on (hintsOn); when off there are no rack markers
+    // and no pill. Computed locally from the viewer's own hand + the live board
+    // groups. Jokers are excluded from the set/count for v1 (see planning.js).
     const myHandTiles = getPlayerHandTiles(G, playerID);
-    const playableTileList = playerID != null
+    const playableTileList = hintsOn && playerID != null
         ? Array.from(playableTiles(myHandTiles, extractSeqs(G)))
         : [];
     const playableCount = playableTileList.length;
@@ -542,10 +565,13 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         </div>
     ) : null
 
-    const playableHint = playableCount > 0 ? (
+    const playableHint = hintsOn ? (
         <div className="playable-hint" role="status" aria-live="polite">
-            <span className="playable-hint__dot" aria-hidden="true"/>
-            <span className="playable-hint__label">{playableCount} playable</span>
+            {playableCount > 0
+                ? (playableCount === 1
+                    ? '💡 1 tile fits the table'
+                    : `💡 ${playableCount} tiles fit the table`)
+                : '💡 No tiles fit the table yet'}
         </div>
     ) : null
 
@@ -642,6 +668,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                             onOrderByValColor()
                         }}>Sort: colours
                         </button>
+                        <HintsToggle on={hintsOn} onToggle={toggleHints}/>
                         {drawOrEnd}
                         {undoBut}
                         {redoBut}

@@ -860,6 +860,12 @@ svg.fa-smile-beam {
         min-height: 44px;
         min-width: 44px;
     }
+
+    /* T4: the hints toggle is a sibling control — match the ~44px touch target. */
+    .hints-toggle {
+        min-height: 44px;
+        min-width: 44px;
+    }
 }
 
 /* ============================================================
@@ -1151,13 +1157,37 @@ div.tile.tile-playable {
     line-height: 1.4;
 }
 
-.playable-hint__dot {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background: var(--c-blue);
-    border: 2px solid #fff;
-    box-shadow: 0 0 0 1px var(--c-blue);
+/* T4 (WS-B): opt-in hints toggle. A subtle utility control in the rack's
+   controls cluster — deliberately quieter than the cream .rummikub-button
+   primary actions, brightening to the blue assist accent when on. */
+.hints-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--rack-border, rgba(0, 0, 0, .35));
+    background: rgba(255, 255, 255, .14);
+    color: #f4ead2;
+    font-weight: 600;
+    font-size: clamp(12px, 1vw, 14px);
+    line-height: 1.2;
+    cursor: pointer;
+    transition: background .15s ease, transform .1s ease;
+}
+
+.hints-toggle:hover {
+    background: rgba(255, 255, 255, .24);
+}
+
+.hints-toggle:active {
+    transform: translateY(1px);
+}
+
+.hints-toggle[aria-pressed="true"] {
+    background: rgba(19, 71, 143, .92);
+    border-color: rgba(19, 71, 143, .92);
+    color: #fff;
 }
 
 @media (prefers-reduced-motion: no-preference) {
