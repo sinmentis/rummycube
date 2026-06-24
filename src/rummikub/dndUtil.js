@@ -102,3 +102,29 @@ export function resolveDropSlot(target, isOccupied, selectionLength, maxCols) {
     if (best === -1) return {ok: false};
     return {ok: true, gridId, row, cols: Array.from({length: len}, (_, i) => best + i)};
 }
+
+// True iff the N-wide run starting at column T on `row` is in bounds and entirely
+// free. `isOccupied` is the verified two-arg (col,row)=>bool predicate from
+// buildRowOccupancy, so `row` MUST be forwarded; calling isOccupied(c) alone would
+// query "c:undefined" and read every occupied cell as free. `maxCols` is the
+// EXCLUSIVE column count (BOARD_COLS=32). Used by the drop dispatch to decide
+// snap (free) vs. push (occupancy).
+export function isRunFree(isOccupied, T, N, row, maxCols) {
+    if (T < 0 || T + N > maxCols) return false;
+    for (let c = T; c < T + N; c++) if (isOccupied(c, row)) return false;
+    return true;
+}
+
+// Collect the board ('b') tiles sitting on `row`, minus any id in excludeIds (the
+// dragged selection). Pure: returns [{tileId, col}]. Feeds the insert/push ripple
+// so the colliding row tiles can be shifted around the dropped run.
+export function boardRowTiles(tilePositions, row, excludeIds) {
+    const ex = new Set((excludeIds || []).map(String));
+    const out = [];
+    for (const id in tilePositions) {
+        const p = tilePositions[id];
+        if (!p || p.gridId !== 'b' || p.row !== row || ex.has(String(id))) continue;
+        out.push({tileId: id, col: p.col});
+    }
+    return out;
+}
