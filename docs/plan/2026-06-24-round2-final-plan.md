@@ -242,8 +242,9 @@ const onForfeitTurn = useCallback(() => {
     giveUpTimer.current = setTimeout(() => setGiveUpArmed(false), GIVEUP_CONFIRM_MS);
 }, [giveUpArmed, disarm, moves]);
 useEffect(() => { disarm(); }, [ctx.currentPlayer, ctx.gameover, disarm]);
-// (rubber-duck 修正) 牌面/暂存变化也复位 —— 否则 arm 后移牌/撤销改变了暂存态,armed 仍生效会确认到「另一个局面」
-useEffect(() => { if (giveUpArmed) disarm(); }, [G.tilePositions, hasStaged, giveUpArmed, disarm]);
+// (rubber-duck 修正 + T8 实测修正) 牌面/暂存变化也复位。注意 deps 里**不能**含 giveUpArmed/disarm,
+// 否则 arm(false→true)那一帧 effect 会重跑并立刻自我 disarm,两次点击流程直接失效(已实测)。
+useEffect(() => { if (giveUpArmed) disarm(); }, [G.tilePositions, hasStaged]);
 useEffect(() => () => clearTimeout(giveUpTimer.current), []);
 ```
 按钮:`giveUpArmed ? 'Click again to confirm' : 'Give up turn'` + armed 加 `is-arming`(琥珀 + `⚠` 字形;脉冲动画进 `@media (prefers-reduced-motion: no-preference)`)。提交成功(`onSubmitMeld` 接受分支)也 `disarm()`。文案英文。
