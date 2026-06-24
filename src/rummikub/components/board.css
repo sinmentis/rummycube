@@ -637,6 +637,31 @@ svg.fa-smile-beam {
     box-shadow: 0 4px 0 #d98686, 0 0 12px rgba(220, 70, 70, .55);
 }
 
+/* T8 / WS-2 — armed state of the two-click "Give up turn" button. Amber warning
+   skin plus a ⚠ glyph as a non-colour second channel, so the "one more click
+   forfeits" state reads in grayscale too. The pulse is gated behind
+   prefers-reduced-motion; reduced-motion users get the static amber state. */
+.rummikub-button.is-arming {
+    background-color: #ffe0a3;
+    color: #8a4b00;
+    box-shadow: 0 4px 0 #d99a3a, 0 0 12px rgba(230, 150, 40, .6);
+}
+
+.rummikub-button.is-arming::before {
+    content: '⚠ ';
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .rummikub-button.is-arming {
+        animation: giveup-arm-pulse 1s ease-in-out infinite;
+    }
+
+    @keyframes giveup-arm-pulse {
+        0%, 100% { box-shadow: 0 4px 0 #d99a3a, 0 0 8px rgba(230, 150, 40, .5); }
+        50% { box-shadow: 0 4px 0 #d99a3a, 0 0 18px rgba(230, 150, 40, .9); }
+    }
+}
+
 /* ============================================================
    WS-C — primary / secondary action hierarchy.
    .primary-action (Draw / Submit meld / End): brass, larger, strong 3D
