@@ -2,6 +2,7 @@ import React from 'react';
 import {useDroppable} from '@dnd-kit/core'
 import {Tile} from "./Tile";
 import {makeSlotId} from "../dndUtil";
+import {BOARD_GRID_ID} from "../constants";
 
 
 const GridSlot = React.memo(({
@@ -43,15 +44,18 @@ const GridSlot = React.memo(({
     // drag and, on click, hands its coords to onCellTap to place the selection
     // through the same validated path as drag. stopPropagation keeps the board's
     // click-to-clear-selection handler from firing on a placement.
-    const isTapTarget = (isDragActive || hasSelection) && canDnD
+    // WS-D: the cue is board-only — hand empty cells never light up.
+    const isBoard = gridId === BOARD_GRID_ID
+    const isTapTarget = isBoard && (isDragActive || hasSelection) && canDnD
     const onClick = (hasSelection && canDnD && onCellTap)
         ? (e) => { e.stopPropagation(); onCellTap(gridId, col, row); }
         : undefined
     return <div
         ref={setNodeRef}
         onClick={onClick}
-        style={{backgroundColor: (canDnD && isOver) ? 'rgba(71,179,86,0.43)' : ''}}
-        className={'grid-item' + (isTapTarget ? ' slot-valid' : '')}/>
+        className={'grid-item'
+            + (isTapTarget ? ' slot-valid' : '')
+            + (isBoard && canDnD && isOver ? ' slot-over' : '')}/>
 })
 
 

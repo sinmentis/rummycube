@@ -311,10 +311,15 @@ div.grid-container {
    ============================================================ */
 .grid-item.slot-valid {
     border-radius: 6px;
-    /* soft brass-green legal-drop highlight */
-    background-color: rgba(120, 200, 130, .16);
-    box-shadow: inset 0 0 0 2px rgba(150, 210, 120, .55),
-                inset 0 0 12px rgba(120, 200, 130, .28);
+    /* softer "you can place here" — faint fill + thin inset outline, no loud glow */
+    background-color: rgba(120, 200, 130, .08);
+    box-shadow: inset 0 0 0 1.5px rgba(150, 210, 120, .35);
+}
+.grid-item.slot-over {
+    border-radius: 6px;
+    /* hovered cell: a touch stronger than slot-valid but still restrained (< .3) */
+    background-color: rgba(120, 200, 130, .22);
+    box-shadow: inset 0 0 0 2px rgba(150, 210, 120, .55);
 }
 
 .grid-item.slot-reject {

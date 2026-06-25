@@ -12,7 +12,7 @@ import {COLOR} from '../rummikub/constants';
 const t1 = buildTileObj(5, COLOR.red, 0);
 const tiles2dArray = [[t1, null, null]];
 
-function renderGrid({isDragActive, canDnD}) {
+function renderGrid({isDragActive, canDnD, gridId = 'b'}) {
     return render(
         <DndContext>
             <GridContainer
@@ -21,7 +21,7 @@ function renderGrid({isDragActive, canDnD}) {
                 cols={3}
                 canDnD={canDnD}
                 isDragActive={isDragActive}
-                gridId="b"
+                gridId={gridId}
                 validTiles={[]}
                 highlightTiles={false}
                 selectedTiles={[]}
@@ -57,4 +57,15 @@ test('no cue when no drag is active', () => {
 test('no cue when the grid is not droppable', () => {
     const {container} = renderGrid({isDragActive: true, canDnD: false});
     expect(container.querySelectorAll('.slot-valid').length).toBe(0);
+});
+
+// WS-D: the cue is board-only. With a live drag and canDnD, an empty BOARD cell
+// (gridId 'b') wears .slot-valid, but an empty HAND cell (gridId 'h') never does.
+test('cue is board-only: hand empty cells never light up', () => {
+    const board = renderGrid({isDragActive: true, canDnD: true, gridId: 'b'});
+    const hand = renderGrid({isDragActive: true, canDnD: true, gridId: 'h'});
+    // board empty cells light up
+    expect(board.container.querySelectorAll('.grid-item.slot-valid').length).toBe(2);
+    // hand empty cells never light up
+    expect(hand.container.querySelectorAll('.grid-item.slot-valid').length).toBe(0);
 });
