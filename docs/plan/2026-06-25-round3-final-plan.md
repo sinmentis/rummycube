@@ -107,7 +107,7 @@
 
 **Files:** Modify `src/rummikub/dndUtil.js`(+`resolveDropDispatch`,`boardRowTiles` 用 `BOARD_GRID_ID`)、`moves.js`(`insertTilesWithPush` 复用 `boardRowTiles`);Test `src/tests/resolve-drop-dispatch.test.js`。**依赖 T2(jokerSwapTarget)。**
 
-**Interface — Produces:** `resolveDropDispatch({tilePositions, target, primaryId, selection, playerID, boardCols, handCols, allowJokerSwap}) -> {kind:'joker'|'push'|'snap'|'reject', …args}`(见 review-2 §D.2,逐字采用)。优先级:**joker-swap → push → snap → reject**。`insertTilesWithPush` 内联收集行改为调 `boardRowTiles`。
+**Interface — Produces:** `resolveDropDispatch({tilePositions, target, primaryId, selection, playerID, boardCols, handCols, allowJokerSwap}) -> {kind:'joker'|'push'|'snap'|'reject', args:Array}`。**(rubber-duck 规范化)** 统一返回 `{kind, args}`:`args` 是要传给对应 move 的实参数组(`joker`→`[jokerId, primaryId]`、`push`→`[T,row,'b',{id},ordered]`、`snap`→`[col,row,gridId,{id},selection]`、`reject`→`[]`);**本形态为准,覆盖 review-2 §D.2 里 `{move}`/`{reject}` 的草图**。T7 的 `dispatchDrop` 一律 `switch(d.kind)`。优先级:**joker-swap → push → snap → reject**。`insertTilesWithPush` 内联收集行改为调 `boardRowTiles`。
 
 - [ ] **Step 1 失败测试**(纯):joker 匹配→`kind:'joker'`;board 占位→`'push'`(`insertWithPush` 非 null)/`'reject'`(null);全空/越界/hand→`'snap'`;越界仍 snap(不 reject)。
 - [ ] **Step 2 跑测试确认失败**。
@@ -121,9 +121,9 @@
 
 **Files:** Modify `src/rummikub/components/Board.jsx`(`onDragEnd`/`onCellTap` 经 `resolveDropDispatch` 派发,joker-swap **先于** push);Test `src/tests/board-joker-swap-dispatch.test.js`。**Board 串行段①;依赖 T6。**
 
-**实现(见 review-2 §B.3/§D.3):** `onDragEnd`/`onCellTap` 调 `dispatchDrop`(用 T6 的 `resolveDropDispatch`)→ 按 `kind` 调 `moves.retrieveJoker` / `moves.insertTilesWithPush` / `moves.moveTiles` / `buzz`。**R1:** joker-swap 必须在挤位之前(joker 格被占,漏前置会被挤开而非取回)。
+**实现(见 review-2 §B.3/§D.3):** `onDragEnd`/`onCellTap` 调 `dispatchDrop`(用 T6 的 `resolveDropDispatch`)→ `switch(kind)` 调 `moves.retrieveJoker` / `moves.insertTilesWithPush` / `moves.moveTiles` / `buzz`。**R1:** joker-swap 必须在挤位之前(joker 格被占,漏前置会被挤开而非取回)。**(rubber-duck 修正)joker-swap 仅 DRAG 路径**:`GridSlot` 只在**空格**挂 `onCellTap`(占位的 joker 格根本不触发 tap),故 `onCellTap` 走同一 `dispatchDrop` 但目标恒为空格 → `jokerSwapTarget` 返回 `{ok:false}`、自然只命中 push/snap;**无需改 `GridSlot`,也不写 onCellTap-joker 测试**。
 
-- [ ] **Step 1 失败测试**(RTL,mock moves):拖**匹配**牌到 board joker → 调 `moves.retrieveJoker(jokerId,id)`(不调 insertTilesWithPush/moveTiles);拖**不匹配**牌到 joker → 走 `moves.insertTilesWithPush`(挤位);全空 → `moveTiles`;`onCellTap` 同分流。
+- [ ] **Step 1 失败测试**(RTL,mock moves):拖**匹配**牌到 board joker → 调 `moves.retrieveJoker(jokerId,id)`(不调 insertTilesWithPush/moveTiles);拖**不匹配**牌到 joker → 走 `moves.insertTilesWithPush`(挤位);全空 board 目标 → `moveTiles`;`onCellTap` 经同一 `dispatchDrop`(目标恒空格 → 只命中 push/snap,**不测 joker**)。
 - [ ] **Step 2 跑测试确认失败**。
 - [ ] **Step 3 实现**(既有 board-insert-push-dispatch/tap-to-place 回归绿)。
 - [ ] **Step 4 跑测试确认通过** + `npm run build` 绿。
@@ -203,6 +203,7 @@
 ## Self-Review(spec 覆盖)
 
 - WS-A→T1 ✅;WS-B→T2(helper)+T4(move)+T7(分支)✅;WS-C→T5 ✅;WS-D→T6+T7 ✅;WS-E→T3+T10 ✅;WS-F→T11 ✅;WS-G→T8 ✅;WS-H→T9 ✅。
-- 类型一致:`jokerSwapTarget→{ok,jokerId,representedValue}`(T2 定、T6/T7 用);`seatConnected→bool`(T3 定、T10 用);`resolveDropDispatch→{kind,…}`(T6 定、T7 用);`retrieveJoker(_,jokerId,tileId)`(T4 定、T7 调)。
+- 类型一致:`jokerSwapTarget→{ok,jokerId,representedValue}`(T2 定、T6/T7 用);`seatConnected→bool`(T3 定、T10 用);`resolveDropDispatch→{kind,args}`(T6 定、T7 `switch(kind)`);`retrieveJoker(_,jokerId,tileId)`(T4 定、T7 调)。
 - 占位扫描:无 TODO/TBD;combo 权重/阈值给定值;WS-G cursor 版明确顺延为 v1。
 - combo 守卫:ComboOverlay 不改靠「可达分=3 的倍数」不变量,plan 要求 T1 加守卫注释记录该依赖。✅
+- rubber-duck(gpt-5.5)复核已并入:① joker-swap **仅 DRAG**(GridSlot 占位格不触发 onCellTap,无需改 GridSlot,不写 onCellTap-joker 测试);② `resolveDropDispatch` 统一 `{kind,args}` 形态(覆盖 review-2 的 `{move}` 草图)。其余(combo 量纲对齐、joker 优先级、retrieveJoker 简化、moveTiles 回滚、边界约定、T8-T11)经核实无阻断。✅
