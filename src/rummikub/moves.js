@@ -16,7 +16,7 @@ import {
     getSecTs,
     getGameState,
     getTileReadableName, getHandsTilesGrid,
-    getTileValue, isJoker, freezeSeqJokers, isSequenceValid, deactivateTileVariant,
+    getTileValue, isJoker, freezeSeqJokers, isSequenceValid,
 } from "./util.js";
 import {original} from "immer"
 import {current} from 'immer';
@@ -360,21 +360,21 @@ function validatePlayerMove(G, ctx, playerID, events) {
     }
 }
 
-// Owner decision #6: a board joker is reclaimable only by handing over TWO
-// physical copies of the tile it represents. Flip to 1 for the classic rule
-// (any single matching tile). [待核实] design point — two copies is restrictive
-// and may rarely be satisfiable in practice; see report.
-const JOKER_RETRIEVE_TILES_NEEDED = 2
+// Classic rule: a board joker is reclaimed by handing over a single hand tile
+// matching the value it represents (its colour is enforced by the post-swap
+// board-validity check). The joker returns to the player's hand.
+const JOKER_RETRIEVE_TILES_NEEDED = 1
 // v1 keeps retrieval independent of any meld this turn. Hook for a future rule
 // that would require the reclaimed joker to be re-melded in the same turn.
 const JOKER_RETRIEVE_REQUIRES_MELD_SAME_TURN = false
 
-// Current-player move: reclaim a frozen board joker by swapping in matching hand
-// tiles. Non-destructive — any ineligibility (wrong player, not a joker, missing
-// copies, or a swap that would invalidate the board) returns INVALID_MOVE, which
-// makes boardgame.io discard the immer draft so G is left untouched (mirrors the
-// submitMeld no-op contract). Does NOT end the turn or draw.
-function retrieveJoker({G, ctx, playerID}, jokerTileId, tileA, tileB) {
+// Current-player move: reclaim a frozen board joker by swapping in the single
+// hand tile it represents. Non-destructive — any ineligibility (wrong player,
+// not a settled board joker, a hand tile of the wrong value, or a swap that
+// would invalidate the board) returns INVALID_MOVE, which makes boardgame.io
+// discard the immer draft so G is left untouched (mirrors the submitMeld no-op
+// contract). Does NOT end the turn or draw.
+function retrieveJoker({G, ctx, playerID}, jokerTileId, tileId) {
     if (playerID !== ctx.currentPlayer) return INVALID_MOVE
 
     const jokerId = Number(jokerTileId)
@@ -395,25 +395,19 @@ function retrieveJoker({G, ctx, playerID}, jokerTileId, tileA, tileB) {
     const jokerIndex = seq.findIndex(t => Number(t) === jokerId)
     const representedValue = getTileValue(frozen[jokerIndex])
 
-    // Exactly TILES_NEEDED distinct hand tiles, all the same face (two physical
-    // copies of one tile), all matching the joker's represented value. The
-    // represented COLOUR is enforced by the board-validity check below.
-    const candidates = [Number(tileA), Number(tileB)].slice(0, JOKER_RETRIEVE_TILES_NEEDED)
-    if (new Set(candidates).size !== JOKER_RETRIEVE_TILES_NEEDED) return INVALID_MOVE
-    for (const cid of candidates) {
-        const pos = G.tilePositions[cid]
-        if (!pos || pos.gridId !== HAND_GRID_ID || pos.playerID !== playerID) return INVALID_MOVE
-        if (isJoker(cid)) return INVALID_MOVE
-        if (getTileValue(cid) !== representedValue) return INVALID_MOVE
-    }
-    if (new Set(candidates.map(deactivateTileVariant)).size !== 1) return INVALID_MOVE
+    // The swap tile must be one of the current player's hand tiles, a non-joker,
+    // and match the joker's represented value. Its COLOUR is enforced by the
+    // board-validity check below.
+    const swapTile = Number(tileId)
+    const swapPos = G.tilePositions[swapTile]
+    if (!swapPos || swapPos.gridId !== HAND_GRID_ID || String(swapPos.playerID) !== String(playerID)) return INVALID_MOVE
+    if (isJoker(swapTile)) return INVALID_MOVE
+    if (getTileValue(swapTile) !== representedValue) return INVALID_MOVE
 
-    // Swap: one copy takes the joker's board slot, the joker takes that copy's
-    // freed hand slot. Then the board must still be valid, otherwise no-op.
-    const swapTile = candidates[0]
-    const swapHand = G.tilePositions[swapTile]
-    const swapRow = swapHand.row
-    const swapCol = swapHand.col
+    // Swap: the hand tile takes the joker's board slot, the joker takes that
+    // tile's freed hand slot. Then the board must still be valid, otherwise no-op.
+    const swapRow = swapPos.row
+    const swapCol = swapPos.col
     G.tilePositions[swapTile] = {id: swapTile, col: jokerCol, row: jokerRow, gridId: BOARD_GRID_ID, tmp: false, playerID: null}
     G.tilePositions[jokerId] = {id: jokerId, col: swapCol, row: swapRow, gridId: HAND_GRID_ID, tmp: false, playerID}
 
