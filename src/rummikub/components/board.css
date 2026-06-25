@@ -208,6 +208,7 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
+    position: relative;
 }
 
 /* Phones/tablets: stack the three clusters, surfacing the dominant actions
@@ -1433,6 +1434,51 @@ div.tile.tile-playable {
     background: rgba(19, 71, 143, .92);
     border-color: rgba(19, 71, 143, .92);
     color: #fff;
+}
+
+/* T9 (WS-H): one-time tooltip on the first off->on flip of the hints toggle.
+   Anchored above the toggle in the (now positioned) .controls-tools cluster;
+   non-blocking (role="status"), so it never overlays or gates play. */
+.hints-tip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    right: 0;
+    max-width: min(78vw, 280px);
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: rgba(19, 71, 143, .96);
+    color: #fff;
+    font-size: clamp(11px, 1vw, 13px);
+    line-height: 1.4;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, .4);
+    z-index: 9;
+}
+
+.hints-tip__close {
+    display: block;
+    margin-top: 8px;
+    padding: 4px 10px;
+    border: 1px solid rgba(255, 255, 255, .55);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .14);
+    color: #fff;
+    font-weight: 600;
+    font-size: clamp(11px, 1vw, 13px);
+    cursor: pointer;
+}
+
+.hints-tip__close:hover {
+    background: rgba(255, 255, 255, .26);
+}
+
+/* Enter animation only when the user hasn't asked to reduce motion. */
+@media (prefers-reduced-motion: no-preference) {
+    .hints-tip { animation: hints-tip-in .18s ease both; }
+}
+
+@keyframes hints-tip-in {
+    0%   { opacity: 0; transform: translateY(4px); }
+    100% { opacity: 1; transform: translateY(0); }
 }
 
 @media (prefers-reduced-motion: no-preference) {

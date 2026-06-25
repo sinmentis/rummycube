@@ -68,15 +68,42 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             return false;
         }
     });
+    // T9 (WS-H): the very first off->on flip of the hints toggle pops a one-time,
+    // non-blocking tooltip explaining what the highlights mean. A persisted flag
+    // keeps it from ever reappearing; a ref (not state) lets toggleHints keep its
+    // empty deps and check "seen" synchronously inside the updater.
+    const HINTS_TIP_KEY = 'rummycube:hintsTipSeen';
+    const hintsTipSeenRef = useRef((() => {
+        try {
+            return typeof localStorage !== 'undefined' && localStorage.getItem(HINTS_TIP_KEY) === '1';
+        } catch (e) {
+            return false;
+        }
+    })());
+    const [showHintsTip, setShowHintsTip] = useState(false);
     const toggleHints = useCallback(() => {
         setHintsOn((on) => {
             const next = !on;
             try {
                 localStorage.setItem(HINTS_KEY, next ? '1' : '0');
             } catch (e) { /* private mode / no storage: stays in-memory only */ }
+            if (next && !hintsTipSeenRef.current) {
+                setShowHintsTip(true);
+                hintsTipSeenRef.current = true;
+                try {
+                    localStorage.setItem(HINTS_TIP_KEY, '1');
+                } catch (e) { /* private mode / no storage: tip may show again next session */ }
+            }
             return next;
         });
     }, []);
+    const dismissHintsTip = useCallback(() => setShowHintsTip(false), []);
+
+    useEffect(() => {
+        if (!showHintsTip) return;
+        const t = setTimeout(dismissHintsTip, 6000);
+        return () => clearTimeout(t);
+    }, [showHintsTip]);
 
     useEffect(() => {
         if (playerID === '0' && ctx.phase === 'playersJoin' && every(matchData, (item) => item.name)) {
@@ -686,6 +713,12 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                         </div>
                         <div className="controls-tools">
                             <HintsToggle on={hintsOn} onToggle={toggleHints}/>
+                            {showHintsTip && (
+                                <div className="hints-tip" role="status" aria-live="polite">
+                                    These highlight tiles you can add to a group already on the table. You still need your 30-point opening meld first.
+                                    <button type="button" className="hints-tip__close" aria-label="Dismiss" onClick={dismissHintsTip}>Got it</button>
+                                </div>
+                            )}
                         </div>
                     </div>
                     {submitReason &&
