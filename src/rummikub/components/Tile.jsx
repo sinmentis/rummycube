@@ -81,7 +81,10 @@ function getTileStyle(selected, isDragging, isValid, position, index, newlyAdded
 
     let result = {
         backgroundColor: backgroundColor,
-        opacity: isDragging ? 0.5 : 1,
+        // Face stays fully opaque while dragging: the outer Tile wrapper fades the
+        // source placeholder, and the DragOverlay clone has no wrapper so it must
+        // stay solid. Only the cursor below reflects the dragging state.
+        opacity: 1,
         fontSize: 25,
         fontWeight: 'bold',
         cursor: !canDnD ? 'default' : (isDragging ? 'grabbing' : 'grab'),
