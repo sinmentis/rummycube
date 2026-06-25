@@ -32,6 +32,7 @@ import IconButton from "./IconButton";
 import TimeoutAnnouncement from "./TimeoutAnnouncement";
 import {useUndoRedoHotkeys} from "./useUndoRedoHotkeys";
 import {useTilePlacementHotkeys} from "./useTilePlacementHotkeys";
+import {seatConnected} from "../seats/seatConnection";
 import every from "lodash/every.js";
 
 const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, events, chatMessages, sendChatMessage, isConnected}) {
@@ -581,6 +582,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             matchID={matchID}
             hands={hands}
             handCounts={G.handCounts}
+            connected={G.connected}
             timerExpireAt={showTurnTimer ? G.timerExpireAt : null}
             timePerTurn={G.timePerTurn}
             showTurnTimer={showTurnTimer}
@@ -599,7 +601,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                                    tiles={G.handCounts && G.handCounts[playerID] != null
                                        ? G.handCounts[playerID]
                                        : count2dArrItems(hands[playerID])}
-                                   isConnected={selfData.isConnected}
+                                   isConnected={seatConnected(G.connected, Number(playerID), selfData.isConnected)}
                                    timerExpireAt={showTurnTimer ? G.timerExpireAt : null}
                                    totalTime={G.timePerTurn}
                                    showTurnTimer={showTurnTimer}/>

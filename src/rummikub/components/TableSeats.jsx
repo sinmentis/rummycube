@@ -2,11 +2,12 @@ import React from "react";
 import {count2dArrItems} from "../util";
 import PlayerAvatarWithTimer from "./PlayerAvatar";
 import {tablePositions} from "../seats/tableLayout";
+import {seatConnected} from "../seats/seatConnection";
 
 // Opponent avatars laid out around the felt like a mahjong table (top/left/right
 // by seat order). Self is rendered next to the rack, not here. Renders as a
 // non-interactive overlay inside .board so it never blocks tile dragging.
-const TableSeats = function ({currentPlayer, playerID, matchData, matchID, hands, handCounts, timerExpireAt, timePerTurn, showTurnTimer}) {
+const TableSeats = function ({currentPlayer, playerID, matchData, matchID, hands, handCounts, connected, timerExpireAt, timePerTurn, showTurnTimer}) {
     const positions = tablePositions(matchData.length, Number(playerID));
 
     return (
@@ -25,7 +26,7 @@ const TableSeats = function ({currentPlayer, playerID, matchData, matchID, hands
                                                      matchId={matchID}
                                                      seatId={data.id}
                                                      tiles={tiles}
-                                                     isConnected={data.isConnected}
+                                                     isConnected={seatConnected(connected, data.id, data.isConnected)}
                                                      timerExpireAt={timerExpireAt}
                                                      totalTime={timePerTurn}
                                                      showTurnTimer={showTurnTimer}/>
