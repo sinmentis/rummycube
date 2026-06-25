@@ -7,19 +7,50 @@ test('manipulationScore weights groups + rearrange over raw tile count', () => {
     // A rearrange-heavy play also beats a flat dump of the same tile count.
     expect(manipulationScore({groups: 1, rearranged: 3, placed: 1}))
         .toBeGreaterThan(manipulationScore({groups: 1, rearranged: 0, placed: 1}));
-    // Starting weights: W_GROUP=3, W_INTEG=2, W_PLACE=1.
-    expect(manipulationScore({groups: 2, rearranged: 0, placed: 1})).toBe(7);
-    expect(manipulationScore({groups: 1, rearranged: 0, placed: 3})).toBe(6);
+    // Rebalanced weights: W_GROUP=3, W_INTEG=3, W_PLACE=0 (placed no longer scores).
+    expect(manipulationScore({groups: 2, rearranged: 0, placed: 1})).toBe(6);
+    expect(manipulationScore({groups: 1, rearranged: 0, placed: 3})).toBe(3);
     // Defaults to 0 when given nothing.
     expect(manipulationScore({})).toBe(0);
 });
 
-test('comboLabel tiers at 3/5/7', () => {
+test('a single-group dump scores exactly 3 (NICE) regardless of tile count', () => {
+    // ON FIRE must be earned by manipulation, not by dumping a long run from hand:
+    // a lone group is always score 3 whether it places 1 tile or 13.
+    for (let placed = 1; placed <= 13; placed++) {
+        const score = manipulationScore({groups: 1, rearranged: 0, placed});
+        expect(score).toBe(3);
+        expect(comboLabel(score)).toBe('NICE');
+    }
+});
+
+test('two groups, or a group plus a rearrange, earns COMBO (6)', () => {
+    expect(manipulationScore({groups: 2, rearranged: 0, placed: 2})).toBe(6);
+    expect(manipulationScore({groups: 1, rearranged: 1, placed: 5})).toBe(6);
+    expect(comboLabel(manipulationScore({groups: 2, rearranged: 0, placed: 2}))).toBe('COMBO');
+    expect(comboLabel(manipulationScore({groups: 1, rearranged: 1, placed: 5}))).toBe('COMBO');
+});
+
+test('a multi-group play with a rearrange earns ON FIRE (>= 9)', () => {
+    const score = manipulationScore({groups: 2, rearranged: 1, placed: 4});
+    expect(score).toBe(9);
+    expect(comboLabel(score)).toBe('ON FIRE');
+    expect(manipulationScore({groups: 3, rearranged: 2, placed: 7})).toBeGreaterThanOrEqual(9);
+});
+
+test('an empty play scores 0 and earns no label', () => {
+    expect(manipulationScore({})).toBe(0);
+    expect(comboLabel(0)).toBe('');
+});
+
+test('comboLabel tiers at 3/6/9', () => {
+  expect(comboLabel(0)).toBe('');
   expect(comboLabel(2)).toBe('');
   expect(comboLabel(3)).toBe('NICE');
-  expect(comboLabel(4)).toBe('NICE');
-  expect(comboLabel(5)).toBe('COMBO');
-  expect(comboLabel(7)).toBe('ON FIRE');
+  expect(comboLabel(5)).toBe('NICE');
+  expect(comboLabel(6)).toBe('COMBO');
+  expect(comboLabel(8)).toBe('COMBO');
+  expect(comboLabel(9)).toBe('ON FIRE');
   expect(comboLabel(99)).toBe('ON FIRE');
 });
 test('particleCount scales with intensity', () => {

@@ -58,7 +58,7 @@ test('a play forming 2 groups beats a 3-tile flat dump, scored pre-freeze', () =
     expect(twoGroups.placed).toBe(2);
     expect(twoGroups.rearranged).toBe(0);
     expect(twoGroups.manipulation).toBe(twoGroups.count);
-    expect(twoGroups.count).toBe(8); // 3*2 + 2*0 + 1*2
+    expect(twoGroups.count).toBe(6); // 3*2 + 3*0 + 0*2
 
     // --- Play B: flat-dump a single 3-tile run. ---
     const setupFlatDump = () => {
@@ -80,7 +80,7 @@ test('a play forming 2 groups beats a 3-tile flat dump, scored pre-freeze', () =
     expect(flatDump).toBeTruthy();
     expect(flatDump.groups.length).toBe(1);
     expect(flatDump.placed).toBe(3);
-    expect(flatDump.count).toBe(6); // 3*1 + 2*0 + 1*3
+    expect(flatDump.count).toBe(3); // 3*1 + 3*0 + 0*3
     expect(flatDump.manipulation).toBe(flatDump.count);
 
     // Manipulation beats dumping: more groups for fewer tiles scores higher.
