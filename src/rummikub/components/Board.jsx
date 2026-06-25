@@ -19,7 +19,7 @@ import {turnBannerLabel} from "../turnBanner";
 import {buildGridsFromTilePositions, getSecTs, isSequenceValid, count2dArrItems, getPlayerHandTiles} from "../util";
 import {playableTiles} from "../planning";
 const GameOverModal = lazy(() => import("./GameOverModal"));
-import {handleTileSelection, contiguousGroup} from "../boardUtil";
+import {handleTileSelection, tilesRightward} from "../boardUtil";
 import {play, place, milestone, buzz} from "../sound/sfx";
 import * as fx from "../juice/effects";
 import {resolveJuice} from "../juice/gating";
@@ -258,16 +258,23 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     const handleTileSelectionCb = useCallback((tileId, shiftKey, ctrlKey) => {
         handleTileSelection(gRef.current, stateRef.current, setState, playerID, tileId, shiftKey, ctrlKey)
     }, [playerID])
-    // Long-press fired in a Tile: select the whole contiguous run it sits in, then
+    // Long-press fired in a Tile: grow the selection rightward one tile per tick.
+    // Tile fires onLongPress(tileId, count) every LONG_PRESS_STEP_MS with an
+    // incrementing count; we take the first `count` of the tile's rightward run and
     // let the existing distance:6 multi-drag pipeline carry the selection. Ids are
     // normalized to strings to match the rest of the selection code (tile ids reach
     // the UI as object keys, i.e. strings, so includes()/=== checks in onDragStart
-    // and the DragOverlay stay type-consistent and never drop a tile).
-    const onLongPressCb = useCallback((tileId) => {
-        setState({
-            selectedTiles: contiguousGroup(gRef.current.tilePositions, tileId).map(String),
-            lastSelectedTileId: String(tileId),
-        })
+    // and the DragOverlay stay type-consistent and never drop a tile). The idempotent
+    // guard makes an exhausted tick (count past the run length) a no-op re-render.
+    const onLongPressCb = useCallback((tileId, count) => {
+        const seq = tilesRightward(gRef.current.tilePositions, tileId).map(String);
+        const n = Math.min(count, seq.length);
+        setState(prev => {
+            const next = seq.slice(0, n);
+            if (prev.selectedTiles.length === next.length &&
+                prev.selectedTiles.every((id, i) => id === next[i])) return prev;
+            return {selectedTiles: next, lastSelectedTileId: String(tileId)};
+        });
     }, [])
 
     const onTileDragEnd = useCallback(() => {

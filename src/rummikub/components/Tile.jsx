@@ -5,12 +5,17 @@ import {getTileValue, isJoker, getTileColor} from "../util";
 import {useDraggable} from '@dnd-kit/core';
 import {COLORS, TILE_WIDTH} from "../constants";
 
-// Long-press to pick up a whole contiguous group (WS-5). The press-timer is kept
-// entirely local to the leaf Tile so cancellation never has to reach across the
-// tree: a hold of LONG_PRESS_MS with movement under MOVE_CANCEL_PX fires
-// onLongPress(tile). MOVE_CANCEL_PX matches the dnd-kit activation distance (6)
-// so a real drag and a long-press never both win.
+// Long-press to progressively pick up a tile and the contiguous run to its RIGHT
+// (WS-A). The press-timer is kept entirely local to the leaf Tile so cancellation
+// never has to reach across the tree: a hold of LONG_PRESS_MS with movement under
+// MOVE_CANCEL_PX arms a repeating tick that fires onLongPress(tile, count) every
+// LONG_PRESS_STEP_MS with an incrementing count, so Board grows the selection one
+// tile per step. MOVE_CANCEL_PX matches the dnd-kit activation distance (6) so a
+// real drag and a long-press never both win.
 const LONG_PRESS_MS = 250;
+// Tunable: one more tile is picked up every LONG_PRESS_STEP_MS (the first tick lands
+// at LONG_PRESS_MS). Game-design suggested ~180ms for steps 2+; kept at 250 for now.
+const LONG_PRESS_STEP_MS = LONG_PRESS_MS;
 const MOVE_CANCEL_PX = 6;
 
 
@@ -99,29 +104,32 @@ const Tile = React.memo(function Tile({tile, canDnD, isSelected, isValid, isPlay
     const pressTimer = useRef(null);
     const startXY = useRef(null);
     const firedRef = useRef(false);
+    const tickRef = useRef(0);
 
     const clearPressTimer = useCallback(() => {
         if (pressTimer.current) {
-            clearTimeout(pressTimer.current);
+            clearInterval(pressTimer.current);
             pressTimer.current = null;
         }
     }, []);
 
     // Pointer events (not onMouseDown/onTouchStart, which are the dnd-kit
     // Mouse/Touch sensor activators in {...listeners}); pointer handlers coexist
-    // without clobbering them. On a still hold we arm the whole group; the
-    // firedRef then swallows the click that the OS sends after pointerup so the
-    // group isn't immediately toggled back to a single tile.
+    // without clobbering them. On a still hold we arm a repeating tick that picks up
+    // the tile then one more of its rightward run per step; the firedRef then
+    // swallows the click that the OS sends after pointerup so the selection isn't
+    // immediately toggled back to a single tile.
     const onPointerDown = useCallback((e) => {
         if (!canDnD) return;
         firedRef.current = false;
+        tickRef.current = 0;
         startXY.current = {x: e.clientX, y: e.clientY};
         clearPressTimer();
-        pressTimer.current = setTimeout(() => {
-            firedRef.current = true;
-            pressTimer.current = null;
-            onLongPress?.(tile);
-        }, LONG_PRESS_MS);
+        pressTimer.current = setInterval(() => {
+            firedRef.current = true;          // first tick onward swallows the trailing click
+            tickRef.current += 1;
+            onLongPress?.(tile, tickRef.current);
+        }, LONG_PRESS_STEP_MS);
     }, [canDnD, tile, onLongPress, clearPressTimer]);
 
     const onPointerMove = useCallback((e) => {

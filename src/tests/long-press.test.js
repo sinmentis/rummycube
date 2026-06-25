@@ -2,14 +2,17 @@ import React from 'react';
 import {render, fireEvent, createEvent, act} from '@testing-library/react';
 import {DndContext} from '@dnd-kit/core';
 import {Tile} from '../rummikub/components/Tile';
+import {tilesRightward} from '../rummikub/boardUtil';
 import {buildTileObj} from '../rummikub/util';
-import {COLOR} from '../rummikub/constants';
+import {COLOR, BOARD_GRID_ID} from '../rummikub/constants';
 
-// WS-5 (T6): Tile carries a local pointer press-timer. A ~250ms hold (with <6px
-// movement) fires onLongPress(tile) so Board can select the whole contiguous
-// group; a firedRef suppresses the click that follows a long-press so the group
-// isn't toggled back to a single tile. A short tap still single-selects, and any
-// movement >6px or a pointer up/cancel/leave clears the timer.
+// WS-A: Tile carries a local pointer press-timer. A ~250ms hold (with <6px
+// movement) starts a repeating tick that fires onLongPress(tile, count) every
+// ~250ms with an incrementing count, so Board can progressively pick up the tile
+// and the contiguous run to its RIGHT (one tile per tick; the left side is never
+// selected). A firedRef suppresses the click that follows a long-press so the
+// selection isn't toggled back to a single tile. A short tap still single-selects,
+// and any movement >6px or a pointer up/cancel/leave clears the timer.
 //
 // jsdom has no PointerEvent and drops clientX/clientY off the synthetic event,
 // so for movement assertions we build the event and pin the coords onto it.
@@ -21,9 +24,9 @@ function pointerEventWithCoords(type, node, x, y) {
 }
 
 function renderTile(extra = {}) {
-    const onLongPress = jest.fn();
-    const handleTileSelection = jest.fn();
-    const tile = buildTileObj(5, COLOR.red, 0);
+    const onLongPress = extra.onLongPress || jest.fn();
+    const handleTileSelection = extra.handleTileSelection || jest.fn();
+    const tile = extra.tile != null ? extra.tile : buildTileObj(5, COLOR.red, 0);
     const utils = render(
         <DndContext>
             <Tile
@@ -50,7 +53,7 @@ test('holding for >=250ms fires onLongPress with the tile', () => {
     fireEvent.pointerDown(node);
     act(() => jest.advanceTimersByTime(250));
     expect(onLongPress).toHaveBeenCalledTimes(1);
-    expect(onLongPress).toHaveBeenCalledWith(tile);
+    expect(onLongPress).toHaveBeenCalledWith(tile, 1);
 });
 
 test('a short press (<250ms) does not fire onLongPress and a tap still single-selects', () => {
@@ -93,7 +96,7 @@ test('a small move within 6px does not cancel the long-press', () => {
     fireEvent(node, pointerEventWithCoords('pointerMove', node, 3, 3)); // ~4.2px
     act(() => jest.advanceTimersByTime(250));
     expect(onLongPress).toHaveBeenCalledTimes(1);
-    expect(onLongPress).toHaveBeenCalledWith(tile);
+    expect(onLongPress).toHaveBeenCalledWith(tile, 1);
 });
 
 test('a pointer leaving the tile mid-hold cancels the long-press', () => {
@@ -119,4 +122,46 @@ test('a non-draggable tile does not arm the long-press timer but still single-se
     expect(onLongPress).not.toHaveBeenCalled();
     fireEvent.click(node);
     expect(handleTileSelection).toHaveBeenCalledWith(tile, false, false);
+});
+
+test('progressive long-press accumulates rightward one tile per step', () => {
+    // Board run a@col0 b@col1 c@col2 on the shared board row (playerID:null).
+    // Holding 'b' must grow the selection rightward one tile per LONG_PRESS_STEP_MS
+    // via Tile's onLongPress(tile, count). We wire that into the same accumulator
+    // Board uses (the first `count` of tilesRightward) and watch the selection it
+    // yields: never reaching 'a' on the left, frozen once the right run is exhausted.
+    const a = buildTileObj(1, COLOR.red, 0);
+    const b = buildTileObj(2, COLOR.red, 0);
+    const c = buildTileObj(3, COLOR.red, 0);
+    const tilePositions = {
+        [a]: {gridId: BOARD_GRID_ID, row: 0, col: 0, playerID: null},
+        [b]: {gridId: BOARD_GRID_ID, row: 0, col: 1, playerID: null},
+        [c]: {gridId: BOARD_GRID_ID, row: 0, col: 2, playerID: null},
+    };
+    const counts = [];
+    let selectedTiles = [];
+    const onLongPress = (tile, count) => {
+        counts.push(count);
+        const seq = tilesRightward(tilePositions, tile).map(String);
+        selectedTiles = seq.slice(0, Math.min(count, seq.length));
+    };
+    const {node} = renderTile({tile: b, onLongPress});
+
+    fireEvent.pointerDown(node);
+
+    act(() => jest.advanceTimersByTime(250));
+    expect(counts).toEqual([1]);
+    expect(selectedTiles).toEqual([String(b)]);             // first tick: only the pressed tile
+
+    act(() => jest.advanceTimersByTime(250));
+    expect(counts).toEqual([1, 2]);
+    expect(selectedTiles).toEqual([String(b), String(c)]);  // +250ms: adds the next RIGHT tile
+
+    act(() => jest.advanceTimersByTime(250));
+    expect(counts).toEqual([1, 2, 3]);
+    expect(selectedTiles).toEqual([String(b), String(c)]);  // run exhausted: no change
+
+    expect(selectedTiles).not.toContain(String(a));         // the left tile is never selected
+
+    fireEvent.pointerUp(node); // stop the interval
 });

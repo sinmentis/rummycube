@@ -55,7 +55,8 @@ import Board from '../rummikub/components/Board';
 import {buildTileObj} from '../rummikub/util';
 import {COLOR} from '../rummikub/constants';
 
-// Two contiguous hand tiles for player 0 — long-pressing one selects the pair.
+// Two contiguous hand tiles for player 0 — long-pressing handA and holding for two
+// ticks selects the pair (handA, then handB to its right; the run is right-only).
 const handA = buildTileObj(1, COLOR.red, 0);
 const handB = buildTileObj(2, COLOR.red, 0);
 
@@ -124,7 +125,7 @@ test('board drop onto an OCCUPIED run routes to insertTilesWithPush with the sna
     };
     const moves = renderBoard(tilePositions);
 
-    act(() => { mockGrid['b'].onLongPress(handA); });
+    act(() => { mockGrid['b'].onLongPress(handA, 2); }); // 2 ticks: pick up handA + handB
     act(() => { mockDnd.onDragEnd({active: {id: handA}, over: {id: 'b:5:0'}}); });
 
     expect(moves.insertTilesWithPush).toHaveBeenCalledTimes(1);
@@ -162,7 +163,7 @@ test('an OUT-OF-BOUNDS board drop (T+N>32) stays on the resolveDropSlot/moveTile
     };
     const moves = renderBoard(tilePositions);
 
-    act(() => { mockGrid['b'].onLongPress(handA); });
+    act(() => { mockGrid['b'].onLongPress(handA, 2); }); // 2 ticks: pick up handA + handB
     act(() => { mockDnd.onDragEnd({active: {id: handA}, over: {id: 'b:31:0'}}); });
 
     expect(moves.moveTiles).toHaveBeenCalledTimes(1);
@@ -209,7 +210,7 @@ test('onCellTap on a free cell whose run overlaps an occupied neighbour routes t
     };
     const moves = renderBoard(tilePositions);
 
-    act(() => { mockGrid['b'].onLongPress(handA); });
+    act(() => { mockGrid['b'].onLongPress(handA, 2); }); // 2 ticks: pick up handA + handB
     act(() => { mockGrid['b'].onCellTap('b', 5, 0); });
 
     expect(moves.insertTilesWithPush).toHaveBeenCalledTimes(1);
@@ -230,7 +231,7 @@ test('onCellTap on a fully free board run routes to moveTiles, not insertTilesWi
     };
     const moves = renderBoard(tilePositions);
 
-    act(() => { mockGrid['b'].onLongPress(handA); });
+    act(() => { mockGrid['b'].onLongPress(handA, 2); }); // 2 ticks: pick up handA + handB
     act(() => { mockGrid['b'].onCellTap('b', 3, 0); });
 
     expect(moves.moveTiles).toHaveBeenCalledTimes(1);
