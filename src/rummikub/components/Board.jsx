@@ -3,8 +3,7 @@ import './board.css';
 import '../theme/classic.css';
 import GridContainer from "./GridContainer";
 import {DndContext, DragOverlay, MouseSensor, TouchSensor, useSensor, useSensors} from '@dnd-kit/core'
-import {parseSlotId, orderTilesBySource, resolveDropSlot, buildRowOccupancy, isRunFree, boardRowTiles} from "../dndUtil";
-import {insertWithPush} from "../insertPush";
+import {parseSlotId, orderTilesBySource, resolveDropDispatch} from "../dndUtil";
 import {TilePreview} from "./Tile";
 import {
     HAND_GRID_ID, BOARD_GRID_ID, BOARD_ROWS, BOARD_COLS, HAND_ROWS, HAND_COLS
@@ -158,6 +157,42 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         clearTimeout(comboTimer.current);
         comboTimer.current = setTimeout(() => { setCombo(0); setComboBy(''); }, 1800);
     }, [G.lastPlay ? G.lastPlay.ts : null]);
+    // T7 (WS-B/WS-D): the single drop dispatch shared by drag (onDragEnd) and
+    // empty-cell tap (onCellTap). resolveDropDispatch folds joker-swap -> push ->
+    // snap -> reject into one pure decision; the client only chooses the path while
+    // the server move stays authoritative (a wrong guess snaps back as INVALID_MOVE,
+    // not a desync). allowJokerSwap is on, but a retrieve only ever fires on a drag:
+    // GridSlot wires onCellTap on EMPTY cells, so a tap target never holds a joker.
+    //   target    = {gridId, col, row} (a parseSlotId product)
+    //   primaryId = the dragged/primary tile id
+    //   selection = the tiles being placed (rack reading order restored downstream)
+    const dispatchDrop = useCallback((target, primaryId, selection) => {
+        const d = resolveDropDispatch({
+            tilePositions: gRef.current.tilePositions,
+            target, primaryId, selection,
+            playerID, boardCols: BOARD_COLS, handCols: HAND_COLS, allowJokerSwap: true,
+        });
+        switch (d.kind) {
+            case 'joker':
+                moves.retrieveJoker(...d.args);
+                break;
+            case 'push':
+                moves.insertTilesWithPush(...d.args);
+                break;
+            case 'snap':
+                moves.moveTiles(...d.args);
+                break;
+            default:
+                // reject: no legal landing / a hopeless push. Non-destructive — a
+                // light buzz, no server call, selection cleared.
+                buzz();
+                setState({selectedTiles: [], lastSelectedTileId: null});
+                return;
+        }
+        markSyncing();
+        play('place');
+        setState({selectedTiles: [], lastSelectedTileId: null});
+    }, [moves, playerID, markSyncing]);
     const onDragStart = useCallback((e) => {
         const id = e.active.id;
         setActiveTile(id);
@@ -168,50 +203,14 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         setActiveTile(null);
         setIsDragActive(false);
         if (!e.over) return;
-        const {gridId, col, row} = parseSlotId(String(e.over.id));
+        const target = parseSlotId(String(e.over.id));
         const id = e.active.id;
+        // A bare single-tile drag carries no selection; normalize to the dragged id
+        // so the dispatch always has the tiles being placed.
         const selectedTiles = stateRef.current.selectedTiles;
-        // Validate/snap the drop before touching the server. Exclude the dragged
-        // tile(s) from occupancy so a selection can land where it already sits.
-        const selectionLength = selectedTiles.length || 1;
-        const excludeIds = selectedTiles.length ? selectedTiles : [id];
-        const isOccupied = buildRowOccupancy(gRef.current.tilePositions, gridId, excludeIds, playerID);
-        const maxCols = gridId === BOARD_GRID_ID ? BOARD_COLS : HAND_COLS;
-        // T4 (WS-6): a board drop whose in-bounds run lands on an occupied span routes
-        // to the authoritative insert/push move. Split out-of-bounds from occupied —
-        // only push when inBounds && occupied; a free target, the hand, or an
-        // out-of-bounds run falls through to resolveDropSlot's near-edge snap below.
-        // The client only decides the path and gives an instant buzz on a hopeless
-        // push; the server move (insertTilesWithPush) is the authority.
-        const inBounds = col >= 0 && col + selectionLength <= maxCols;
-        const occupiedInRun = inBounds && !isRunFree(isOccupied, col, selectionLength, row, maxCols);
-        if (gridId === BOARD_GRID_ID && occupiedInRun) {
-            const rowTiles = boardRowTiles(gRef.current.tilePositions, row, excludeIds);
-            const plan = insertWithPush(rowTiles, col, selectionLength, BOARD_COLS - 1);
-            if (!plan) {
-                buzz();
-                setState({selectedTiles: [], lastSelectedTileId: null});
-                return;
-            }
-            moves.insertTilesWithPush(col, row, gridId, {id}, orderTilesBySource(excludeIds, gRef.current.tilePositions));
-            markSyncing();
-            play('place');
-            setState({selectedTiles: [], lastSelectedTileId: null});
-            return;
-        }
-        const result = resolveDropSlot({gridId, col, row}, isOccupied, selectionLength, maxCols);
-        if (!result.ok) {
-            // No legal landing (e.g. a multi-selection onto insufficient space).
-            // Reject non-destructively: no server call, light buzz, clear selection.
-            buzz();
-            setState({selectedTiles: [], lastSelectedTileId: null});
-            return;
-        }
-        moves.moveTiles(result.cols[0], row, gridId, {id}, selectedTiles);
-        markSyncing();
-        play('place');
-        setState({selectedTiles: [], lastSelectedTileId: null});
-    }, [moves, playerID, markSyncing]);
+        const selection = selectedTiles.length ? selectedTiles : [id];
+        dispatchDrop(target, id, selection);
+    }, [dispatchDrop]);
     const [showInvalidTiles, setShowInvalidTiles] = useState(false);
     const [validTiles, setValidTiles] = useState([])
     // Inline English reason for the last rejected submit. Non-destructive: tiles
@@ -247,48 +246,15 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     }, [])
 
     // Tap-to-place (S3-U8): the non-drag placement path. When a selection is live
-    // and the player taps an empty droppable cell, place the selection there via
-    // the SAME validated/snapped path as drag — build occupancy (excluding the
-    // selected tiles so they can run through where they already sit), resolve the
-    // tapped cell, and on `ok` call moveTiles; on reject, a light buzz and no
-    // move. Either way the selection clears. GridSlot only wires this onto empty
-    // cells when canDnD, so turn/phase gating matches the drag droppable cue.
+    // and the player taps an empty droppable cell, route it through the SAME
+    // dispatchDrop the drag uses. GridSlot only wires this onto empty cells when
+    // canDnD, so turn/phase gating matches the drag cue and the tap target is always
+    // empty — joker-swap (drag-only) never fires here. An empty selection is a no-op.
     const onCellTap = useCallback((gridId, col, row) => {
         const selectedTiles = stateRef.current.selectedTiles;
         if (!selectedTiles.length) return;
-        const selectionLength = selectedTiles.length;
-        const isOccupied = buildRowOccupancy(gRef.current.tilePositions, gridId, selectedTiles, playerID);
-        const maxCols = gridId === BOARD_GRID_ID ? BOARD_COLS : HAND_COLS;
-        // T4 (WS-6): same board split as the drag drop — a tapped empty cell whose
-        // N-wide run overlaps occupants to its right must push too; out-of-bounds and
-        // the hand stay on the resolveDropSlot snap below.
-        const inBounds = col >= 0 && col + selectionLength <= maxCols;
-        const occupiedInRun = inBounds && !isRunFree(isOccupied, col, selectionLength, row, maxCols);
-        if (gridId === BOARD_GRID_ID && occupiedInRun) {
-            const rowTiles = boardRowTiles(gRef.current.tilePositions, row, selectedTiles);
-            const plan = insertWithPush(rowTiles, col, selectionLength, BOARD_COLS - 1);
-            if (!plan) {
-                buzz();
-                setState({selectedTiles: [], lastSelectedTileId: null});
-                return;
-            }
-            moves.insertTilesWithPush(col, row, gridId, {id: selectedTiles[0]}, orderTilesBySource(selectedTiles, gRef.current.tilePositions));
-            markSyncing();
-            play('place');
-            setState({selectedTiles: [], lastSelectedTileId: null});
-            return;
-        }
-        const result = resolveDropSlot({gridId, col, row}, isOccupied, selectionLength, maxCols);
-        if (!result.ok) {
-            buzz();
-            setState({selectedTiles: [], lastSelectedTileId: null});
-            return;
-        }
-        moves.moveTiles(result.cols[0], result.row, gridId, {id: selectedTiles[0]}, selectedTiles);
-        markSyncing();
-        play('place');
-        setState({selectedTiles: [], lastSelectedTileId: null});
-    }, [moves, playerID, markSyncing])
+        dispatchDrop({gridId, col, row}, selectedTiles[0], selectedTiles);
+    }, [dispatchDrop])
     // TODO(S3-U8 stretch): keyboard placement — arrow-key a cursor over empty
     // cells and Enter to call onCellTap on the focused cell. Deferred: it needs a
     // focusable cell/roving-tabindex grid + a visible focus ring, which is more
