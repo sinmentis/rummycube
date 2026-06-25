@@ -1,38 +1,38 @@
 import {useEffect, useRef} from "react";
 import {getSecTs} from "../util";
 
-// Null-rendering watcher that fires the client-side turn-timeout nudge exactly
-// once when the server-set deadline passes. Because it renders null and lives
-// as a Board child, its internal 400ms ticking never re-renders Board's tile
-// tree. The server `forceEndTurn` guard remains the real anti-cheat authority;
-// this just makes an honest client end the turn at/after the deadline.
+// Null-rendering watcher that nudges the server-side turn timeout. The server
+// `forceEndTurn` deadline guard is the real authority; this just makes an honest
+// client end the turn at/after the deadline. It RETRIES (not fire-once) so a
+// nudge rejected by the guard — e.g. when the client clock runs ahead of the
+// server's — is followed by another until the server accepts and the turn
+// advances. Its 400ms ticking renders null, so it never re-renders Board's tiles.
+const TICK_MS = 400;
+const FIRE_SLACK_MS = 500;          // wait ~500ms past the local deadline before firing,
+                                    // so a client running slightly ahead doesn't pre-fire.
+const REFIRE_INTERVAL_MS = 1500;    // throttle re-fires while past the deadline.
+
 const TurnDeadlineWatcher = ({timerExpireAt, onTimeout}) => {
-    const firedRef = useRef(false);
     const intervalRef = useRef(null);
-    // Keep onTimeout in a ref so its identity changing does not resubscribe the
-    // interval (which would reset the single-fire guard mid-turn).
+    const lastFireRef = useRef(0);
     const onTimeoutRef = useRef(onTimeout);
-    useEffect(() => {
-        onTimeoutRef.current = onTimeout;
-    }, [onTimeout]);
+    useEffect(() => { onTimeoutRef.current = onTimeout; }, [onTimeout]);
 
     useEffect(() => {
-        firedRef.current = false;
+        lastFireRef.current = 0;        // new turn: reset throttle (natural re-arm)
         if (!timerExpireAt) return;
 
         const check = () => {
-            const remaining = timerExpireAt - getSecTs();
-            if (remaining <= 0 && !firedRef.current) {
-                firedRef.current = true;
-                onTimeoutRef.current();
-                clearInterval(intervalRef.current);
-            }
+            const now = getSecTs();
+            if (timerExpireAt - now > -FIRE_SLACK_MS) return;       // not past deadline + slack yet
+            if (now - lastFireRef.current < REFIRE_INTERVAL_MS) return; // throttled
+            lastFireRef.current = now;
+            onTimeoutRef.current();      // do NOT clearInterval — retry next window if rejected
         };
 
-        check(); // run immediately
-        intervalRef.current = setInterval(check, 400);
-
-        return () => clearInterval(intervalRef.current);
+        check();
+        intervalRef.current = setInterval(check, TICK_MS);
+        return () => clearInterval(intervalRef.current);   // unmount / turn change: no cross-turn leak
     }, [timerExpireAt]);
 
     return null;

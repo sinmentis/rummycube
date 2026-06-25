@@ -102,31 +102,38 @@ describe('U13 turn timer extraction', () => {
     expect(offsetAfter).not.toBe(offsetBefore);
   });
 
-  test('TurnDeadlineWatcher fires onTimeout exactly once, at/after the deadline and not before', () => {
+  // WS-F: the watcher no longer fires once at the raw deadline. It waits
+  // FIRE_SLACK_MS past the deadline (so a client running slightly ahead does not
+  // pre-fire) and then RETRIES every REFIRE_INTERVAL_MS, because a nudge can be
+  // rejected by the server's deadline guard under clock skew. Advances are on the
+  // 400ms tick grid: deadline 1000 + 500 slack = 1500 threshold, first tick >=
+  // threshold is 1600. The single-fire/throttle details are covered exhaustively
+  // in turn-deadline-watcher.test.js.
+  test('TurnDeadlineWatcher fires after deadline+slack, then retries while still past the deadline', () => {
     const onTimeout = jest.fn();
-    const timerExpireAt = getSecTs() + 1000;
+    const timerExpireAt = getSecTs() + 1000; // deadline 1000; threshold 1500; first eligible tick 1600
 
     render(
       <TurnDeadlineWatcher timerExpireAt={timerExpireAt} onTimeout={onTimeout} />
     );
 
-    // Before the deadline: not fired.
+    // Past the deadline but before deadline+slack: no pre-firing on skew.
     act(() => {
-      jest.advanceTimersByTime(800);
+      jest.advanceTimersByTime(1200); // ticks 400/800/1200 -> still before the 1500 threshold
     });
     expect(onTimeout).not.toHaveBeenCalled();
 
-    // Crossing the deadline: fired exactly once.
+    // Just past deadline+slack: first fire.
     act(() => {
-      jest.advanceTimersByTime(400);
+      jest.advanceTimersByTime(600); // clock 1800 -> tick 1600 fires
     });
     expect(onTimeout).toHaveBeenCalledTimes(1);
 
-    // Well past the deadline: still only once (single-fire guard holds).
+    // A rejected nudge (timerExpireAt unchanged) is retried, not latched.
     act(() => {
-      jest.advanceTimersByTime(5000);
+      jest.advanceTimersByTime(3400); // clock 5200 -> further fires at ticks ~3200, ~4800
     });
-    expect(onTimeout).toHaveBeenCalledTimes(1);
+    expect(onTimeout.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 
   test('TurnDeadlineWatcher does nothing when there is no deadline', () => {
