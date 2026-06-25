@@ -136,3 +136,58 @@ test('a hand-row drop -> {kind:snap, ...}; the hand never pushes', () => {
     expect(d.args[3]).toEqual({id: handA});
     expect(d.args[4]).toEqual([handA]);
 });
+
+// --- WS-E bridge routing (precedence 2, free-target case) --------------------
+
+// A free in-bounds span whose immediate left AND right board neighbours are both
+// occupied is plugging the only gap between two runs. It must route to push so
+// insertWithPush re-opens a 1-col separator (and to reject when there is no room),
+// instead of snapping the tiles in and fusing the two runs into one sequence.
+describe('WS-E bridge routing', () => {
+    // a b c | gap@3 | d e f on board row 0; one hand tile dropped on col 3 bridges.
+    test('a free board target bridging two runs (both neighbours occupied) -> {kind:push}', () => {
+        const tilePositions = {
+            8001: boardTile(8001, 0, 0), 8002: boardTile(8002, 1, 0), 8003: boardTile(8003, 2, 0),
+            8004: boardTile(8004, 4, 0), 8005: boardTile(8005, 5, 0), 8006: boardTile(8006, 6, 0),
+            [handA]: handTile(handA, 0, 0),
+        };
+        const d = dispatch({tilePositions, target: {gridId: BOARD_GRID_ID, col: 3, row: 0}, primaryId: handA, selection: [handA]});
+        expect(d.kind).toBe('push');
+    });
+
+    // Same bridge against the right wall: a b c @25..27 | gap@28 | d e f @29..31. The
+    // right run cannot ripple past col 31, so insertWithPush returns null -> reject.
+    test('a bridge with no room to re-open the separator (right wall) -> {kind:reject}', () => {
+        const tilePositions = {
+            8001: boardTile(8001, 25, 0), 8002: boardTile(8002, 26, 0), 8003: boardTile(8003, 27, 0),
+            8004: boardTile(8004, 29, 0), 8005: boardTile(8005, 30, 0), 8006: boardTile(8006, 31, 0),
+            [handA]: handTile(handA, 0, 0),
+        };
+        const d = dispatch({tilePositions, target: {gridId: BOARD_GRID_ID, col: 28, row: 0}, primaryId: handA, selection: [handA]});
+        expect(d).toEqual({kind: 'reject', args: []});
+    });
+
+    // A 2-wide gap is NOT a bridge: dropping at col 3 leaves col 4 free on the right,
+    // so the span is a plain free target and snaps in place.
+    test('a free non-bridge target (2-wide gap, right neighbour free) -> {kind:snap}', () => {
+        const tilePositions = {
+            8001: boardTile(8001, 0, 0), 8002: boardTile(8002, 1, 0), 8003: boardTile(8003, 2, 0),
+            8004: boardTile(8004, 5, 0), 8005: boardTile(8005, 6, 0), 8006: boardTile(8006, 7, 0),
+            [handA]: handTile(handA, 0, 0),
+        };
+        const d = dispatch({tilePositions, target: {gridId: BOARD_GRID_ID, col: 3, row: 0}, primaryId: handA, selection: [handA]});
+        expect(d.kind).toBe('snap');
+    });
+
+    // The bridge term is board-only: the very same neighbour pattern on the hand grid
+    // snaps (the hand never pushes).
+    test('a hand-grid gap with both neighbours occupied never bridges -> {kind:snap}', () => {
+        const dragId = 7009;
+        const tilePositions = {
+            [handA]: handTile(handA, 1, 0), [handB]: handTile(handB, 3, 0),
+            [dragId]: handTile(dragId, 9, 0),
+        };
+        const d = dispatch({tilePositions, target: {gridId: HAND_GRID_ID, col: 2, row: 0}, primaryId: dragId, selection: [dragId]});
+        expect(d.kind).toBe('snap');
+    });
+});

@@ -220,8 +220,13 @@ export function resolveDropDispatch({tilePositions, target, primaryId, selection
     // ripples the colliding run aside. A hopeless ripple rejects non-destructively.
     // Out-of-bounds and the hand fall through to the snap below.
     const inBounds = col >= 0 && col + N <= maxCols;
-    const occupiedInRun = inBounds && !isRunFree(isOccupied, col, N, row, maxCols);
-    if (isBoard && occupiedInRun) {
+    const runIsFree = inBounds && isRunFree(isOccupied, col, N, row, maxCols);
+    const occupiedInRun = inBounds && !runIsFree;
+    // WS-E: a free in-bounds span whose immediate left AND right neighbours are
+    // both occupied is plugging the only gap between two runs -> route to push so
+    // insertWithPush re-opens a 1-col separator instead of fusing them.
+    const bridge = isBoard && runIsFree && isOccupied(col - 1, row) && isOccupied(col + N, row);
+    if (isBoard && (occupiedInRun || bridge)) {
         const rowTiles = boardRowTiles(tilePositions, row, sel);
         const plan = insertWithPush(rowTiles, col, N, boardCols - 1);
         if (!plan) return {kind: 'reject', args: []};
