@@ -45,7 +45,7 @@ function TilePreview({tile, isSelected, isDragging, isValid, isPlayable, positio
     return (
         <div
             style={getTileStyle(isSelected, isDragging, isValid, position, index, newlyAdded)}
-            className={"tile tile-clickable border-dark" + (newlyAdded === true ? " tile-drawn" : "") + (isPlayable === true ? " tile-playable" : "")}>
+            className={"tile tile-clickable border-dark" + (newlyAdded === true ? " tile-drawn" : "") + (isPlayable === true ? " tile-playable" : "") + (isSelected === true ? " tile-selected" : "")}>
             {isPlayable === true &&
                 <span className="tile-playable-mark" aria-hidden="true"/>}
             <div className={"tile-text tile-" + COLORS[getTileColor(tile)]}>{val}</div>
