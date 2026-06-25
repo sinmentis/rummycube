@@ -1,4 +1,6 @@
-import {HAND_GRID_ID} from "./constants.js";
+import {BOARD_GRID_ID, HAND_GRID_ID} from "./constants.js";
+import {extractSeqs} from "./moveValidation.js";
+import {freezeSeqJokers, isSequenceValid, isJoker, getTileValue} from "./util.js";
 
 export function makeSlotId(gridId, col, row) {
     return `${gridId}:${col}:${row}`;
@@ -127,4 +129,49 @@ export function boardRowTiles(tilePositions, row, excludeIds) {
         out.push({tileId: id, col: p.col});
     }
     return out;
+}
+
+// Pure detector for the classic 1-tile joker retrieve via drag. Returns
+// {ok:true, jokerId, representedValue} iff the drop `cell` holds a SETTLED
+// (non-tmp) board joker sitting in a currently-valid run/group AND the dragged
+// HAND tile is a non-joker whose value equals that joker's represented value;
+// otherwise {ok:false}. Mirrors the server retrieveJoker eligibility, minus the
+// post-swap isBoardValid (that stays server-authoritative — colour mismatch is
+// deferred there). Computes the represented value with the SAME pure path the
+// server uses: extractSeqs -> freezeSeqJokers -> getTileValue. Never mutates.
+// cell = {gridId, col, row} (a parseSlotId product).
+export function jokerSwapTarget(tilePositions, cell, draggedTileId) {
+    if (!cell || cell.gridId !== BOARD_GRID_ID) return {ok: false};
+
+    // 1) the settled board joker sitting on the drop cell
+    let jokerId = null;
+    for (const id in tilePositions) {
+        const p = tilePositions[id];
+        if (!p || p.gridId !== BOARD_GRID_ID || p.row !== cell.row || p.col !== cell.col) continue;
+        if (p.tmp) return {ok: false};                 // this-turn placement, not a retrievable settled tile
+        if (!isJoker(Number(id))) return {ok: false};  // the cell's occupant is not a joker
+        jokerId = Number(id);
+        break;
+    }
+    if (jokerId === null) return {ok: false};          // empty cell -> hand back to the existing dispatch
+
+    // 2) the dragged tile must be one of this client's hand tiles, and not a joker
+    // (playerView strips opponents' hands, so gridId 'h' here means our own)
+    const draggedId = Number(draggedTileId);
+    const dp = tilePositions[draggedId];
+    if (!dp || dp.gridId !== HAND_GRID_ID) return {ok: false};
+    if (isJoker(draggedId)) return {ok: false};
+
+    // 3) the joker must live in a valid sequence -> freeze it to read its value
+    const seq = extractSeqs({tilePositions}).find(s => s.some(t => Number(t) === jokerId));
+    if (!seq || !isSequenceValid(seq)) return {ok: false};
+    const frozen = freezeSeqJokers(seq);
+    if (!frozen) return {ok: false};
+    const idx = seq.findIndex(t => Number(t) === jokerId);
+    const representedValue = getTileValue(frozen[idx]);
+
+    // 4) value must match (colour is left to the server's post-swap isBoardValid)
+    if (getTileValue(draggedId) !== representedValue) return {ok: false};
+
+    return {ok: true, jokerId, representedValue};
 }
