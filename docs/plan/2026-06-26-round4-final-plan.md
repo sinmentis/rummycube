@@ -229,7 +229,7 @@ describe('WS-E bridge routing', () => {
 });
 ```
 
-> If `resolveDropDispatch`'s parameter shape in the existing file differs (e.g. positional args), match the existing tests in `resolve-drop-dispatch.test.js` exactly — read them first and copy their call style. The assertions on `out.kind` are what matter.
+> IMPORTANT (rubber-duck): the call shape above is illustrative, NOT runnable as-is — the real `resolveDropDispatch` takes `target` (not `cell`) and requires `boardCols`/`handCols`. Before writing these, read `src/tests/resolve-drop-dispatch.test.js` and reuse its existing `dispatch(...)` helper (≈ lines 27-35) which assembles the full arg shape. Translate each scenario above into a `dispatch(...)` call: build the `tilePositions`, set the target board cell `{gridId:'b', col, row}`, the dragged hand tile + `selection`, and assert only `out.kind`. The four scenarios (bridge→push, no-room→reject, 2-wide-gap free→snap, hand-grid→snap) are what must be encoded.
 
 - [ ] **Step 2: Run tests to verify they fail**
 
@@ -304,38 +304,35 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 
 Create `src/tests/turn-deadline-watcher.test.js` (mirror `turn-timer-render.test.js` setup: `jest.useFakeTimers()` also mocks `Date`):
 
+> CADENCE NOTE (rubber-duck): the watcher does `check()` immediately then `setInterval(check, TICK_MS=400)`, so a fire can only happen ON a 400ms tick. With a 1000ms deadline + 500ms slack the threshold is 1500ms, but the first tick at/after 1500 is **1600**. So tests must advance PAST the next tick boundary after `deadline+slack`, never to the exact threshold. The advances below are chosen on the 400ms grid; do not "tighten" them to the raw threshold.
+
 ```js
 import React from 'react';
 import {render, act} from '@testing-library/react';
 import TurnDeadlineWatcher from '../rummikub/components/TurnDeadlineWatcher';
 
-const FIRE_SLACK_MS = 500;
-const REFIRE_INTERVAL_MS = 1500;
-
-beforeEach(() => jest.useFakeTimers());
+beforeEach(() => jest.useFakeTimers());           // modern fake timers also mock Date, so getSecTs() advances
 afterEach(() => { jest.runOnlyPendingTimers(); jest.useRealTimers(); });
 
-const now = () => Date.now();
+const now = () => Date.now();                      // equals new Date().getTime() under fake timers
 
-test('normal path: fires once at deadline + slack, then throttled', () => {
+test('normal path: no fire before deadline+slack, fires shortly after, then throttled', () => {
   const onTimeout = jest.fn();
-  const expireAt = now() + 1000;
+  const expireAt = now() + 1000;                   // deadline 1000; threshold = 1500; first eligible tick = 1600
   render(<TurnDeadlineWatcher timerExpireAt={expireAt} onTimeout={onTimeout}/>);
-  act(() => jest.advanceTimersByTime(1000));           // at deadline, slack not yet reached
+  act(() => jest.advanceTimersByTime(1200));       // past deadline, before threshold -> ticks 400/800/1200, no fire
   expect(onTimeout).toHaveBeenCalledTimes(0);
-  act(() => jest.advanceTimersByTime(FIRE_SLACK_MS));  // deadline + slack
+  act(() => jest.advanceTimersByTime(600));         // clock 1800 -> tick 1600 fires
   expect(onTimeout).toHaveBeenCalledTimes(1);
-  act(() => jest.advanceTimersByTime(1000));           // within refire throttle window
+  act(() => jest.advanceTimersByTime(1000));        // clock 2800 -> ticks 2000/2400/2800 all within 1500ms throttle
   expect(onTimeout).toHaveBeenCalledTimes(1);
 });
 
 test('client-ahead skew: keeps retrying when onTimeout has no effect', () => {
-  const onTimeout = jest.fn();                          // simulate server INVALID_MOVE: turn never advances
+  const onTimeout = jest.fn();                      // no effect -> server keeps rejecting, timerExpireAt unchanged
   const expireAt = now() + 1000;
   render(<TurnDeadlineWatcher timerExpireAt={expireAt} onTimeout={onTimeout}/>);
-  act(() => jest.advanceTimersByTime(1000 + FIRE_SLACK_MS));   // first fire
-  act(() => jest.advanceTimersByTime(REFIRE_INTERVAL_MS));     // second fire
-  act(() => jest.advanceTimersByTime(REFIRE_INTERVAL_MS));     // third fire
+  act(() => jest.advanceTimersByTime(5200));        // fires at ticks ~1600, ~3200, ~4800
   expect(onTimeout.mock.calls.length).toBeGreaterThanOrEqual(3);
 });
 
@@ -343,14 +340,14 @@ test('timerExpireAt change re-arms and clears the old throttle', () => {
   const onTimeout = jest.fn();
   const t1 = now() + 1000;
   const {rerender} = render(<TurnDeadlineWatcher timerExpireAt={t1} onTimeout={onTimeout}/>);
-  act(() => jest.advanceTimersByTime(1000 + FIRE_SLACK_MS));   // fires for t1
-  const firedForT1 = onTimeout.mock.calls.length;
-  const t2 = now() + 1000;                                     // new turn, future deadline
+  act(() => jest.advanceTimersByTime(1800));        // fires once for t1 (tick 1600)
+  expect(onTimeout).toHaveBeenCalledTimes(1);
+  const t2 = now() + 1000;                           // clock now ~1800 -> t2 ~2800, threshold ~3300
   rerender(<TurnDeadlineWatcher timerExpireAt={t2} onTimeout={onTimeout}/>);
-  act(() => jest.advanceTimersByTime(500));                    // before t2 deadline
-  expect(onTimeout.mock.calls.length).toBe(firedForT1);        // no premature fire
-  act(() => jest.advanceTimersByTime(500 + FIRE_SLACK_MS));    // past t2 + slack
-  expect(onTimeout.mock.calls.length).toBe(firedForT1 + 1);
+  act(() => jest.advanceTimersByTime(600));          // clock ~2400, before t2 threshold -> no new fire
+  expect(onTimeout).toHaveBeenCalledTimes(1);
+  act(() => jest.advanceTimersByTime(1200));         // clock ~3600, past t2 threshold -> fires again (throttle reset)
+  expect(onTimeout).toHaveBeenCalledTimes(2);
 });
 
 test('null deadline never fires', () => {
@@ -616,7 +613,7 @@ In `src/rummikub/components/Board.jsx`:
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `npx jest src/tests/long-press.test.js`
-Expected: PASS — progressive case green; existing long-press cases still green (adjust any existing assertion that expected bidirectional selection, since the contract is now right-only — update those assertions to the right-only expectation).
+Expected: PASS — progressive case green; existing long-press cases still green. NOTE: the existing suite asserts the OLD one-arg contract `expect(onLongPress).toHaveBeenCalledWith(tile)` (≈ `long-press.test.js:48-54` and `:90-97`); migrate those to the new two-arg contract `expect(onLongPress).toHaveBeenCalledWith(tile, 1)` (the first tick), and update any assertion that expected the bidirectional whole-group selection to the right-only expectation. Keep the timing/cancel assertions (move-cancel, pointer-up clears) intact — the `setTimeout`→`setInterval` swap preserves the 6px cancel boundary.
 
 - [ ] **Step 5: Commit**
 
@@ -649,26 +646,21 @@ const fs = require('fs');
 const path = require('path');
 const css = fs.readFileSync(path.join(__dirname, '../rummikub/components/board.css'), 'utf8');
 
-function ruleBody(selector) {
-  const i = css.indexOf(selector);
-  if (i < 0) return '';
-  const open = css.indexOf('{', i);
-  const close = css.indexOf('}', open);
-  return css.slice(open + 1, close);
-}
-
-test('.tile-selected lifts via transform under reduced-motion gate', () => {
-  const body = ruleBody('.tile.tile-selected');
-  expect(body).toMatch(/translateY\(\s*-6px\s*\)/);
-  expect(body).toMatch(/scale\(\s*1\.04\s*\)/);
-  // transform must sit inside a prefers-reduced-motion: no-preference block
-  const idx = css.indexOf('.tile.tile-selected');
-  const prefersIdx = css.lastIndexOf('@media (prefers-reduced-motion: no-preference)', idx);
-  expect(prefersIdx).toBeGreaterThanOrEqual(0);
+test('.tile-selected has a static second channel and a reduced-motion-gated lift', () => {
+  // base rule carries the motion-off second channel (shadow/z-index), always present
+  expect(css).toMatch(/\.tile\.tile-selected\s*\{[^}]*box-shadow/);
+  // the lift transform exists ...
+  const tIdx = css.search(/transform:\s*translateY\(\s*-6px\s*\)\s+scale\(\s*1\.04\s*\)/);
+  expect(tIdx).toBeGreaterThanOrEqual(0);
+  // ... and sits under a prefers-reduced-motion: no-preference gate, in a .tile-selected rule
+  const gateIdx = css.lastIndexOf('@media (prefers-reduced-motion: no-preference)', tIdx);
+  expect(gateIdx).toBeGreaterThanOrEqual(0);
+  const selIdx = css.lastIndexOf('.tile-selected', tIdx);
+  expect(selIdx).toBeGreaterThan(gateIdx);
 });
 ```
 
-> If the project keeps the lift transform in a dedicated reduced-motion block while a base `.tile.tile-selected` holds the static border, scope the `ruleBody` lookup to the block that contains the transform. The assertion intent: transform present AND under a `prefers-reduced-motion: no-preference` media query.
+> The assertion intent: the transform `translateY(-6px) scale(1.04)` is present AND lives inside a `prefers-reduced-motion: no-preference` block on a `.tile-selected` rule, while a base `.tile.tile-selected` rule holds the static shadow as the motion-off channel.
 
 - [ ] **Step 2: Run test to verify it fails**
 
