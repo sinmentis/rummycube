@@ -22,7 +22,7 @@ import {original} from "immer"
 import {current} from 'immer';
 
 import {pushTilesToGrid} from "./orderTiles.js";
-import {orderTilesBySource} from "./dndUtil.js";
+import {orderTilesBySource, boardRowTiles} from "./dndUtil.js";
 import {insertWithPush} from "./insertPush.js";   // explicit .js so node src/server.js boots
 import {manipulationScore} from "./juice/comboMath.js";
 
@@ -152,16 +152,10 @@ function insertTilesWithPush({G, ctx, playerID}, col, row, destGridId, tileIdObj
         ? orderTilesBySource(selectedTiles, G.tilePositions)
         : [tileId];
     const N = selection.length;
-    const sel = new Set(selection.map(String));
 
-    // The target row's existing occupants, excluding the dragged selection.
-    const rowTiles = [];
-    for (const id in G.tilePositions) {
-        const p = G.tilePositions[id];
-        if (!p || p.gridId !== BOARD_GRID_ID || p.row !== row) continue;
-        if (sel.has(String(id))) continue;
-        rowTiles.push({tileId: id, col: p.col});
-    }
+    // The target row's existing occupants, excluding the dragged selection
+    // (shared with the client's drop dispatch via dndUtil.boardRowTiles).
+    const rowTiles = boardRowTiles(G.tilePositions, row, selection);
 
     const plan = insertWithPush(rowTiles, T, N, BOARD_COLS - 1);
     if (!plan) return INVALID_MOVE;

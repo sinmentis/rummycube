@@ -1,6 +1,7 @@
 import {BOARD_GRID_ID, HAND_GRID_ID} from "./constants.js";
 import {extractSeqs} from "./moveValidation.js";
 import {freezeSeqJokers, isSequenceValid, isJoker, getTileValue} from "./util.js";
+import {insertWithPush} from "./insertPush.js";   // explicit .js so node src/server.js boots
 
 export function makeSlotId(gridId, col, row) {
     return `${gridId}:${col}:${row}`;
@@ -125,7 +126,7 @@ export function boardRowTiles(tilePositions, row, excludeIds) {
     const out = [];
     for (const id in tilePositions) {
         const p = tilePositions[id];
-        if (!p || p.gridId !== 'b' || p.row !== row || ex.has(String(id))) continue;
+        if (!p || p.gridId !== BOARD_GRID_ID || p.row !== row || ex.has(String(id))) continue;
         out.push({tileId: id, col: p.col});
     }
     return out;
@@ -174,4 +175,62 @@ export function jokerSwapTarget(tilePositions, cell, draggedTileId) {
     if (getTileValue(draggedId) !== representedValue) return {ok: false};
 
     return {ok: true, jokerId, representedValue};
+}
+
+// Single decision point for "what should this board/hand drop (or empty-cell tap)
+// do?", folding the round-2 snap-vs-insert/push split and the classic 1-tile
+// joker-swap into ONE precedence: joker-swap -> push -> snap -> reject. Pure:
+// reads tilePositions, never mutates — the client only DECIDES the path while the
+// server move stays authoritative.
+//
+//   target          = {gridId, col, row} (a parseSlotId product)
+//   primaryId       = the dragged/active tile id
+//   selection       = the live selection (rack reading order is restored below)
+//   boardCols/handCols = each grid's EXCLUSIVE column count (32 / 22)
+//   allowJokerSwap  = drag-only gate so tap placement never triggers a retrieve
+//
+// Returns {kind, args} where args is the EXACT argument array for the matching move:
+//   joker  -> retrieveJoker(jokerId, primaryId)
+//   push   -> insertTilesWithPush(T, row, 'b', {id:primaryId}, ordered)
+//   snap   -> moveTiles(col, row, gridId, {id:primaryId}, selection)
+//   reject -> []  (no move; the caller buzzes)
+//
+// Off-by-one (round-2): isRunFree/inBounds use the EXCLUSIVE column count
+// (maxCols = boardCols), while insertWithPush takes the INCLUSIVE last column
+// (boardCols - 1). isOccupied from buildRowOccupancy is the two-arg (col,row)=>bool.
+export function resolveDropDispatch({tilePositions, target, primaryId, selection, playerID, boardCols, handCols, allowJokerSwap}) {
+    const {gridId, col, row} = target;
+    const isBoard = gridId === BOARD_GRID_ID;
+    // Normalize to a non-empty selection so occupancy/bounds/ordering always have
+    // the tiles being placed, even for a bare single-tile drag.
+    const sel = (selection && selection.length) ? selection : [primaryId];
+    const N = sel.length;
+
+    // (1) joker-swap: a single tile dropped on a settled board joker that sits in a
+    // valid run and matches its represented value. Drag-only via allowJokerSwap.
+    if (isBoard && N === 1 && allowJokerSwap) {
+        const swap = jokerSwapTarget(tilePositions, target, primaryId);
+        if (swap.ok) return {kind: 'joker', args: [swap.jokerId, primaryId]};
+    }
+
+    const maxCols = isBoard ? boardCols : handCols;
+    const isOccupied = buildRowOccupancy(tilePositions, gridId, sel, playerID);
+
+    // (2) push: a board target whose in-bounds N-wide run lands on an occupied span
+    // ripples the colliding run aside. A hopeless ripple rejects non-destructively.
+    // Out-of-bounds and the hand fall through to the snap below.
+    const inBounds = col >= 0 && col + N <= maxCols;
+    const occupiedInRun = inBounds && !isRunFree(isOccupied, col, N, row, maxCols);
+    if (isBoard && occupiedInRun) {
+        const rowTiles = boardRowTiles(tilePositions, row, sel);
+        const plan = insertWithPush(rowTiles, col, N, boardCols - 1);
+        if (!plan) return {kind: 'reject', args: []};
+        return {kind: 'push', args: [col, row, BOARD_GRID_ID, {id: primaryId}, orderTilesBySource(sel, tilePositions)]};
+    }
+
+    // (3) snap: a free board target, the hand, or an out-of-bounds run, snapped to
+    // the nearest legal slot; no legal landing rejects non-destructively.
+    const result = resolveDropSlot(target, isOccupied, N, maxCols);
+    if (!result.ok) return {kind: 'reject', args: []};
+    return {kind: 'snap', args: [result.cols[0], row, gridId, {id: primaryId}, selection]};
 }
