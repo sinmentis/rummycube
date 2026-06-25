@@ -88,6 +88,7 @@ function moveTiles({G, ctx, playerID}, col, row, destGridId, tileIdObj, selected
             return INVALID_MOVE;
         }
         let currPos = G.tilePositions[tileId]
+        if (!currPos) return INVALID_MOVE
         let currPlayer = playerID
         let fromHandToBoard = currPos.gridId === HAND_GRID_ID && destGridId === BOARD_GRID_ID
         let fromHandToHand = currPos.gridId === HAND_GRID_ID && destGridId === HAND_GRID_ID
@@ -120,12 +121,19 @@ function moveTiles({G, ctx, playerID}, col, row, destGridId, tileIdObj, selected
         // Place the selection in rack reading order (row then col), not tap order,
         // so a run you sorted lands in the same order it looks. Shared with the
         // drag preview via orderTilesBySource.
+        // A for-loop (not .map) so a rejected insert can early-return INVALID_MOVE,
+        // discarding the whole immer draft, including the gameStateStack snapshot
+        // pushed above and any tiles already placed earlier in this selection.
         const ordered = orderTilesBySource(selectedTiles, G.tilePositions)
-        ordered.map(function (id, index) {
-            insertTile(id, destGridId, row, col + index)
-        })
+        for (let index = 0; index < ordered.length; index++) {
+            if (insertTile(ordered[index], destGridId, row, col + index) === INVALID_MOVE) {
+                return INVALID_MOVE
+            }
+        }
     } else {
-        insertTile(tileId, destGridId, row, col)
+        if (insertTile(tileId, destGridId, row, col) === INVALID_MOVE) {
+            return INVALID_MOVE
+        }
     }
 }
 
