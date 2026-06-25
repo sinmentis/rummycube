@@ -23,6 +23,25 @@ export function contiguousGroup(tilePositions, pressedTileId) {
     return group;
 }
 
+// Pure: the pressed tile plus the contiguous run to its RIGHT (ascending cols),
+// same grid + row; a gap stops the run. The left side is never included. HAND
+// runs are isolated per playerID; board tiles (playerID:null) are not.
+export function tilesRightward(tilePositions, pressedTileId) {
+    const p = tilePositions[pressedTileId];
+    if (!p) return [pressedTileId];
+    const {gridId, row, col, playerID} = p;
+    const byCol = {};
+    for (const id in tilePositions) {
+        const q = tilePositions[id];
+        if (!q || q.gridId !== gridId || q.row !== row) continue;
+        if (gridId === HAND_GRID_ID && String(q.playerID) !== String(playerID)) continue;
+        byCol[q.col] = id;
+    }
+    const group = [pressedTileId];
+    for (let c = col + 1; byCol[c] != null; c++) group.push(byCol[c]);
+    return group;
+}
+
 
 
 function getTilesInSameRow(G, tilePos) {
