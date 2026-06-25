@@ -20,8 +20,32 @@ export function insertWithPush(rowTiles, T, N, maxCol) {
     const occ = new Set(asc.map(t => t.col));
     let free = true;
     for (let c = T; c < T + N; c++) if (occ.has(c)) { free = false; break; }
-    if (free) return {shifts: {}, newCols: cols(T, N)};
+    if (free) {
+        // WS-E bridge: the dropped block fills the ONLY gap between a left and a
+        // right run (both immediate neighbours occupied). A plain free placement
+        // would fuse them into one (illegal) contiguous sequence, so re-open a
+        // 1-col separator by rippling the right run one column right (stop at the
+        // first gap). No room -> null, which the dispatch turns into a reject;
+        // NEVER fall back to the plain free placement (that is the original bug).
+        if (occ.has(T - 1) && occ.has(T + N)) {
+            const shifts = openSeparatorRight(asc, T + N, maxCol);
+            return shifts === null ? null : {shifts, newCols: cols(T, N)};
+        }
+        return {shifts: {}, newCols: cols(T, N)};
+    }
     return tryRight(asc, T, N, maxCol) || tryLeft(asc, T, N, maxCol);
+}
+// Vacate column G by cascading the contiguous occupied run starting at G one
+// column right, stopping at the first gap. Returns the shift map, or null if a
+// tile would pass maxCol (INCLUSIVE). Same ripple shape as tryRight.
+function openSeparatorRight(asc, G, maxCol) {
+    const shifts = {}; let cursor = G + 1;
+    for (const {tileId, col} of asc) {
+        if (col < G) continue;
+        if (col < cursor) { if (cursor > maxCol) return null; shifts[tileId] = cursor; cursor += 1; }
+        else break;
+    }
+    return shifts;
 }
 function cols(T, N) { return Array.from({length: N}, (_, i) => T + i); }
 function tryRight(asc, T, N, maxCol) {

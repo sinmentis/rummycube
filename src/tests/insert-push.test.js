@@ -116,3 +116,50 @@ test('output columns are provably distinct after a long cascade', () => {
     const cols = finalCols(row, result);
     expect(new Set(cols).size).toBe(cols.length);
 });
+
+describe('WS-E bridge: leave a 1-col separator', () => {
+  const row = (pairs) => pairs.map(([tileId, col]) => ({tileId, col}));
+
+  test('owner case 123_456 drop @gap pushes right run, opens separator', () => {
+    const rt = row([['a',0],['b',1],['c',2],['d',4],['e',5],['f',6]]);
+    expect(insertWithPush(rt, 3, 1, 31))
+      .toEqual({shifts: {d:5, e:6, f:7}, newCols: [3]});
+  });
+
+  test('multi-tile span bridging a 2-wide-needed boundary', () => {
+    const rt = row([['a',0],['b',1],['c',2],['g',5],['h',6],['i',7]]);
+    expect(insertWithPush(rt, 3, 2, 31))
+      .toEqual({shifts: {g:6, h:7, i:8}, newCols: [3,4]});
+  });
+
+  test('ripple stops at an inner gap', () => {
+    const rt = row([['a',24],['b',25],['c',26],['d',28],['e',29],['f',31]]);
+    expect(insertWithPush(rt, 27, 1, 31))
+      .toEqual({shifts: {d:29, e:30}, newCols: [27]});
+  });
+
+  test('no room at right wall returns null (caller rejects)', () => {
+    const rt = row([['a',25],['b',26],['c',27],['d',29],['e',30],['f',31]]);
+    expect(insertWithPush(rt, 28, 1, 31)).toBeNull();
+  });
+
+  test('NOT a bridge: T+N free with a 2-wide gap, plain placement', () => {
+    const rt = row([['a',0],['b',1],['c',2],['d',5],['e',6],['f',7]]);
+    expect(insertWithPush(rt, 3, 1, 31)).toEqual({shifts: {}, newCols: [3]});
+  });
+
+  test('NOT a bridge: append left of a run (left neighbour empty)', () => {
+    const rt = row([['b',1],['c',2],['d',3]]);
+    expect(insertWithPush(rt, 0, 1, 31)).toEqual({shifts: {}, newCols: [0]});
+  });
+
+  test('NOT a bridge: append right of a run (right neighbour empty)', () => {
+    const rt = row([['a',0],['b',1],['c',2]]);
+    expect(insertWithPush(rt, 3, 1, 31)).toEqual({shifts: {}, newCols: [3]});
+  });
+
+  test('within-run insert (occupied target) unchanged, stays contiguous', () => {
+    const rt = row([['a',0],['b',1],['c',2],['e',3]]);
+    expect(insertWithPush(rt, 3, 1, 31)).toEqual({shifts: {e:4}, newCols: [3]});
+  });
+});
