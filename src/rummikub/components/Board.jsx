@@ -740,8 +740,8 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             {activeTile ? (
                 <div className="tile-lift" style={{display: 'flex', gap: '2px'}}>
                     {state.selectedTiles.includes(activeTile)
-                        ? orderTilesBySource(state.selectedTiles, G.tilePositions).map(id => <TilePreview key={id} tile={id}/>)
-                        : <TilePreview tile={activeTile}/>}
+                        ? orderTilesBySource(state.selectedTiles, G.tilePositions).map(id => <TilePreview key={id} tile={id} canDnD={true} isDragging={true}/>)
+                        : <TilePreview tile={activeTile} canDnD={true} isDragging={true}/>}
                 </div>
             ) : null}
         </DragOverlay>

@@ -26,7 +26,7 @@ function getAbsolutePosition(relativePosition) {
     };
 }
 
-function TilePreview({tile, isSelected, isDragging, isValid, isPlayable, position, boardGriBoundingBox, index, newlyAdded}) {
+function TilePreview({tile, canDnD, isSelected, isDragging, isValid, isPlayable, position, boardGriBoundingBox, index, newlyAdded}) {
     if (!tile) return null
     if (position && boardGriBoundingBox) {
         let absPos = getAbsolutePosition(position);
@@ -44,7 +44,7 @@ function TilePreview({tile, isSelected, isDragging, isValid, isPlayable, positio
     let validGlyph = isValid === true ? '✓' : isValid === false ? '✕' : ''
     return (
         <div
-            style={getTileStyle(isSelected, isDragging, isValid, position, index, newlyAdded)}
+            style={getTileStyle(isSelected, isDragging, isValid, position, index, newlyAdded, canDnD)}
             className={"tile tile-clickable border-dark" + (newlyAdded === true ? " tile-drawn" : "") + (isPlayable === true ? " tile-playable" : "") + (isSelected === true ? " tile-selected" : "")}>
             {isPlayable === true &&
                 <span className="tile-playable-mark" aria-hidden="true"/>}
@@ -59,7 +59,7 @@ function getTileWidth() {
     return (TILE_WIDTH * viewportWidth) / 100;
 }
 
-function getTileStyle(selected, isDragging, isValid, position, index, newlyAdded) {
+function getTileStyle(selected, isDragging, isValid, position, index, newlyAdded, canDnD) {
     let backgroundColor = ''
     let border = ''
     let borderColor = ''
@@ -84,7 +84,7 @@ function getTileStyle(selected, isDragging, isValid, position, index, newlyAdded
         opacity: isDragging ? 0.5 : 1,
         fontSize: 25,
         fontWeight: 'bold',
-        cursor: 'move',
+        cursor: !canDnD ? 'default' : (isDragging ? 'grabbing' : 'grab'),
         border: border,
         borderColor: borderColor,
     }
@@ -164,6 +164,8 @@ const Tile = React.memo(function Tile({tile, canDnD, isSelected, isValid, isPlay
              style={{touchAction: 'none', opacity: isDragging ? 0.4 : 1, cursor: canDnD ? 'grab' : 'default'}}>
             <TilePreview
                 tile={tile}
+                canDnD={canDnD}
+                isDragging={isDragging}
                 isSelected={isSelected}
                 isValid={isValid}
                 isPlayable={isPlayable}
