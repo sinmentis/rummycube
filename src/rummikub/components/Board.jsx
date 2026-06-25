@@ -31,6 +31,7 @@ import HintsToggle from "./HintsToggle";
 import IconButton from "./IconButton";
 import TimeoutAnnouncement from "./TimeoutAnnouncement";
 import {useUndoRedoHotkeys} from "./useUndoRedoHotkeys";
+import {useTilePlacementHotkeys} from "./useTilePlacementHotkeys";
 import every from "lodash/every.js";
 
 const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, events, chatMessages, sendChatMessage, isConnected}) {
@@ -457,6 +458,29 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         }}>Draw
     </button>)
     const {board, hands} = buildGridsFromTilePositions(G.tilePositions, ctx.numPlayers)
+
+    // T8 (WS-G): keyboard tap-to-place. firstFreeBoardCell is the v1 landing target
+    // — the first free board cell scanned row-major, with NO cursor/cell selection
+    // yet. placeFocusedHandTile routes a single focused hand tile through the SAME
+    // validated dispatchDrop the drag/empty-cell-tap paths use, so the move stays
+    // server-authoritative (a wrong guess snaps/rejects, never desyncs).
+    // TODO: cursor cell selection (arrow-key a focus ring across empty cells, Enter
+    //   to place at the chosen cell) — deferred; v1 always uses the first free cell.
+    let firstFreeBoardCell = null;
+    for (let r = 0; r < BOARD_ROWS && !firstFreeBoardCell; r++) {
+        for (let c = 0; c < BOARD_COLS; c++) {
+            if (board[r][c] == null) { firstFreeBoardCell = {col: c, row: r}; break; }
+        }
+    }
+    const placeFocusedHandTile = (tileId) => {
+        if (!firstFreeBoardCell) return;
+        dispatchDrop({gridId: BOARD_GRID_ID, col: firstFreeBoardCell.col, row: firstFreeBoardCell.row}, tileId, [tileId]);
+    };
+    useTilePlacementHotkeys({
+        enabled: isMyTurn && !waiting,
+        getTilePos: (id) => G.tilePositions[id],
+        onPlaceTile: placeFocusedHandTile,
+    });
 
     // WS-10 highlight-only, T4 opt-in: mark the rack tiles that could extend a
     // valid board group right now, plus a count pill. Only computed when the
