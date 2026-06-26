@@ -1,3 +1,16 @@
+/* R5b-T4: shared radius + elevation tokens so the table's corner radii and
+   surface shadows come from one scale instead of ad-hoc per-rule values. The
+   palette tokens live in theme/classic.css; CSS merges these :root blocks. Pills
+   keep 999px and circular chips keep 50% — they are not on this scale. */
+:root {
+    --r-sm: 6px;
+    --r-md: 10px;
+    --r-lg: 14px;
+    --r-xl: 18px;
+    --elev-1: 0 2px 6px rgba(0, 0, 0, .3);
+    --elev-2: 0 14px 26px rgba(0, 0, 0, .42);
+}
+
 body {
     /*min-height: 100%;*/
     position: relative;
@@ -102,18 +115,34 @@ body {
     max-width: 94vw;
     margin: 2.2vh auto 1vh;
     padding: 1.4vh 1.6vw 1.8vh;
-    border-radius: 16px;
+    border-radius: var(--r-xl);
     background: var(--rack);
     border: 1px solid var(--rack-border);
-    box-shadow: var(--rack-highlight), 0 14px 26px rgba(0, 0, 0, .42);
+    box-shadow: var(--rack-highlight), var(--elev-2);
 }
 
-/* Your own avatar, pinned to the top-left corner of your rack. */
+/* R5b-T4: centre the hand grid within the rack so the wood reads symmetric
+   instead of left-weighted with empty wood on the right. Scoped to the hand so
+   the board tray grid (.ref .grid-container) is untouched. */
+.hand-buttons .grid-container {
+    justify-content: center;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Your own avatar, pinned to the top-left corner of your rack. R5b-T4 seats it on
+   a small wood nameplate (reusing --rack) so the avatar + name + turn group reads
+   as part of the rack rather than floating on the felt/rack seam. */
 .rack-self {
     position: absolute;
     left: 6px;
     bottom: calc(100% + 2px);
     z-index: 7;
+    padding: 8px 12px 10px;
+    background: var(--rack);
+    border: 1px solid var(--rack-border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--rack-highlight), var(--elev-1);
 }
 
 /* WS-D: undo/redo as ↶/↷ icon buttons, floated to the rack's top-right corner —
@@ -137,15 +166,18 @@ body {
     font-size: 20px;           /* ↶ / ↷ glyph */
     line-height: 1;
     border: 1px solid var(--brass-soft, rgba(205, 162, 75, .5));
-    border-radius: 10px;
+    border-radius: var(--r-md);
     color: var(--cream, #f5edd8);          /* on the dark rack = 10.5:1 */
-    background: rgba(20, 16, 10, .42);      /* quiet, low weight */
+    /* R5b-T4: more visible than the old near-invisible .42 felt wash + a 1px brass
+       inset, so undo/redo are discoverable on the felt but still quiet. */
+    background: rgba(40, 30, 16, .62);
+    box-shadow: inset 0 0 0 1px rgba(205, 162, 75, .28);
     cursor: pointer;
     transition: background-color .12s ease, transform .1s ease, opacity .12s ease;
 }
 
 .icon-button:hover {
-    background: rgba(20, 16, 10, .62);
+    background: rgba(54, 40, 20, .74);
     transform: translateY(-1px);
 }
 
@@ -313,20 +345,20 @@ div.grid-container {
    CSS-only (no JS toggling in this task).
    ============================================================ */
 .grid-item.slot-valid {
-    border-radius: 6px;
+    border-radius: var(--r-sm);
     /* softer "you can place here" — faint fill + thin inset outline, no loud glow */
     background-color: rgba(120, 200, 130, .08);
     box-shadow: inset 0 0 0 1.5px rgba(150, 210, 120, .35);
 }
 .grid-item.slot-over {
-    border-radius: 6px;
+    border-radius: var(--r-sm);
     /* hovered cell: a touch stronger than slot-valid but still restrained (< .3) */
     background-color: rgba(120, 200, 130, .22);
     box-shadow: inset 0 0 0 2px rgba(150, 210, 120, .55);
 }
 
 .grid-item.slot-reject {
-    border-radius: 6px;
+    border-radius: var(--r-sm);
     /* muted, desaturated red illegal-drop indication */
     background-color: rgba(150, 70, 70, .16);
     box-shadow: inset 0 0 0 2px rgba(170, 80, 80, .5);
@@ -359,7 +391,7 @@ div.tile {
     background-color: var(--tile-face-solid);
     background-image: var(--tile-sheen);
     border: 1px solid var(--tile-border);
-    border-radius: 5px;
+    border-radius: var(--r-sm);
     /* drop shadow + carved top highlight + warm bottom shading = beveled ivory */
     box-shadow: var(--tile-shadow);
     font-family: 'Poppins', system-ui, sans-serif;
@@ -614,7 +646,7 @@ svg.fa-smile-beam {
     padding: 10px 20px;
     margin: 0 10px;
     border: none;
-    border-radius: 12px;
+    border-radius: var(--r-lg);
     background-color: #fdf4dc;
     box-shadow: 0 4px 0 #d6c38d, 0 2px 6px rgba(0, 0, 0, 0.3);
     color: #333;
@@ -702,7 +734,7 @@ svg.fa-smile-beam {
     padding: 13px 28px;
     min-width: 120px;
     border: none;
-    border-radius: 12px;
+    border-radius: var(--r-lg);
     color: #2a2012;            /* dark ink on brass = 6.75:1 */
     background: linear-gradient(180deg, #e7c66b 0%, #cda24b 100%);
     box-shadow: 0 4px 0 #9c7a33, 0 6px 16px rgba(0, 0, 0, .42),
@@ -755,7 +787,7 @@ svg.fa-smile-beam {
     min-height: 44px;          /* still >= hit area; demoted via colour/size, not target */
     padding: 8px 14px;
     border: 1px solid var(--parchment-border, #cbae7e);
-    border-radius: 10px;
+    border-radius: var(--r-md);
     color: #5b4a2e;            /* on muted parchment = 6.68:1 */
     background: #efe3c4;
     box-shadow: 0 1px 2px rgba(0, 0, 0, .28);
@@ -1116,7 +1148,7 @@ svg.fa-smile-beam {
         height: max(5.6vh, 44px);
         min-width: 44px;
         min-height: 44px;
-        border-radius: 6px;
+        border-radius: var(--r-sm);
         font-size: clamp(17px, 5vw, 26px);
     }
 
