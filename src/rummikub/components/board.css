@@ -563,7 +563,7 @@ svg.fa-smile-beam {
 /* Remaining-seconds readout in the ring center — a non-color cue. The ring SVG
    is rotated -90deg; the text counter-rotates (in JSX) to stay upright. */
 .timer-seconds {
-    font-family: 'Segoe UI', sans-serif;
+    font-family: 'Poppins', system-ui, sans-serif;
     font-weight: 800;
     font-size: 30px;
     fill: #fffaf0;
@@ -591,7 +591,7 @@ svg.fa-smile-beam {
     border-radius: 999px;
     background: rgba(20, 16, 10, .82);
     color: #fffaf0;
-    font-family: 'Segoe UI', sans-serif;
+    font-family: 'Poppins', system-ui, sans-serif;
     font-weight: 700;
     font-size: 15px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, .4);
@@ -608,7 +608,7 @@ svg.fa-smile-beam {
 }
 
 .rummikub-button {
-    font-family: 'Segoe UI', sans-serif;
+    font-family: 'Poppins', system-ui, sans-serif;
     font-weight: bold;
     font-size: 18px;
     padding: 10px 20px;

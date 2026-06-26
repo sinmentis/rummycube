@@ -12,7 +12,7 @@ const LOW_TIME_MS = 5000;
 
 const PlayerAvatarWithTimer = ({name, matchId, seatId, tiles, isActive, isConnected, timerExpireAt, totalTime, showTurnTimer}) => {
     const [dashOffset, setDashOffset] = useState(CIRCUMFERENCE);
-    const [strokeColor, setStrokeColor] = useState("#00f");
+    const [strokeColor, setStrokeColor] = useState("#cda24b");
 
     // Only the active avatar runs its own countdown, so a 400ms tick re-renders
     // just this subtree — never Board. Non-active avatars pass null and idle.
@@ -24,10 +24,9 @@ const PlayerAvatarWithTimer = ({name, matchId, seatId, tiles, isActive, isConnec
         const offset = CIRCUMFERENCE * (1 - percent);
         setDashOffset(offset);
 
-        // Change color based on remaining time
-        const redIntensity = Math.max(0, 255 * (1 - percent)); // from 0 to 255
-        const blueIntensity = Math.max(0, 255 * percent); // from 255 to 0
-        setStrokeColor(`rgb(${redIntensity}, ${0}, ${blueIntensity})`); // smooth transition from blue to red
+        // Discrete brand ramp on the remaining fraction (low-sat felt/brass/ivory
+        // palette): plenty of time = brass, past half = amber, final fifth = alert red.
+        setStrokeColor(percent > 0.5 ? "#cda24b" : percent > 0.2 ? "#e0a64b" : "#b3162a");
     }, [timeLeft, totalTime]);
 
     return (
