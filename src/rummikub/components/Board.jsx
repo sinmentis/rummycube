@@ -16,7 +16,7 @@ import {extractSeqs, isBoardHasNewTiles, isBoardValid, isSubmitAccepted, submitR
 import {submitReasonText} from "../submitReasonText";
 import {waitingLabel, isWaitingForPlayers} from "../waitingRoom";
 import {turnBannerLabel} from "../turnBanner";
-import {buildGridsFromTilePositions, getSecTs, isSequenceValid, count2dArrItems, getPlayerHandTiles} from "../util";
+import {buildGridsFromTilePositions, getSecTs, isSequenceValid, count2dArrItems, getPlayerHandTiles, copyToClipboard} from "../util";
 import {playableTiles} from "../planning";
 const GameOverModal = lazy(() => import("./GameOverModal"));
 import {handleTileSelection, tilesRightward} from "../boardUtil";
@@ -57,6 +57,18 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             localStorage.setItem(COACH_SEEN_KEY, '1');
         } catch (e) { /* private mode / no storage: card just shows again */ }
     }, []);
+
+    // Round-5a / T6: surface the room invite inside the waiting card so the host
+    // can share the join link without hunting for the top-left Sidebar. Mirrors
+    // the Sidebar flow: copy `${origin}/join-match/${matchID}` and flash
+    // "Copied!" for 1.5s.
+    const [inviteCopied, setInviteCopied] = useState(false);
+    const onCopyInvite = useCallback(() => {
+        if (!matchID) return;
+        copyToClipboard(`${window.location.origin}/join-match/${matchID}`);
+        setInviteCopied(true);
+        setTimeout(() => setInviteCopied(false), 1500);
+    }, [matchID]);
 
     // T4 (WS-B): the playable-tile assist (rack markers + count pill) is opt-in.
     // Default OFF — only the stored value '1' turns it on — and the choice
@@ -677,11 +689,26 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                     {timeoutAnnouncement}
                 </div>
                 {waiting &&
-                    <div className="waiting-overlay" role="status" aria-live="polite">
+                    <div className="waiting-overlay" role="status" aria-live="polite"
+                         aria-label="Waiting for players">
                         <div className="waiting-card">
                             <div className="waiting-spinner" aria-hidden="true"/>
                             <div className="waiting-title">Waiting for players</div>
                             <div className="waiting-count">{waitingLabel(matchData)} joined</div>
+                            {matchID &&
+                                <div className="waiting-invite">
+                                    <span className="invite-label">Invite a friend</span>
+                                    <button
+                                        type="button"
+                                        className="invite-code"
+                                        onClick={onCopyInvite}
+                                        title="Click to copy the join link">
+                                        {matchID}
+                                    </button>
+                                    <button type="button" className="invite-copy" onClick={onCopyInvite}>
+                                        {inviteCopied ? 'Copied!' : 'Copy link'}
+                                    </button>
+                                </div>}
                         </div>
                     </div>}
                 <Suspense fallback={null}>

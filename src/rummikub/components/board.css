@@ -1260,6 +1260,26 @@ svg.fa-smile-beam {
     font-size: 15px;
     opacity: .9;
 }
+/* Round-5a / T6: the invite block lives inside the waiting card. It reuses the
+   Sidebar .invite-code / .invite-copy / .invite-label visuals but sits in its
+   own centred panel so the host can copy the join link without the Sidebar. */
+.waiting-invite {
+    margin-top: 6px;
+    width: 100%;
+    max-width: 240px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, .26);
+    border: 1px solid var(--brass-soft, rgba(205, 162, 75, .5));
+}
+.waiting-invite .invite-label {
+    text-align: center;
+}
 .waiting-spinner {
     width: 34px;
     height: 34px;
