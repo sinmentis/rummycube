@@ -11,7 +11,7 @@ export function makeMatch(overrides = {}) {
     setup: ({ctx} = {}) => {
       const n = (ctx && ctx.numPlayers) || 2;
       const defaultG = {
-        timePerTurn: 60000, timerExpireAt: null,
+        timePerTurn: 10000, timerExpireAt: null,
         tilesPool: [], tilePositions: {}, prevTilePositions: {},
         firstMoveDone: Array(n).fill(false),
         gameStateStack: [], redoMoveStack: [], lastCircle: [], recentlyDrawnTiles: [],
