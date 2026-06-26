@@ -123,11 +123,18 @@ body {
 
 /* R5b-T4: centre the hand grid within the rack so the wood reads symmetric
    instead of left-weighted with empty wood on the right. Scoped to the hand so
-   the board tray grid (.ref .grid-container) is untouched. */
-.hand-buttons .grid-container {
-    justify-content: center;
-    margin-left: auto;
-    margin-right: auto;
+   the board tray grid (.ref .grid-container) is untouched, and gated to desktop
+   (min-width: 821px), mirroring T1's gutter block above. On phones the hand
+   grid has fixed 22-col tracks (~1056px) that overflow inside an overflow-x:auto
+   scroller (R5b-T2 below); centring there would centre the overflow and push the
+   left columns to negative offsets, unreachable at scrollLeft 0. Mobile keeps the
+   default (start) so the scroller begins at the first tile. */
+@media (min-width: 821px) {
+    .hand-buttons .grid-container {
+        justify-content: center;
+        margin-left: auto;
+        margin-right: auto;
+    }
 }
 
 /* Your own avatar, pinned to the top-left corner of your rack. R5b-T4 seats it on
