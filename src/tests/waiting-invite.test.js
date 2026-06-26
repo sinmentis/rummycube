@@ -5,7 +5,7 @@ import {render, screen, fireEvent, within, act} from '@testing-library/react';
 // central "Waiting for players" card, so a host who never looks at the top-left
 // Sidebar can still share the room. Reuses the real-Board RTL harness from
 // coach-card.test.js, rendered in a waiting state (2 seats, only seat 0 named).
-// copyToClipboard is stubbed (the rest of util stays real for the Board) so the
+// copyToClipboard is stubbed (the rest of domUtil stays real for the Board) so the
 // copied link can be asserted without touching the jsdom clipboard.
 
 jest.mock('../rummikub/components/GridContainer', () => {
@@ -21,13 +21,13 @@ jest.mock('../rummikub/juice/effects', () => ({
     floatText: () => {},
 }));
 jest.mock('../rummikub/components/ChatPanel', () => () => <div/>);
-jest.mock('../rummikub/util', () => ({
-    ...jest.requireActual('../rummikub/util'),
+jest.mock('../rummikub/components/domUtil', () => ({
+    ...jest.requireActual('../rummikub/components/domUtil'),
     copyToClipboard: jest.fn(),
 }));
 
 import Board from '../rummikub/components/Board';
-import {copyToClipboard} from '../rummikub/util';
+import {copyToClipboard} from '../rummikub/components/domUtil';
 
 function renderWaitingBoard({matchID = 'm1'} = {}) {
     const G = {

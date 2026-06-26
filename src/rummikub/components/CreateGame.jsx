@@ -2,7 +2,7 @@ import GameLobbyClient from "../lobbyClient";
 import {useState} from "react";
 import {useNavigate} from "react-router-dom"
 import {FRONTEND_ADDR, IS_DEV, LOBBY_SERVER_PROTO} from "../constants";
-import {copyToClipboard} from "../util";
+import {copyToClipboard} from "./domUtil";
 
 const USERNAME_KEY = 'rummycube:username'
 

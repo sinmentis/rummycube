@@ -16,7 +16,8 @@ import {extractSeqs, isBoardHasNewTiles, isBoardValid, isSubmitAccepted, submitR
 import {submitReasonText} from "../submitReasonText";
 import {waitingLabel, isWaitingForPlayers} from "../waitingRoom";
 import {turnBannerLabel} from "../turnBanner";
-import {buildGridsFromTilePositions, getSecTs, isSequenceValid, count2dArrItems, getPlayerHandTiles, copyToClipboard} from "../util";
+import {buildGridsFromTilePositions, getSecTs, isSequenceValid, count2dArrItems, getPlayerHandTiles} from "../util";
+import {copyToClipboard} from "./domUtil";
 import {playableTiles} from "../planning";
 const GameOverModal = lazy(() => import("./GameOverModal"));
 import {handleTileSelection, tilesRightward} from "../boardUtil";

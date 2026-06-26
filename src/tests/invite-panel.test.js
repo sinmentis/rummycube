@@ -1,14 +1,14 @@
 import React from 'react';
 import {render, screen, fireEvent, act} from '@testing-library/react';
 import Sidebar from '../rummikub/components/Sidebar';
-import {copyToClipboard} from '../rummikub/util';
+import {copyToClipboard} from '../rummikub/components/domUtil';
 
 // S2-U10: invite panel polish. The panel shows a warm relabeled header, a
 // prominent room code, and a large Copy-link button while waiting for players
 // (!allJoined). Copy behaviour and the visibility condition must stay
 // identical: it copies `${origin}/join-match/${matchID}` and flashes "Copied!"
 // for ~1.5s, and only renders while waiting.
-jest.mock('../rummikub/util', () => ({
+jest.mock('../rummikub/components/domUtil', () => ({
     copyToClipboard: jest.fn(),
 }));
 

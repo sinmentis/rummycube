@@ -1,5 +1,5 @@
 import React, {useState} from "react";
-import {copyToClipboard} from "../util";
+import {copyToClipboard} from "./domUtil";
 
 // Compact info card (top-left): tiles left in the pool + the room invite while
 // waiting. Player avatars now live around the table in TableSeats.

@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from "react";
-import {stringToColor} from "../util";
+import {stringToColor} from "./domUtil";
 import {catAvatarUrl} from "../avatars/catAvatar";
 import {useCountdown} from "../hooks/useCountdown";
 

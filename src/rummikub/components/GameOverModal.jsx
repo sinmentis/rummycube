@@ -3,7 +3,7 @@ import confetti from "canvas-confetti";
 import {play} from "../sound/sfx";
 import "./GameOverModal.css";
 import {FRONTEND_PORT, LOBBY_SERVER_HOST, LOBBY_SERVER_PROTO} from "../constants";
-import {copyToClipboard} from "../util";
+import {copyToClipboard} from "./domUtil";
 import GameLobbyClient from "../lobbyClient";
 import {useNavigate} from "react-router-dom";
 
