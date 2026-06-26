@@ -1065,14 +1065,17 @@ svg.fa-smile-beam {
     }
 
     .ref > div {
-        width: max-content !important;
+        /* R5b-T2: fit the 32-col board to the viewport instead of letting it
+           grow to max-content (~1536px) and scroll horizontally. A definite
+           width lets the minmax(0, 1fr) tracks below divide the screen width. */
+        width: 100% !important;
         margin: 0 !important;
     }
 
     .ref .grid-container {
-        grid-template-columns: repeat(32, max(8.4vw, 48px)) !important;
-        /* keep the faint cell lines aligned to the wider mobile track */
-        background-size: max(8.4vw, 48px) 7vh, max(8.4vw, 48px) 7vh;
+        grid-template-columns: repeat(32, minmax(0, 1fr)) !important;
+        /* keep the faint cell lines aligned to the fitted mobile track */
+        background-size: calc(100% / 32) 7vh, calc(100% / 32) 7vh;
     }
 
     /* Wood rack: pinned to the bottom of the column, always visible. */
@@ -1115,6 +1118,21 @@ svg.fa-smile-beam {
         min-height: 44px;
         border-radius: 6px;
         font-size: clamp(17px, 5vw, 26px);
+    }
+
+    /* R5b-T2: the board cells are now fitted to the viewport (~1/32 of the
+       width), far narrower than the 44px hand touch target above. Board tiles
+       scale down to sit inside their fitted cells; without this the 44px floor
+       overflows the cell and re-introduces the horizontal scroll we removed.
+       Hand tiles keep the 44px target because they live outside .ref. */
+    .ref div.tile {
+        width: 100%;
+        height: 5.4vh;
+        min-width: 0;
+        min-height: 0;
+        border-radius: 3px;
+        font-size: clamp(8px, 2.6vw, 14px);
+        overflow: hidden;
     }
 
     div.tile:hover {
