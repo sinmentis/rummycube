@@ -12,7 +12,8 @@ body {
    Sort/Draw/Submit/Undo/Redo row ran off the bottom on shorter laptops. */
 .board-container {
     /* WS-F: paint the board's felt gradient (not the flat fallback colour) so the
-       right chat gutter exposed at >=821px stays seamless with the board. */
+       full-width felt reads as one continuous surface beneath the floating chat
+       overlay (R5b-T1 removed the always-on right chat gutter). */
     background: var(--felt);
     height: calc(100vh - var(--nav-h, 56px));
     height: calc(100dvh - var(--nav-h, 56px));
@@ -21,16 +22,18 @@ body {
     overflow: hidden;
 }
 
-/* WS-3: on desktop the chat panel is always docked top-right (position:fixed,
-   300px wide); it only folds to a corner FAB at <=820px (see chat.css). Reserve a
-   matching right gutter on the match column so the centred rack and the .ref
-   horizontal-scroll region end at the chat's left edge instead of sliding under it.
-   Padding the shared container narrows both at once (the rack re-centres via its
-   auto margins, the scroll region recomputes its width). The 821px floor is the
-   exact complement of the chat's 820px fold breakpoint, so there is never a
-   "docked AND overlapping" or "folded AND gutter" dead-band. */
+/* R5b-T1: the chat is now a collapsible FAB + floating overlay at every width
+   (see chat.css), so the match column no longer reserves a right gutter for an
+   always-on panel — the board uses the full felt width. On desktop we instead
+   cap the board tray and lift the rack: the 9-row grid is intrinsically ~63vh
+   and sits mostly empty early-game, so capping the .ref scroll region stops the
+   empty tray from dominating the felt, and a larger rack top margin floats the
+   rack + controls nearer the vertical centre instead of the bottom third. The
+   opened chat panel floats above the felt (top-right) and is dismissible, so any
+   brief overlap with the board is by design. */
 @media (min-width: 821px) {
-    .board-container { padding-right: calc(300px + 16px); }
+    .ref { max-height: 54vh; }
+    .hand-buttons { margin-top: 4vh; }
 }
 
 .game-navbar {

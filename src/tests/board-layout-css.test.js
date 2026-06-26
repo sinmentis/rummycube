@@ -1,10 +1,10 @@
 import fs from 'fs';
 import path from 'path';
 
-// T9 (WS-3 / WS-4): pixel layout cannot be measured in jsdom, so these are
-// honest CSS-source assertions — they verify the two layout rules exist in the
-// stylesheet, not that the browser lays them out a certain way. They guard
-// against the gutter or the banner reposition being reverted by a later edit.
+// T9 (WS-3 / WS-4) → R5b-T1: pixel layout cannot be measured in jsdom, so these
+// are honest CSS-source assertions — they verify the layout rules exist in the
+// stylesheet, not that the browser lays them out a certain way. They guard the
+// gutter's removal (R5b-T1) and the WS-4 banner reposition against a later revert.
 const boardCss = fs.readFileSync(
     path.join(__dirname, '../rummikub/components/board.css'),
     'utf8',
@@ -23,21 +23,24 @@ function turnBannerBaseBody() {
     return m[1];
 }
 
-describe('WS-3 chat gutter', () => {
-    test('reserves a right gutter on .board-container at >=821px', () => {
-        const m = boardCss.match(
-            /@media\s*\(min-width:\s*821px\)\s*\{[^@]*?\.board-container\s*\{[^}]*padding-right:\s*calc\(300px \+ 16px\)/,
-        );
-        expect(m).not.toBeNull();
+// R5b-T1 replaced WS-3: the always-on desktop chat dock and its reserved 316px
+// right gutter are gone — the chat is a collapsible FAB + floating overlay at
+// every width, so the board uses the full felt. The old
+// @media (min-width:821px){ .board-container{ padding-right: calc(300px+16px) }}
+// gutter must NOT come back; the desktop block now caps the board tray instead.
+describe('R5b-T1 chat gutter reclaimed', () => {
+    test('no longer reserves a right gutter on .board-container', () => {
+        expect(boardCss).not.toMatch(/padding-right:\s*calc\(300px \+ 16px\)/);
     });
 
-    test('gutter floor is the exact complement of the chat fold breakpoint', () => {
-        // chat.css folds the always-on panel to a corner FAB at <=820px.
+    test('chat still folds to a FAB on narrow screens (mobile repositioning kept)', () => {
         expect(chatCss).toMatch(/@media\s*\(max-width:\s*820px\)/);
-        // The gutter therefore must start at 820 + 1 = 821px so there is no
-        // "docked AND overlapping" or "folded AND gutter" dead-band.
-        expect(boardCss).toMatch(/@media\s*\(min-width:\s*821px\)/);
-        expect(820 + 1).toBe(821);
+    });
+
+    test('the >=821px desktop block now caps the board tray instead of guttering', () => {
+        expect(boardCss).toMatch(
+            /@media\s*\(min-width:\s*821px\)[\s\S]*?\.ref\s*\{[^}]*max-height:/,
+        );
     });
 });
 

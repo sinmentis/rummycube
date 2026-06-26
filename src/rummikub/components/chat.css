@@ -14,7 +14,7 @@
     width: 300px;
     max-width: 42vw;
     max-height: 42vh;
-    display: flex;
+    display: none;
     flex-direction: column;
     background: rgba(244, 234, 210, .92);
     border-radius: 14px;
@@ -35,9 +35,12 @@
     gap: 8px;
 }
 
-/* Collapse affordance — only meaningful on narrow screens (see media query). */
+/* Collapse affordance: the FAB has no inline close, so the panel header carries
+   the ✕ to re-collapse the chat. Used at every width now. */
 .chat-close {
-    display: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     flex: 0 0 auto;
     border: none;
     background: transparent;
@@ -50,10 +53,12 @@
 }
 .chat-close:hover { background: rgba(255, 255, 255, .18); }
 
-/* Floating action button — hidden on desktop (chat is always-on there),
-   shown on narrow screens to expand the chat on demand. */
+/* Floating action button — the chat collapses to this FAB at every width; tapping
+   it expands the panel as a floating overlay on demand (see .chat-root.open). */
 .chat-fab {
-    display: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     pointer-events: auto;
     position: relative;
     width: 52px;
@@ -78,6 +83,12 @@
     background: #e2554e;
     box-shadow: 0 0 0 2px rgba(244, 234, 210, .92);
 }
+
+/* Collapsed by default at every width: the FAB shows, the panel stays hidden
+   until opened. Opening swaps the FAB out for the panel, which floats above the
+   felt as a fixed overlay (via .chat-root) instead of needing a reserved column. */
+.chat-root.open .chat-fab { display: none; }
+.chat-root.open .chat-panel { display: flex; }
 
 .chat-messages {
     flex: 1 1 auto;
@@ -227,9 +238,9 @@
 }
 .chat-send:disabled { opacity: .5; cursor: default; }
 
-/* Narrow screens: fold the always-on panel into a corner FAB, clear of the
-   top HUD strip (.sidenav goes full-width at the top on mobile). The chat sits
-   in the bottom-right; the FAB expands an overlay panel on demand. */
+/* Narrow screens: the collapse-to-FAB behaviour is the default at every width
+   now (above); here we only move the FAB clear of the full-width top HUD strip
+   into the bottom-right corner, and widen the opened panel to most of the screen. */
 @media (max-width: 820px) {
     .chat-root {
         top: auto;
@@ -237,15 +248,7 @@
         right: calc(env(safe-area-inset-right, 0px) + 12px);
     }
 
-    /* Collapsed by default: show the FAB, hide the panel. */
-    .chat-fab { display: inline-flex; align-items: center; justify-content: center; }
-    .chat-panel { display: none; }
-    .chat-close { display: inline-flex; align-items: center; justify-content: center; }
-
-    /* Expanded: hide the FAB, reveal the panel anchored above the corner. */
-    .chat-root.open .chat-fab { display: none; }
     .chat-root.open .chat-panel {
-        display: flex;
         width: 78vw;
         max-width: 78vw;
         max-height: 60vh;

@@ -60,3 +60,22 @@ test('close affordance collapses the open panel again', () => {
     fireEvent.click(screen.getByRole('button', {name: /close chat/i}));
     expect(root(container)).not.toHaveClass('open');
 });
+
+// R5b-T1: the chat is now a collapsible FAB at ALL widths (the always-on
+// desktop dock + its reserved gutter are gone). jsdom ignores media queries, so
+// width is only a hint — the open/closed mechanism is width-independent state.
+// Simulate a desktop viewport and confirm the same FAB toggles the panel, with
+// the panel starting collapsed on desktop too.
+test('at desktop width the FAB toggles the collapsible panel (default closed)', () => {
+    window.innerWidth = 1280;
+    const {container} = render(<ChatPanel {...baseProps} />);
+    const fab = screen.getByRole('button', {name: /open chat/i});
+    expect(root(container)).not.toHaveClass('open');
+
+    fireEvent.click(fab);
+    expect(root(container)).toHaveClass('open');
+    expect(screen.getByText('hello there')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', {name: /close chat/i}));
+    expect(root(container)).not.toHaveClass('open');
+});
