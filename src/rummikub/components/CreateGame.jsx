@@ -60,6 +60,7 @@ const CreateGameForm = function () {
                         setUsername(e.target.value)
                     }}
                     type="text"
+                    autoFocus
                     placeholder="Enter username"/>
             </div>
 
@@ -104,6 +105,7 @@ const CreateGameForm = function () {
                 disabled={!username || !numPlayers}>
                 Create
             </button>
+            {!username && <p className="lobby-hint">Enter a username to start.</p>}
 
             {matchID ?
                 <div className="room-share">
