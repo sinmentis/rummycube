@@ -21,9 +21,8 @@ import {copyToClipboard} from "./domUtil";
 import {playableTiles} from "../planning";
 const GameOverModal = lazy(() => import("./GameOverModal"));
 import {handleTileSelection, tilesRightward} from "../boardUtil";
-import {play, place, milestone, buzz} from "../sound/sfx";
+import {play, buzz} from "../sound/sfx";
 import * as fx from "../juice/effects";
-import {resolveJuice} from "../juice/gating";
 import {countPlacedThisTurn} from "../juice/comboMath";
 const ComboOverlay = lazy(() => import("./ComboOverlay"));
 import ChatPanel from "./ChatPanel";
@@ -35,6 +34,8 @@ import {useUndoRedoHotkeys} from "./useUndoRedoHotkeys";
 import {useTilePlacementHotkeys} from "./useTilePlacementHotkeys";
 import {usePersistentFlag} from "./hooks/usePersistentFlag";
 import {useGiveUpConfirm} from "./hooks/useGiveUpConfirm";
+import {useSyncingCue} from "./hooks/useSyncingCue";
+import {useComboCelebration} from "./hooks/useComboCelebration";
 import {seatConnected} from "../seats/seatConnection";
 import every from "lodash/every.js";
 
@@ -136,51 +137,11 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         useSensor(MouseSensor, {activationConstraint: {distance: 6}}),
         useSensor(TouchSensor, {activationConstraint: {distance: 6}}),
     );
-    const [combo, setCombo] = useState(0);
-    const [comboBy, setComboBy] = useState('');
-    const comboTimer = useRef(null);
-    const seenPlayRef = useRef(undefined);
-    // S3-U2: a light, time-boxed "syncing…" cue. The local player triggers it on
-    // a move (tile drop / submit); it clears on the next authoritative G update
-    // (G.lastPlay below or a tilePositions change) or after a short timeout, so it
-    // never lingers and never blocks input.
-    const [syncing, setSyncing] = useState(false);
-    const syncTimer = useRef(null);
-    const markSyncing = useCallback(() => {
-        setSyncing(true);
-        clearTimeout(syncTimer.current);
-        syncTimer.current = setTimeout(() => setSyncing(false), 1200);
-    }, []);
-    useEffect(() => () => clearTimeout(syncTimer.current), []);
-    // Everyone celebrates a valid submit: the server records it in G.lastPlay and
-    // every client (not just the scorer) fires the combo/spotlight off its ts.
-    useEffect(() => {
-        const lp = G.lastPlay;
-        const ts = lp && lp.ts ? lp.ts : null;
-        if (seenPlayRef.current === undefined) { seenPlayRef.current = ts; return; } // ignore the one present at mount/reconnect
-        if (ts === null || ts === seenPlayRef.current) return;
-        seenPlayRef.current = ts;
-        setSyncing(false);
-        const n = lp.count || 0;
-        const by = (matchData && matchData[lp.seat] && matchData[lp.seat].name) || `Player ${Number(lp.seat) + 1}`;
-        const cx = window.innerWidth / 2, cy = window.innerHeight * 0.4;
-        // Scale the celebration to who played + whether we're mid-drag (pure predicate).
-        const isDragging = !!activeTile || state.selectedTiles.length > 0;
-        const g = resolveJuice({lastPlay: lp, localSeat: playerID, isDragging});
-        setCombo(n);
-        setComboBy(by);
-        if (g.celebrate && lp.groups && lp.groups.length) fx.celebrateGroups(lp.groups);
-        if (g.intensity === 'full') place(n);
-        // One primary screen effect per play (T9-3): flash on a high manipulation
-        // score, otherwise a confetti burst — never both at once.
-        if (g.flash && n >= 3) { fx.flash('combo'); if (g.win) milestone(); }
-        else if (g.burst) fx.burstAt(cx, cy, n);
-        if (g.kick) fx.kick(n);
-        fx.floatText('+' + (lp.points || 0), cx, cy);
-        if (g.win) play('win');
-        clearTimeout(comboTimer.current);
-        comboTimer.current = setTimeout(() => { setCombo(0); setComboBy(''); }, 1800);
-    }, [G.lastPlay ? G.lastPlay.ts : null]);
+    const {syncing, markSyncing, clearSyncing} = useSyncingCue();
+    const {combo, comboBy} = useComboCelebration({
+        G, matchData, playerID, activeTile,
+        selectedTiles: state.selectedTiles, clearSyncing,
+    });
     // T7 (WS-B/WS-D): the single drop dispatch shared by drag (onDragEnd) and
     // empty-cell tap (onCellTap). resolveDropDispatch folds joker-swap -> push ->
     // snap -> reject into one pure decision; the client only chooses the path while
