@@ -52,12 +52,17 @@ export function useDropDispatch({moves, playerID, gRef, stateRef, setState, mark
         markSyncing();
         play('place');
         setState({selectedTiles: [], lastSelectedTileId: null});
+        // gRef/setState are stable (ref + useState setter); reading gRef.current
+        // live at drop time is the whole point — never add it as a dep.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [moves, playerID, markSyncing]);
     const onDragStart = useCallback((e) => {
         const id = e.active.id;
         setActiveTile(id);
         setIsDragActive(true);
         setState(prev => prev.selectedTiles.includes(id) ? prev : {selectedTiles: [id], lastSelectedTileId: id});
+        // setState is a stable useState setter.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
     const onDragEnd = useCallback((e) => {
         setActiveTile(null);
@@ -70,6 +75,8 @@ export function useDropDispatch({moves, playerID, gRef, stateRef, setState, mark
         const selectedTiles = stateRef.current.selectedTiles;
         const selection = selectedTiles.length ? selectedTiles : [id];
         dispatchDrop(target, id, selection);
+        // stateRef is a stable ref; reading stateRef.current.selectedTiles live is intentional.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dispatchDrop]);
     // Tap-to-place (S3-U8): the non-drag placement path. When a selection is live
     // and the player taps an empty droppable cell, route it through the SAME
@@ -80,6 +87,8 @@ export function useDropDispatch({moves, playerID, gRef, stateRef, setState, mark
         const selectedTiles = stateRef.current.selectedTiles;
         if (!selectedTiles.length) return;
         dispatchDrop({gridId, col, row}, selectedTiles[0], selectedTiles);
+        // stateRef is a stable ref; reading stateRef.current.selectedTiles live is intentional.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dispatchDrop])
     // TODO(S3-U8 stretch): keyboard placement — arrow-key a cursor over empty
     // cells and Enter to call onCellTap on the focused cell. Deferred: it needs a
