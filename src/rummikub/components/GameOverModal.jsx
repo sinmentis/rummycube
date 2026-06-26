@@ -72,10 +72,11 @@ const GameOverModal = ({gameover, matchId, playerID, matchData}) => {
                     Points: <strong>{gameover.points[parseInt(gameover.winner)]}</strong></p>
                 <ul className="gameover-score-list">
                     {Object.entries(gameover.points)
-                        .sort((a, b) => b[0] - a[0])
-                        .map((data) => (
-                            <li key={data[0]} className="gameover-score-item">
-                                {matchData[parseInt(data[0])].name} <strong>{data[1]} pts</strong>
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([seat, pts], i) => (
+                            <li key={seat} className="gameover-score-item">
+                                <span className="gameover-rank">{['🥇', '🥈', '🥉'][i] || ''}</span>
+                                {matchData[parseInt(seat)].name} <strong>{pts} pts</strong>
                             </li>
                         ))}
                 </ul>
