@@ -23,7 +23,7 @@ import {original} from "immer"
 import {pushTilesToGrid} from "./orderTiles.js";
 import {orderTilesBySource, boardRowTiles} from "./dndUtil.js";
 import {insertWithPush} from "./insertPush.js";   // explicit .js so node src/server.js boots
-import {manipulationScore} from "./juice/comboMath.js";
+import {computePlayScore} from "./scoring/playScore.js";
 import {logger} from './logger.js';
 
 import { INVALID_MOVE } from 'boardgame.io/dist/cjs/core.js';
@@ -295,45 +295,12 @@ function redo({G, ctx, playerID}) {
 
 function applyValidMove({G, ctx, events}) {
     let player = ctx.currentPlayer
-    G.firstMoveDone[player] = true
     // Record the play so EVERY client can celebrate the combo (not just the
     // player who made it). Computed before freezing while tiles are still tmp.
     const groups = getFormedGroups(G)
-    const tmp = Object.values(G.tilePositions).filter(p => p && p.gridId === BOARD_GRID_ID && p.tmp)
-    // A joker scores the value it REPRESENTS inside its run/group, not 0. Map each
-    // tmp joker to its frozen value via the formed (valid) sequence that holds it.
-    const jokerValueById = {}
-    for (const seq of groups) {
-        const frozen = freezeSeqJokers(seq)
-        if (!frozen) continue
-        seq.forEach((tid, i) => {
-            if (isJoker(tid)) {
-                jokerValueById[Number(tid)] = getTileValue(frozen[i])
-            }
-        })
-    }
-    const points = tmp.reduce((s, p) => s + (isJoker(p.id) ? (jokerValueById[p.id] || 0) : getTileValue(p.id)), 0)
-    // Manipulation score rewards groups formed + existing board tiles rearranged
-    // this turn over a raw tile dump. prevTilePositions is the turn-start baseline
-    // and is reset next turn, so this must run here, pre-freeze.
-    const placed = tmp.length
-    const baseline = G.prevTilePositions || {}
-    const rearranged = Object.values(G.tilePositions).filter(p => {
-        if (!p || p.gridId !== BOARD_GRID_ID || p.tmp) return false
-        const prev = baseline[p.id]
-        return prev && prev.gridId === BOARD_GRID_ID && (prev.col !== p.col || prev.row !== p.row)
-    }).length
-    const score = manipulationScore({groups: groups.length, rearranged, placed})
-    G.lastPlay = {
-        seat: player,
-        count: score,
-        points: points,
-        manipulation: score,
-        groups: groups.map(seq => seq.map(Number)),
-        rearranged: rearranged,
-        placed: placed,
-        ts: getSecTs(),
-    }
+    const s = computePlayScore({tilePositions: G.tilePositions, formedGroups: groups, prevTilePositions: G.prevTilePositions})
+    G.firstMoveDone[player] = true
+    G.lastPlay = {seat: player, ...s, ts: getSecTs()}
     freezeTmpTiles(G)
     events.endTurn()
 }
