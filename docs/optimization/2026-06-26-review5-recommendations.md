@@ -1,6 +1,6 @@
 # RummyCube · Review 5 · 综合建议（按 owner 边界收敛 · v2）
 
-> **日期:** 2026-06-26 · **方法:** 4 位专家（Game Design / UX / UI / Architecture）独立对线上产品 fresh review，去重 + 交叉印证后的统一路线图。分报告见 `2026-06-26-review5-{game-design,ux,ui,architecture}.md`（原始输入，未改）。
+> **日期:** 2026-06-26 · **方法:** 4 位专家（Game Design / UX / UI / Architecture）独立对线上产品 fresh review，去重 + 交叉印证。本文是**唯一权威建议稿**（原始分报告已并入此处、不再单独保留）；条目后的 `GD/UX/UI/Arch` 标签仅表来源视角。
 > **红线:** 服务器权威 + Rummikub 规则不动；应用内文案英文；不重复已上线项。
 
 ## 0. Owner 边界（据此删除了哪些观点）
