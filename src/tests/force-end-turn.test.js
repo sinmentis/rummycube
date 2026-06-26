@@ -78,7 +78,7 @@ test('forceEndTurn records a server-authoritative G.lastTimeout on an expired cl
     expect(G.lastTimeout).toEqual({seat: Number(before), drawCount: 1, id: turnAtTimeout});
 });
 
-test('forceEndTurn records drawCount 2 once the timed-out player has made their first meld', () => {
+test('forceEndTurn records drawCount 1 even once the timed-out player has made their first meld (standard draw-1)', () => {
     const {c0, c1} = startPlay(-100000, 'm-timeout-draw2', {firstMoveDone: [true, true]});
     const before = c0.getState().ctx.currentPlayer;
     const currentClient = before === '0' ? c0 : c1;
@@ -88,8 +88,8 @@ test('forceEndTurn records drawCount 2 once the timed-out player has made their 
     otherClient.moves.forceEndTurn();
 
     const G = currentClient.getState().G;
-    // after the first meld drawTile pulls two penalty tiles, so drawCount must be 2
-    expect(G.lastTimeout).toEqual({seat: Number(before), drawCount: 2, id: turnAtTimeout});
+    // standard Rummikub draws exactly one tile, before and after the first meld
+    expect(G.lastTimeout).toEqual({seat: Number(before), drawCount: 1, id: turnAtTimeout});
 });
 
 test('forceEndTurn records drawCount 0 when the timed-out player has a valid staged meld', () => {

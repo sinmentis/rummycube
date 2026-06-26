@@ -35,14 +35,11 @@ function drawTile({G, ctx, playerID, events}, doRollback = true) {
         rollbackChanges(G, ctx.currentPlayer, ctx)
     }
     let tiles = []
-    let firstMoveDone = G.firstMoveDone[ctx.currentPlayer]
-    for (let i = 0; i < (firstMoveDone ? 2 : 1); i++) {
-        let tile = G.tilesPool.pop()
-        if (!tile) {
-            break
-        } else {
-            tiles.push(tile)
-        }
+    // Standard Rummikub: a draw always pulls exactly one tile (before and after
+    // the first meld alike).
+    let tile = G.tilesPool.pop()
+    if (tile) {
+        tiles.push(tile)
     }
     logger.debug('draw', {poolLeft: G.tilesPool.length})
     if (!G.tilesPool.length) {

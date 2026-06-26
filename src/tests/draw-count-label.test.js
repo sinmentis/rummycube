@@ -1,10 +1,9 @@
 import React from 'react';
 import {render, screen} from '@testing-library/react';
 
-// R5b-T5: the Draw button must surface the hidden draw-2 rule. The server draws
-// 2 tiles once G.firstMoveDone[currentPlayer] is true (moves.js: i<(firstMoveDone?2:1)),
-// but the UI never said so. This DISPLAY-ONLY label reads "Draw ×2" after your
-// first meld and plain "Draw" before it. Reuses the coach-card real-Board harness.
+// Standard Rummikub draws exactly ONE tile (before and after the first meld
+// alike), so the Draw button always reads plain "Draw" — no "×2". This guards
+// against the reverted draw-2 label reappearing.
 
 jest.mock('../rummikub/components/GridContainer', () => {
     return function GridContainerMock(props) {
@@ -65,12 +64,12 @@ describe('Draw button draw-count label', () => {
         localStorage.clear();
     });
 
-    test('shows ×2 after the first meld is done', () => {
+    test('reads plain "Draw" after the first meld (standard draw-1, no ×2)', () => {
         renderBoard({firstMoveDone: [true, false]});
-        expect(screen.getByRole('button', {name: /draw/i})).toHaveTextContent(/draw\s*[×x]\s*2/i);
+        expect(screen.getByRole('button', {name: /draw/i})).toHaveTextContent(/^draw$/i);
     });
 
-    test('shows plain "Draw" before the first meld', () => {
+    test('reads plain "Draw" before the first meld', () => {
         renderBoard({firstMoveDone: [false, false]});
         expect(screen.getByRole('button', {name: /draw/i})).toHaveTextContent(/^draw$/i);
     });
