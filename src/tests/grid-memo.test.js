@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { DndContext } from '@dnd-kit/core';
 import GridContainer from '../rummikub/components/GridContainer';
-import * as util from '../rummikub/util';
+import * as codec from '../rummikub/tile/codec';
 import * as dndUtil from '../rummikub/dndUtil';
 import { buildTileObj, RedJoker } from '../rummikub/util';
 import { COLOR } from '../rummikub/constants';
@@ -15,7 +15,8 @@ import { COLOR } from '../rummikub/constants';
 // Render counting: every Tile render renders TilePreview, which calls
 // getTileColor(tile) exactly once. Every GridSlot render calls
 // makeSlotId(gridId,col,row). Spying on those lets us count per-cell renders
-// without instrumenting production code.
+// without instrumenting production code. getTileColor is spied on its home
+// module (tile/codec); Tile.jsx reaches it through the util barrel.
 
 const t1 = buildTileObj(5, COLOR.red, 0);
 const t2 = buildTileObj(7, COLOR.blue, 0);
@@ -55,7 +56,7 @@ describe('GridContainer memo via boolean props', () => {
   let slotSpy;
 
   beforeEach(() => {
-    colorSpy = jest.spyOn(util, 'getTileColor');
+    colorSpy = jest.spyOn(codec, 'getTileColor');
     slotSpy = jest.spyOn(dndUtil, 'makeSlotId');
   });
 
