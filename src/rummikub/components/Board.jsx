@@ -496,13 +496,20 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                                 }}>{giveUpArmed ? 'Click again to confirm' : 'Give up turn'}
     </button>)
 
+    // P3 (display only): mirror the server's draw count (moves.js draws
+    // firstMoveDone?2:1 tiles) so a draw/timeout after your first meld no longer
+    // silently adds 2. This changes the label/tooltip only — never the draw move.
+    const drawCount = (G.firstMoveDone && G.firstMoveDone[playerID]) ? 2 : 1
+    const drawTitle = hasStaged
+        ? 'Clear your placed tiles to draw instead'
+        : (drawCount > 1 ? 'After your first meld you draw 2 tiles' : 'Take a tile and skip the turn')
     const drawBut = (<button
         disabled={!(ctx.currentPlayer === playerID && G.tilesPool.length) || ctx.gameover || waiting || hasStaged}
-        title={hasStaged ? 'Clear your placed tiles to draw instead' : 'Take a tile and skip the turn'}
+        title={drawTitle}
         className={'rummikub-button primary-action'}
         onClick={() => {
             drawTile()
-        }}>Draw
+        }}>{`Draw${drawCount > 1 ? ' ×2' : ''}`}
     </button>)
     const {board, hands} = buildGridsFromTilePositions(G.tilePositions, ctx.numPlayers)
 
