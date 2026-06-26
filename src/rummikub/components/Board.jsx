@@ -33,6 +33,8 @@ import IconButton from "./IconButton";
 import TimeoutAnnouncement from "./TimeoutAnnouncement";
 import {useUndoRedoHotkeys} from "./useUndoRedoHotkeys";
 import {useTilePlacementHotkeys} from "./useTilePlacementHotkeys";
+import {usePersistentFlag} from "./hooks/usePersistentFlag";
+import {useGiveUpConfirm} from "./hooks/useGiveUpConfirm";
 import {seatConnected} from "../seats/seatConnection";
 import every from "lodash/every.js";
 
@@ -45,19 +47,8 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     // never reappears on later turns or matches. It also carries the ring
     // microcopy and the hints pointer that previously lived in a standalone hint.
     const COACH_SEEN_KEY = 'rummycube.coachSeen';
-    const [coachSeen, setCoachSeen] = useState(() => {
-        try {
-            return typeof localStorage !== 'undefined' && localStorage.getItem(COACH_SEEN_KEY) === '1';
-        } catch (e) {
-            return false;
-        }
-    });
-    const dismissCoach = useCallback(() => {
-        setCoachSeen(true);
-        try {
-            localStorage.setItem(COACH_SEEN_KEY, '1');
-        } catch (e) { /* private mode / no storage: card just shows again */ }
-    }, []);
+    const [coachSeen, setCoachSeen] = usePersistentFlag(COACH_SEEN_KEY);
+    const dismissCoach = useCallback(() => setCoachSeen(true), [setCoachSeen]);
 
     // Round-5a / T6: surface the room invite inside the waiting card so the host
     // can share the join link without hunting for the top-left Sidebar. Mirrors
@@ -75,13 +66,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     // Default OFF — only the stored value '1' turns it on — and the choice
     // persists like coachSeen above so it survives reloads and later matches.
     const HINTS_KEY = 'rummycube:hintsOn';
-    const [hintsOn, setHintsOn] = useState(() => {
-        try {
-            return typeof localStorage !== 'undefined' && localStorage.getItem(HINTS_KEY) === '1';
-        } catch (e) {
-            return false;
-        }
-    });
+    const [hintsOn, setHintsOn] = usePersistentFlag(HINTS_KEY);
     // T9 (WS-H): the very first off->on flip of the hints toggle pops a one-time,
     // non-blocking tooltip explaining what the highlights mean. A persisted flag
     // keeps it from ever reappearing; a ref (not state) lets toggleHints keep its
@@ -98,9 +83,6 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     const toggleHints = useCallback(() => {
         setHintsOn((on) => {
             const next = !on;
-            try {
-                localStorage.setItem(HINTS_KEY, next ? '1' : '0');
-            } catch (e) { /* private mode / no storage: stays in-memory only */ }
             if (next && !hintsTipSeenRef.current) {
                 setShowHintsTip(true);
                 hintsTipSeenRef.current = true;
@@ -110,7 +92,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             }
             return next;
         });
-    }, []);
+    }, [setHintsOn]);
     const dismissHintsTip = useCallback(() => setShowHintsTip(false), []);
 
     useEffect(() => {
@@ -373,26 +355,10 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         }
     }
 
-    // Explicit "Give up turn" is a two-click in-game confirm (no browser dialog):
-    // the first click ARMS the button (warning style + "Click again to confirm"); a
-    // second click, after a short rage-guard and within the confirm window, forfeits
-    // (tiles roll back + draw one + end turn). It auto-reverts otherwise. Distinct
-    // from a rejected submit, which is a no-op.
-    const GIVEUP_CONFIRM_MS = 3000, GIVEUP_ARM_GUARD_MS = 400;
-    const [giveUpArmed, setGiveUpArmed] = useState(false);
-    const giveUpTimer = useRef(null), armedAtRef = useRef(0);
-    const disarm = useCallback(() => { clearTimeout(giveUpTimer.current); setGiveUpArmed(false); }, []);
-    const onForfeitTurn = useCallback(() => {
-        if (giveUpArmed) {
-            if (Date.now() - armedAtRef.current < GIVEUP_ARM_GUARD_MS) return; // block a rage double-click from confirming instantly
-            disarm(); setSubmitReason(''); moves.forfeitTurn(); return;
-        }
-        setGiveUpArmed(true); armedAtRef.current = Date.now();
-        clearTimeout(giveUpTimer.current);
-        giveUpTimer.current = setTimeout(() => setGiveUpArmed(false), GIVEUP_CONFIRM_MS);
-    }, [giveUpArmed, disarm, moves]);
-    useEffect(() => { disarm(); }, [ctx.currentPlayer, ctx.gameover, disarm]);
-    useEffect(() => () => clearTimeout(giveUpTimer.current), []);
+    // Explicit "Give up turn" is a two-click in-game confirm — see useGiveUpConfirm
+    // for the arm/confirm timing, rage-guard, and disarm effects. armGiveUp drives
+    // the forfeit button; disarm is also fired by the submit-accept path above and
+    // by the staged-board change below.
 
     // Any connected client fires this when the server-set deadline passes. The
     // forceEndTurn move is rejected server-side until the real deadline, so a
@@ -415,13 +381,18 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     const isMyTurn = ctx.currentPlayer === playerID && !ctx.gameover;
     const hasStaged = isBoardHasNewTiles(G);
 
-    // (rubber-duck) Disarm whenever the staged board changes, so an armed confirm
-    // can never apply to a different board state than the one the player saw. NOTE:
-    // giveUpArmed is intentionally NOT a dependency here — including it (as the
-    // original brief snippet did) re-runs this effect on the arming render itself
-    // and instantly disarms, making the two-click confirm impossible. disarm() is a
-    // no-op when not armed, so firing it on every board change is safe.
-    useEffect(() => { disarm(); }, [G.tilePositions, hasStaged, disarm]);
+    // The two-click give-up state machine (arm/confirm timing, rage-guard, and the
+    // disarm-on-turn-change + disarm-on-board-change effects) lives in this hook so
+    // it travels as one unit. setSubmitReason is wired through so a confirm clears
+    // any pending submit-reject message in the same tick, exactly as before.
+    const {giveUpArmed, armGiveUp, disarm} = useGiveUpConfirm({
+        moves,
+        currentPlayer: ctx.currentPlayer,
+        gameover: ctx.gameover,
+        tilePositions: G.tilePositions,
+        hasStaged,
+        setSubmitReason,
+    });
 
     // Pre-match gate: while players are still joining, freeze the board+hand (no
     // drag) and disable every turn control. Mirrors the allJoined / endPhase
@@ -493,7 +464,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                                 className={'rummikub-button' + (giveUpArmed ? ' is-arming' : '')}
                                 title={'Return your tiles and draw — ends your turn'}
                                 onClick={() => {
-                                    onForfeitTurn()
+                                    armGiveUp()
                                 }}>{giveUpArmed ? 'Click again to confirm' : 'Give up turn'}
     </button>)
 
