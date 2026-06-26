@@ -74,7 +74,6 @@ jest.mock('../rummikub/moveValidation', () => {
     };
 });
 
-// eslint-disable-next-line import/first
 import Board from '../rummikub/components/Board';
 
 function renderBoard({
