@@ -4,10 +4,21 @@ import {useNavigate} from "react-router-dom"
 import {FRONTEND_ADDR, IS_DEV, LOBBY_SERVER_PROTO} from "../constants";
 import {copyToClipboard} from "../util";
 
+const USERNAME_KEY = 'rummycube:username'
+
+function readSavedName() {
+    try {
+        return localStorage.getItem(USERNAME_KEY) || ''
+    } catch (e) {
+        return ''
+    }
+}
+
 const CreateGameForm = function () {
     const client = new GameLobbyClient()
     const navigate = useNavigate()
-    const [username, setUsername] = useState(IS_DEV ? 'test' : '')
+    const [savedName] = useState(readSavedName)
+    const [username, setUsername] = useState(() => readSavedName() || (IS_DEV ? 'test' : ''))
     const [numPlayers, setNumPlayers] = useState(IS_DEV ? '2' : '4')
     const [matchID, setMatchID] = useState('')
     const [timePerTurn, setTimePerTurn] = useState(IS_DEV ? '30' : '30')
@@ -19,6 +30,8 @@ const CreateGameForm = function () {
 
     function onGameCreate(event) {
         event.preventDefault();
+        // remember the name so returning players don't re-enter it
+        try { localStorage.setItem(USERNAME_KEY, username); } catch (e) { /* private mode / no storage: skip persisting */ }
         // "0" players = solo test mode -> a real single-player game (no second
         // browser needed); any other value is a normal multiplayer match.
         const actualNumPlayers = numPlayers === '0' ? '1' : numPlayers;
@@ -62,6 +75,7 @@ const CreateGameForm = function () {
                     type="text"
                     autoFocus
                     placeholder="Enter username"/>
+                {savedName && <p className="lobby-welcome">Welcome back, {savedName} 👋</p>}
             </div>
 
             <div className="lobby-field">
