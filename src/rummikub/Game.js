@@ -1,7 +1,8 @@
 import {Stage} from 'boardgame.io/dist/cjs/core.js';
 import {getTiles} from './util.js'
 import {playerView} from './playerView.js'
-import {drawTile, endTurn, extendTurn, forceEndTurn, forfeitTurn, insertTilesWithPush, moveTiles, onPlayPhaseBegin, onTurnBegin, onTurnEnd, redo, retrieveJoker, submitMeld, undo, _setConnection} from "./moves.js";
+import {drawTile, endTurn, extendTurn, forceEndTurn, forfeitTurn, insertTilesWithPush, moveTiles, redo, retrieveJoker, submitMeld, undo, _setConnection} from "./moves.js";
+import {onPlayPhaseBegin, onTurnBegin, onTurnEnd} from "./turn.js";
 import {GAME_NAME, HAND_COLS, HAND_GRID_ID, HAND_ROWS, TILES_TO_DRAW} from "./constants.js";
 import {orderByColorVal, orderByValColor} from "./orderTiles.js";
 
