@@ -18,6 +18,7 @@ export function makeMatch(overrides = {}) {
         lastPlay: null, lastTimeout: null,
         connected: Array(n).fill(true), disconnectTurns: Array(n).fill(0),
         forfeited: Array(n).fill(false), turnExtended: Array(n).fill(false),
+        startedAt: Date.now(), stats: {bestCombo: 0, longestRun: 0},
       };
       return {...defaultG, ...overrides};
     },

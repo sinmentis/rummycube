@@ -55,7 +55,7 @@ test('test game finish on no tiles on hand', () => {
     client1.events.endTurn()
     const {G, ctx} = client1.getState();
 
-    expect(ctx.gameover).toEqual({winner: '0', points: {0: 36, 1: -36}})
+    expect(ctx.gameover).toEqual({winner: '0', points: {0: 36, 1: -36}, highlights: expect.any(Object)})
 });
 
 test('test game finish on no tiles on pool', () => {
@@ -120,5 +120,5 @@ test('test game finish on no tiles on pool', () => {
     client1.moves.endTurn();
 
     ({G, ctx} = client0.getState());
-    expect(ctx.gameover).toEqual({winner: '1', points: {"0":-19, "1": 19}})
+    expect(ctx.gameover).toEqual({winner: '1', points: {"0":-19, "1": 19}, highlights: expect.any(Object)})
 });

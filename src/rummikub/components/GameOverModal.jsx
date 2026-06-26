@@ -15,9 +15,26 @@ export function chooseRematchSeat(players, ownPlayerID) {
     return firstFree ? firstFree.id : own;
 }
 
+function formatClearTime(seconds) {
+    if (seconds == null || !Number.isFinite(seconds)) return null;
+    if (seconds < 60) return `${seconds}s`;
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${String(s).padStart(2, '0')}`;
+}
+
 const GameOverModal = ({gameover, matchId, playerID, matchData}) => {
     const client = new GameLobbyClient()
     const navigate = useNavigate()
+
+    // T11: game-over highlights are server-built (gameover.highlights). Guard their
+    // absence so matches that ended before this feature still render cleanly.
+    const highlights = gameover.highlights;
+    const clearStr = highlights ? formatClearTime(highlights.clearSeconds) : null;
+    const winnerName = matchData[parseInt(gameover.winner)].name;
+    const shareText = highlights
+        ? `${winnerName} won this RummyCube game! Best combo ×${highlights.bestCombo}, longest run ${highlights.longestRun}${clearStr ? `, cleared in ${clearStr}` : ''}.`
+        : '';
 
     useEffect(() => {
         play('win');
@@ -65,6 +82,11 @@ const GameOverModal = ({gameover, matchId, playerID, matchData}) => {
         navigate('/');
     }
 
+    function onShare(event) {
+        event.preventDefault();
+        copyToClipboard(shareText);
+    }
+
     return (
         <div className="gameover-backdrop">
             <div className="gameover-modal">
@@ -81,6 +103,18 @@ const GameOverModal = ({gameover, matchId, playerID, matchData}) => {
                             </li>
                         ))}
                 </ul>
+
+                {highlights && (
+                    <div className="gameover-highlights" data-testid="gameover-highlights">
+                        <p className="gameover-highlights-line">
+                            Best combo ×{highlights.bestCombo} · Longest run {highlights.longestRun}
+                            {clearStr ? ` · Cleared in ${clearStr}` : ''}
+                        </p>
+                        <button className="gameover-button gameover-button--secondary gameover-share" onClick={onShare}>
+                            Share
+                        </button>
+                    </div>
+                )}
 
                 <div className="gameover-actions">
                     <button className="gameover-button" onClick={onPlayAgain}>

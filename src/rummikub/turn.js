@@ -19,6 +19,17 @@ import {logger} from './logger.js';
 const GRACE_MS = 5000
 const N_FORFEIT_TURNS = 3
 
+// T11: this-game highlights for the game-over modal, built server-side so the
+// payload is authoritative (never client-trusted). clearSeconds is the winner's
+// elapsed time; getSecTs() and G.startedAt are both epoch ms despite the name.
+function buildHighlights(G) {
+    return {
+        bestCombo: G.stats?.bestCombo ?? 0,
+        longestRun: G.stats?.longestRun ?? 0,
+        clearSeconds: G.startedAt ? Math.round((getSecTs() - G.startedAt) / 1000) : null,
+    }
+}
+
 function onPlayPhaseBegin({G, ctx}) {
     logger.debug('PLAY PHASE BEGIN', new Date())
     G.timerExpireAt = getSecTs() + G.timePerTurn
@@ -39,7 +50,7 @@ function forfeitSeat(G, ctx, seat, events) {
         const hands = getHandsTilesGrid(G, ctx.numPlayers)
         const winner = remaining.length === 1 ? remaining[0] : findWinner(hands)
         const points = countPoints(hands, winner)
-        events.endGame({winner: winner.toString(), points: points})
+        events.endGame({winner: winner.toString(), points: points, highlights: buildHighlights(G)})
     }
 }
 
@@ -103,14 +114,14 @@ function checkGameOver(G, ctx, events) {
     if (G.lastCircle.length >= ctx.numPlayers) {
         let winner = findWinner(hands)
         let points = countPoints(hands, winner)
-        events.endGame({winner: winner.toString(), points: points})
+        events.endGame({winner: winner.toString(), points: points, highlights: buildHighlights(G)})
     }
 
     let flattened = flatten(hands[ctx.currentPlayer])
     let tilesLeft = some(flattened, Boolean)
     if (!tilesLeft && isBoardValid(G)) {
         let points = countPoints(hands, ctx.currentPlayer)
-        events.endGame({winner: ctx.currentPlayer, points: points})
+        events.endGame({winner: ctx.currentPlayer, points: points, highlights: buildHighlights(G)})
     }
     return G
 }

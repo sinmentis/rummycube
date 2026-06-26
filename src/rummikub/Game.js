@@ -55,6 +55,11 @@ const Rummikub = {
             // R5b-T6: per-seat "+15s already used this turn" flag, reset each
             // turn in onTurnBegin (defensive default there for legacy matches).
             turnExtended: Array(ctx.numPlayers).fill(false),
+            // T11: per-game data for the game-over highlights. startedAt is the
+            // match clock (epoch ms, like getSecTs); stats accumulate the best
+            // manipulation score and longest formed run across the whole game.
+            startedAt: Date.now(),
+            stats: {bestCombo: 0, longestRun: 0},
         }
     },
     phases: {

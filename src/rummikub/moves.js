@@ -295,6 +295,14 @@ function applyValidMove({G, ctx, events}) {
     // player who made it). Computed before freezing while tiles are still tmp.
     const groups = getFormedGroups(G)
     const s = computePlayScore({tilePositions: G.tilePositions, formedGroups: groups, prevTilePositions: G.prevTilePositions})
+    // T11: accumulate this-game highlights (guard legacy matches with no G.stats).
+    // applyValidMove only runs on a valid move, so mutating G.stats here is the
+    // success path and atomic with the rest of the play.
+    if (G.stats) {
+        const runLen = s.groups && s.groups.length ? Math.max(...s.groups.map(g => g.length)) : 0
+        G.stats.bestCombo = Math.max(G.stats.bestCombo, s.manipulation)
+        G.stats.longestRun = Math.max(G.stats.longestRun, runLen)
+    }
     G.firstMoveDone[player] = true
     G.lastPlay = {seat: player, ...s, ts: getSecTs()}
     freezeTmpTiles(G)
