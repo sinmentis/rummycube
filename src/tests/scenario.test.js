@@ -1,4 +1,4 @@
-import {Rummikub} from "../rummikub/Game";
+import {makeMatch} from "./__helpers__/makeMatch";
 import {Client} from 'boardgame.io/client';
 import {buildTileObj, getTiles} from "../rummikub/util";
 import {BOARD_COLS, BOARD_GRID_ID, BOARD_ROWS, COLOR, HAND_GRID_ID} from "../rummikub/constants";
@@ -11,32 +11,27 @@ const red11 = buildTileObj(11, COLOR.red, 0)
 const red12 = buildTileObj(12, COLOR.red, 0)
 const red13 = buildTileObj(13, COLOR.red, 0)
 test('test game finish on no tiles on hand', () => {
-    const RummikubFinishGame = {
-        ...Rummikub,
-        setup: function () {
-            let pool = getTiles()
-            let firstMoveDone = [true, true]
+    let pool = getTiles()
+    let firstMoveDone = [true, true]
 
-            let tilePositions = {}
-            tilePositions[43] = {id: 43, col: 0, row: 0, gridId: HAND_GRID_ID, playerID: "0"}
-            tilePositions[44] = {id: 44, col: 1, row: 0, gridId: HAND_GRID_ID, playerID: "0"}
-            tilePositions[45] = {id: 45, col: 2, row: 0, gridId: HAND_GRID_ID, playerID: "0"}
-            tilePositions[11] = {id: 11, col: 0, row: 0, gridId: HAND_GRID_ID, playerID: "1"}
-            tilePositions[12] = {id: 12, col: 1, row: 0, gridId: HAND_GRID_ID, playerID: "1"}
-            tilePositions[13] = {id: 13, col: 2, row: 0, gridId: HAND_GRID_ID, playerID: "1"}
+    let tilePositions = {}
+    tilePositions[43] = {id: 43, col: 0, row: 0, gridId: HAND_GRID_ID, playerID: "0"}
+    tilePositions[44] = {id: 44, col: 1, row: 0, gridId: HAND_GRID_ID, playerID: "0"}
+    tilePositions[45] = {id: 45, col: 2, row: 0, gridId: HAND_GRID_ID, playerID: "0"}
+    tilePositions[11] = {id: 11, col: 0, row: 0, gridId: HAND_GRID_ID, playerID: "1"}
+    tilePositions[12] = {id: 12, col: 1, row: 0, gridId: HAND_GRID_ID, playerID: "1"}
+    tilePositions[13] = {id: 13, col: 2, row: 0, gridId: HAND_GRID_ID, playerID: "1"}
 
-            return {
-                timePerTurn: 60,
-                tilesPool: pool,
-                tilePositions: tilePositions,
-                prevTilePositions: tilePositions,
-                firstMoveDone: firstMoveDone,
-                gameStateStack: [],
-                redoMoveStack: [],
-                lastCircle: [],
-            }
-        }
-    }
+    const RummikubFinishGame = makeMatch({
+        timePerTurn: 60,
+        tilesPool: pool,
+        tilePositions: tilePositions,
+        prevTilePositions: tilePositions,
+        firstMoveDone: firstMoveDone,
+        gameStateStack: [],
+        redoMoveStack: [],
+        lastCircle: [],
+    })
     const spec = {
         game: RummikubFinishGame,
         multiplayer: Local(),
@@ -64,34 +59,29 @@ test('test game finish on no tiles on hand', () => {
 });
 
 test('test game finish on no tiles on pool', () => {
-    const RummikubFinishGame = {
-        ...Rummikub,
-        setup: function () {
-            let pool = [buildTileObj(9, COLOR.blue, 0),]
-            let firstMoveDone = [true, true]
-            let tilePositions = {}
-            tilePositions[43] = {id: 43, col: 0, row: 0, gridId: HAND_GRID_ID, playerID: "0"}
-            tilePositions[44] = {id: 44, col: 1, row: 0, gridId: HAND_GRID_ID, playerID: "0"}
-            tilePositions[45] = {id: 45, col: 2, row: 0, gridId: HAND_GRID_ID, playerID: "0"}
-            tilePositions[42] = {id: 42, col: 3, row: 0, gridId: HAND_GRID_ID, playerID: "0"}
+    let pool = [buildTileObj(9, COLOR.blue, 0),]
+    let firstMoveDone = [true, true]
+    let tilePositions = {}
+    tilePositions[43] = {id: 43, col: 0, row: 0, gridId: HAND_GRID_ID, playerID: "0"}
+    tilePositions[44] = {id: 44, col: 1, row: 0, gridId: HAND_GRID_ID, playerID: "0"}
+    tilePositions[45] = {id: 45, col: 2, row: 0, gridId: HAND_GRID_ID, playerID: "0"}
+    tilePositions[42] = {id: 42, col: 3, row: 0, gridId: HAND_GRID_ID, playerID: "0"}
 
-            tilePositions[11] = {id: 11, col: 0, row: 0, gridId: HAND_GRID_ID, playerID: "1"}
-            tilePositions[12] = {id: 12, col: 1, row: 0, gridId: HAND_GRID_ID, playerID: "1"}
-            tilePositions[13] = {id: 13, col: 2, row: 0, gridId: HAND_GRID_ID, playerID: "1"}
-            tilePositions[10] = {id: 10, col: 3, row: 0, gridId: HAND_GRID_ID, playerID: "1"}
+    tilePositions[11] = {id: 11, col: 0, row: 0, gridId: HAND_GRID_ID, playerID: "1"}
+    tilePositions[12] = {id: 12, col: 1, row: 0, gridId: HAND_GRID_ID, playerID: "1"}
+    tilePositions[13] = {id: 13, col: 2, row: 0, gridId: HAND_GRID_ID, playerID: "1"}
+    tilePositions[10] = {id: 10, col: 3, row: 0, gridId: HAND_GRID_ID, playerID: "1"}
 
-            return {
-                timePerTurn: 60,
-                tilesPool: pool,
-                tilePositions: tilePositions,
-                prevTilePositions: tilePositions,
-                firstMoveDone: firstMoveDone,
-                gameStateStack: [],
-                redoMoveStack: [],
-                lastCircle: [],
-            }
-        }
-    }
+    const RummikubFinishGame = makeMatch({
+        timePerTurn: 60,
+        tilesPool: pool,
+        tilePositions: tilePositions,
+        prevTilePositions: tilePositions,
+        firstMoveDone: firstMoveDone,
+        gameStateStack: [],
+        redoMoveStack: [],
+        lastCircle: [],
+    })
 
     const spec = {
         game: RummikubFinishGame,

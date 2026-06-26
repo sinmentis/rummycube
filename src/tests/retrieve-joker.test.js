@@ -1,4 +1,4 @@
-import {Rummikub} from "../rummikub/Game";
+import {makeMatch} from "./__helpers__/makeMatch";
 import {Client} from 'boardgame.io/client';
 import {buildTileObj, getTiles, BlackJoker} from "../rummikub/util";
 import {BOARD_GRID_ID, COLOR, HAND_GRID_ID} from "../rummikub/constants";
@@ -29,14 +29,11 @@ function makeGame(handTilesForP0, opts = {}) {
     });
     // player 1 needs a tile so the match is well formed
     tilePositions[11] = {id: 11, col: 0, row: 0, gridId: HAND_GRID_ID, playerID: "1"};
-    return {
-        ...Rummikub,
-        setup: () => ({
-            timePerTurn: 100000, timerExpireAt: null, tilesPool: getTiles(), tilePositions,
-            prevTilePositions: tilePositions, firstMoveDone: [true, true],
-            gameStateStack: [], redoMoveStack: [], lastCircle: [], recentlyDrawnTiles: [], lastPlay: null,
-        }),
-    };
+    return makeMatch({
+        timePerTurn: 100000, timerExpireAt: null, tilesPool: getTiles(), tilePositions,
+        prevTilePositions: tilePositions, firstMoveDone: [true, true],
+        gameStateStack: [], redoMoveStack: [], lastCircle: [], recentlyDrawnTiles: [], lastPlay: null,
+    });
 }
 
 function startPlay(game) {

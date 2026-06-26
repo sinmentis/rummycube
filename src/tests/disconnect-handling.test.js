@@ -1,4 +1,4 @@
-import {Rummikub} from "../rummikub/Game";
+import {makeMatch} from "./__helpers__/makeMatch";
 import {Client} from 'boardgame.io/client';
 import {getTiles} from "../rummikub/util";
 import {HAND_GRID_ID} from "../rummikub/constants";
@@ -15,25 +15,19 @@ function makeGame() {
         11: {id: 11, col: 0, row: 0, gridId: HAND_GRID_ID, playerID: "1"},
         12: {id: 12, col: 1, row: 0, gridId: HAND_GRID_ID, playerID: "1"},
     };
-    return {
-        ...Rummikub,
-        setup: ({ctx}) => ({
-            timePerTurn: TIME_PER_TURN_MS,
-            timerExpireAt: null,
-            tilesPool: getTiles(),
-            tilePositions,
-            prevTilePositions: tilePositions,
-            firstMoveDone: [false, false],
-            gameStateStack: [],
-            redoMoveStack: [],
-            lastCircle: [],
-            recentlyDrawnTiles: [],
-            lastPlay: null,
-            connected: Array(ctx.numPlayers).fill(true),
-            disconnectTurns: Array(ctx.numPlayers).fill(0),
-            forfeited: Array(ctx.numPlayers).fill(false),
-        }),
-    };
+    return makeMatch({
+        timePerTurn: TIME_PER_TURN_MS,
+        timerExpireAt: null,
+        tilesPool: getTiles(),
+        tilePositions,
+        prevTilePositions: tilePositions,
+        firstMoveDone: [false, false],
+        gameStateStack: [],
+        redoMoveStack: [],
+        lastCircle: [],
+        recentlyDrawnTiles: [],
+        lastPlay: null,
+    });
 }
 
 function startPlay(matchID) {

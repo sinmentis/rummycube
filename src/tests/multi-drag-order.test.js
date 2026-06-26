@@ -1,4 +1,4 @@
-import {Rummikub} from "../rummikub/Game";
+import {makeMatch} from "./__helpers__/makeMatch";
 import {Client} from 'boardgame.io/client';
 import {buildTileObj, getTiles} from "../rummikub/util";
 import {BOARD_GRID_ID, COLOR, HAND_GRID_ID} from "../rummikub/constants";
@@ -9,22 +9,17 @@ const red5 = buildTileObj(5, COLOR.red, 0);
 const red6 = buildTileObj(6, COLOR.red, 0);
 
 function startGame() {
-    const game = {
-        ...Rummikub,
-        setup: () => {
-            const tilePositions = {};
-            // a sorted run sitting left-to-right in the rack: 4,5,6
-            tilePositions[red4] = {id: red4, col: 0, row: 0, gridId: HAND_GRID_ID, playerID: "0"};
-            tilePositions[red5] = {id: red5, col: 1, row: 0, gridId: HAND_GRID_ID, playerID: "0"};
-            tilePositions[red6] = {id: red6, col: 2, row: 0, gridId: HAND_GRID_ID, playerID: "0"};
-            tilePositions[11] = {id: 11, col: 0, row: 0, gridId: HAND_GRID_ID, playerID: "1"};
-            return {
-                timePerTurn: 60, tilesPool: getTiles(), tilePositions,
-                prevTilePositions: tilePositions, firstMoveDone: [true, true],
-                gameStateStack: [], redoMoveStack: [], lastCircle: [], recentlyDrawnTiles: [],
-            };
-        },
-    };
+    const tilePositions = {};
+    // a sorted run sitting left-to-right in the rack: 4,5,6
+    tilePositions[red4] = {id: red4, col: 0, row: 0, gridId: HAND_GRID_ID, playerID: "0"};
+    tilePositions[red5] = {id: red5, col: 1, row: 0, gridId: HAND_GRID_ID, playerID: "0"};
+    tilePositions[red6] = {id: red6, col: 2, row: 0, gridId: HAND_GRID_ID, playerID: "0"};
+    tilePositions[11] = {id: 11, col: 0, row: 0, gridId: HAND_GRID_ID, playerID: "1"};
+    const game = makeMatch({
+        timePerTurn: 60, tilesPool: getTiles(), tilePositions,
+        prevTilePositions: tilePositions, firstMoveDone: [true, true],
+        gameStateStack: [], redoMoveStack: [], lastCircle: [], recentlyDrawnTiles: [],
+    });
     const spec = {game, multiplayer: Local()};
     const c0 = Client({...spec, playerID: "0"});
     const c1 = Client({...spec, playerID: "1"});

@@ -1,4 +1,4 @@
-import {Rummikub} from "../rummikub/Game";
+import {makeMatch} from "./__helpers__/makeMatch";
 import {Client} from 'boardgame.io/client';
 import {getTiles} from "../rummikub/util";
 import {BOARD_GRID_ID, HAND_GRID_ID} from "../rummikub/constants";
@@ -29,25 +29,20 @@ function buildPositions() {
 // Full visibility makes the optimistic and authoritative runs identical, so the test
 // deterministically exercises the server-side ownership check itself.
 function makeGame(fullView = false) {
-    const game = {
-        ...Rummikub,
-        setup: () => {
-            const tilePositions = buildPositions();
-            return {
-                timePerTurn: 100000, // ms, far-future deadline (no ×1000 here, setup is overridden)
-                timerExpireAt: null,
-                tilesPool: getTiles(),
-                tilePositions,
-                prevTilePositions: tilePositions,
-                firstMoveDone: [false, false],
-                gameStateStack: [],
-                redoMoveStack: [],
-                lastCircle: [],
-                recentlyDrawnTiles: [],
-                lastPlay: null,
-            };
-        },
-    };
+    const tilePositions = buildPositions();
+    const game = makeMatch({
+        timePerTurn: 100000, // ms, far-future deadline (no ×1000 here, setup is overridden)
+        timerExpireAt: null,
+        tilesPool: getTiles(),
+        tilePositions,
+        prevTilePositions: tilePositions,
+        firstMoveDone: [false, false],
+        gameStateStack: [],
+        redoMoveStack: [],
+        lastCircle: [],
+        recentlyDrawnTiles: [],
+        lastPlay: null,
+    });
     if (fullView) game.playerView = ({G}) => G;
     return game;
 }

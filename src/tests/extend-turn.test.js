@@ -1,4 +1,4 @@
-import {Rummikub} from "../rummikub/Game";
+import {makeMatch} from "./__helpers__/makeMatch";
 import {Client} from 'boardgame.io/client';
 import {getTiles} from "../rummikub/util";
 import {HAND_GRID_ID} from "../rummikub/constants";
@@ -10,29 +10,26 @@ const EXTEND_MS = 15000;
 // A roomy timePerTurn so the deadline stays well in the future across the test
 // (extendTurn only ever moves it forward; it must never auto-expire here).
 function makeGame(timePerTurn = 100000) {
-    // NOTE: setup intentionally omits turnExtended so the test also exercises the
-    // onTurnBegin defensive default (old matches / fixtures without the field).
+    // turnExtended comes from the makeMatch() factory default (all false); this
+    // test then asserts onTurnBegin/extendTurn keep it correct across turns.
     const tilePositions = {
         43: {id: 43, col: 0, row: 0, gridId: HAND_GRID_ID, playerID: "0"},
         11: {id: 11, col: 0, row: 0, gridId: HAND_GRID_ID, playerID: "1"},
     };
-    return {
-        ...Rummikub,
-        setup: () => ({
-            timePerTurn,
-            timerExpireAt: null,
-            tilesPool: getTiles(),
-            tilePositions,
-            prevTilePositions: tilePositions,
-            firstMoveDone: [false, false],
-            gameStateStack: [],
-            redoMoveStack: [],
-            lastCircle: [],
-            recentlyDrawnTiles: [],
-            lastPlay: null,
-            lastTimeout: null,
-        }),
-    };
+    return makeMatch({
+        timePerTurn,
+        timerExpireAt: null,
+        tilesPool: getTiles(),
+        tilePositions,
+        prevTilePositions: tilePositions,
+        firstMoveDone: [false, false],
+        gameStateStack: [],
+        redoMoveStack: [],
+        lastCircle: [],
+        recentlyDrawnTiles: [],
+        lastPlay: null,
+        lastTimeout: null,
+    });
 }
 
 function startPlay(timePerTurn = 100000) {
