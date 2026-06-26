@@ -3,7 +3,7 @@ import './board.css';
 import '../theme/classic.css';
 import GridContainer from "./GridContainer";
 import {DndContext, DragOverlay, MouseSensor, TouchSensor, useSensor, useSensors} from '@dnd-kit/core'
-import {parseSlotId, orderTilesBySource, resolveDropDispatch} from "../dndUtil";
+import {orderTilesBySource} from "../dndUtil";
 import {TilePreview} from "./Tile";
 import {
     HAND_GRID_ID, BOARD_GRID_ID, BOARD_ROWS, BOARD_COLS, HAND_ROWS, HAND_COLS
@@ -36,6 +36,7 @@ import {usePersistentFlag} from "./hooks/usePersistentFlag";
 import {useGiveUpConfirm} from "./hooks/useGiveUpConfirm";
 import {useSyncingCue} from "./hooks/useSyncingCue";
 import {useComboCelebration} from "./hooks/useComboCelebration";
+import {useDropDispatch} from "./hooks/useDropDispatch";
 import {seatConnected} from "../seats/seatConnection";
 import every from "lodash/every.js";
 
@@ -125,10 +126,6 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
 
     const [state, setState] = useState({selectedTiles: [], lastSelectedTileId: null})
 
-    const [activeTile, setActiveTile] = useState(null);
-    // True between onDragStart and onDragEnd. Threaded down so empty board cells
-    // can show the .slot-valid droppable cue while a drag is in flight.
-    const [isDragActive, setIsDragActive] = useState(false);
     const stateRef = useRef(state);
     useEffect(() => { stateRef.current = state; }, [state]);
     const gRef = useRef(G);
@@ -138,64 +135,12 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         useSensor(TouchSensor, {activationConstraint: {distance: 6}}),
     );
     const {syncing, markSyncing, clearSyncing} = useSyncingCue();
+    const {activeTile, isDragActive, onDragStart, onDragEnd, onCellTap, dispatchDrop} =
+        useDropDispatch({moves, playerID, gRef, stateRef, setState, markSyncing});
     const {combo, comboBy} = useComboCelebration({
         G, matchData, playerID, activeTile,
         selectedTiles: state.selectedTiles, clearSyncing,
     });
-    // T7 (WS-B/WS-D): the single drop dispatch shared by drag (onDragEnd) and
-    // empty-cell tap (onCellTap). resolveDropDispatch folds joker-swap -> push ->
-    // snap -> reject into one pure decision; the client only chooses the path while
-    // the server move stays authoritative (a wrong guess snaps back as INVALID_MOVE,
-    // not a desync). allowJokerSwap is on, but a retrieve only ever fires on a drag:
-    // GridSlot wires onCellTap on EMPTY cells, so a tap target never holds a joker.
-    //   target    = {gridId, col, row} (a parseSlotId product)
-    //   primaryId = the dragged/primary tile id
-    //   selection = the tiles being placed (rack reading order restored downstream)
-    const dispatchDrop = useCallback((target, primaryId, selection) => {
-        const d = resolveDropDispatch({
-            tilePositions: gRef.current.tilePositions,
-            target, primaryId, selection,
-            playerID, boardCols: BOARD_COLS, handCols: HAND_COLS, allowJokerSwap: true,
-        });
-        switch (d.kind) {
-            case 'joker':
-                moves.retrieveJoker(...d.args);
-                break;
-            case 'push':
-                moves.insertTilesWithPush(...d.args);
-                break;
-            case 'snap':
-                moves.moveTiles(...d.args);
-                break;
-            default:
-                // reject: no legal landing / a hopeless push. Non-destructive — a
-                // light buzz, no server call, selection cleared.
-                buzz();
-                setState({selectedTiles: [], lastSelectedTileId: null});
-                return;
-        }
-        markSyncing();
-        play('place');
-        setState({selectedTiles: [], lastSelectedTileId: null});
-    }, [moves, playerID, markSyncing]);
-    const onDragStart = useCallback((e) => {
-        const id = e.active.id;
-        setActiveTile(id);
-        setIsDragActive(true);
-        setState(prev => prev.selectedTiles.includes(id) ? prev : {selectedTiles: [id], lastSelectedTileId: id});
-    }, []);
-    const onDragEnd = useCallback((e) => {
-        setActiveTile(null);
-        setIsDragActive(false);
-        if (!e.over) return;
-        const target = parseSlotId(String(e.over.id));
-        const id = e.active.id;
-        // A bare single-tile drag carries no selection; normalize to the dragged id
-        // so the dispatch always has the tiles being placed.
-        const selectedTiles = stateRef.current.selectedTiles;
-        const selection = selectedTiles.length ? selectedTiles : [id];
-        dispatchDrop(target, id, selection);
-    }, [dispatchDrop]);
     const [showInvalidTiles, setShowInvalidTiles] = useState(false);
     const [validTiles, setValidTiles] = useState([])
     // Inline English reason for the last rejected submit. Non-destructive: tiles
@@ -236,22 +181,6 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     const onTileDragEnd = useCallback(() => {
         setState({selectedTiles: [], lastSelectedTileId: null})
     }, [])
-
-    // Tap-to-place (S3-U8): the non-drag placement path. When a selection is live
-    // and the player taps an empty droppable cell, route it through the SAME
-    // dispatchDrop the drag uses. GridSlot only wires this onto empty cells when
-    // canDnD, so turn/phase gating matches the drag cue and the tap target is always
-    // empty — joker-swap (drag-only) never fires here. An empty selection is a no-op.
-    const onCellTap = useCallback((gridId, col, row) => {
-        const selectedTiles = stateRef.current.selectedTiles;
-        if (!selectedTiles.length) return;
-        dispatchDrop({gridId, col, row}, selectedTiles[0], selectedTiles);
-    }, [dispatchDrop])
-    // TODO(S3-U8 stretch): keyboard placement — arrow-key a cursor over empty
-    // cells and Enter to call onCellTap on the focused cell. Deferred: it needs a
-    // focusable cell/roving-tabindex grid + a visible focus ring, which is more
-    // than the "only if cheap" bar. The tap path above is the touch on-ramp; the
-    // keyboard cursor is a follow-up.
 
     function onBoardClick(e) {
         const classList = e.target.className?.split?.(' ') || [];
