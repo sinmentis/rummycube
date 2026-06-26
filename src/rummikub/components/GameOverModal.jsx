@@ -6,7 +6,14 @@ import {FRONTEND_PORT, LOBBY_SERVER_HOST, LOBBY_SERVER_PROTO} from "../constants
 import {copyToClipboard} from "../util";
 import GameLobbyClient from "../lobbyClient";
 import {useNavigate} from "react-router-dom";
-import shuffle from "lodash/shuffle.js";
+
+export function chooseRematchSeat(players, ownPlayerID) {
+    const own = parseInt(ownPlayerID);
+    const ownFree = players.find(p => p.id === own && !p.name);
+    if (ownFree) return own;
+    const firstFree = players.find(p => !p.name);
+    return firstFree ? firstFree.id : own;
+}
 
 const GameOverModal = ({gameover, matchId, playerID, matchData}) => {
     const client = new GameLobbyClient()
@@ -35,14 +42,8 @@ const GameOverModal = ({gameover, matchId, playerID, matchData}) => {
                 copyToClipboard(matchLink)
                 console.debug(result.nextMatchID)
                 client.listSeats(result.nextMatchID).then(matchData => {
-                    let seat = 0
                     console.debug(matchData)
-                    for (let playerSeat of shuffle(matchData.players)) {
-                        if (!playerSeat.name) {
-                            seat = playerSeat.id
-                            break
-                        }
-                    }
+                    const seat = chooseRematchSeat(matchData.players, playerID);
                     client.joinGame(result.nextMatchID, username, seat).then((playerCreds) => {
                         navigate(`/match/${result.nextMatchID}`, {
                             state: {
