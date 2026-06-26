@@ -20,7 +20,7 @@ jest.mock('../rummikub/components/GridContainer', () => {
         return <div data-testid={`grid-${props.gridId}`}/>;
     };
 });
-jest.mock('../rummikub/components/ChatPanel', () => () => <div/>);
+jest.mock('../rummikub/components/ChatPanel', () => function ChatPanelMock() { return <div/>; });
 jest.mock('../rummikub/components/ComboOverlay', () => ({
     __esModule: true, // ComboOverlay is consumed via React.lazy(() => import(...)), which reads .default
     default: function ComboOverlayMock({combo, by}) {
