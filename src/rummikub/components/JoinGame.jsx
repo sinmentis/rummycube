@@ -2,6 +2,7 @@ import {useState} from "react";
 import {useNavigate} from "react-router-dom";
 import GameLobbyClient from "../lobbyClient";
 import LobbySeat from "./LobbySeat";
+import {extractMatchId} from "../matchId";
 
 const JoinGameForm = function () {
     const client = new GameLobbyClient()
@@ -12,7 +13,7 @@ const JoinGameForm = function () {
 
     function onMatchIDChange(matchID) {
         setMatchID(matchID)
-        client.listSeats(matchID).then((matchData) => {
+        client.listSeats(extractMatchId(matchID)).then((matchData) => {
             console.debug(matchData.players)
             setSeats(matchData.players)
         }, (value) => {
@@ -22,7 +23,8 @@ const JoinGameForm = function () {
 
     function onJoinMatch(event) {
         event.preventDefault();
-        client.listSeats(matchID).then(matchData => {
+        const resolvedMatchID = extractMatchId(matchID)
+        client.listSeats(resolvedMatchID).then(matchData => {
             let seat = 0
             console.debug(matchData)
             for (let playerSeat of matchData.players) {
@@ -31,8 +33,8 @@ const JoinGameForm = function () {
                     break
                 }
             }
-            client.joinGame(matchID, username, seat).then((playerCreds) => {
-                navigate(`/match/${matchID}`, {
+            client.joinGame(resolvedMatchID, username, seat).then((playerCreds) => {
+                navigate(`/match/${resolvedMatchID}`, {
                     state: {
                         username: username,
                         numPlayers: matchData.players.length,
@@ -71,7 +73,7 @@ const JoinGameForm = function () {
                         onMatchIDChange(e.target.value)
                     }}
                     type="text"
-                    placeholder="Enter match ID"
+                    placeholder="Room code or invite link"
                 />
             </div>
 
