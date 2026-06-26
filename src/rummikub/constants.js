@@ -1,10 +1,18 @@
 const IS_DEV = process.env.NODE_ENV === 'development'
 console.debug('DEV ENV:', IS_DEV)
-const HAND_ROWS = IS_DEV ? 2 : 2
+const HAND_ROWS = 2
 const BOARD_ROWS = 9
 const HAND_COLS = 22
-const TILES_TO_DRAW = parseInt(process.env.REACT_APP_TILES_TO_DRAW)
-const FIRST_MOVE_SCORE_LIMIT = parseInt(process.env.REACT_APP_FIRST_MOVE_SCORE_LIMIT)
+
+export function requireFiniteInt(name, raw) {
+  const n = parseInt(raw);
+  if (!Number.isFinite(n)) {
+    throw new Error(`Config error: ${name} must be an integer, got ${JSON.stringify(raw)}`);
+  }
+  return n;
+}
+const TILES_TO_DRAW = requireFiniteInt('REACT_APP_TILES_TO_DRAW', process.env.REACT_APP_TILES_TO_DRAW);
+const FIRST_MOVE_SCORE_LIMIT = requireFiniteInt('REACT_APP_FIRST_MOVE_SCORE_LIMIT', process.env.REACT_APP_FIRST_MOVE_SCORE_LIMIT);
 const BOARD_COLS = 32
 const BOARD_GRID_ID = 'b'
 const HAND_GRID_ID = 'h'
