@@ -32,6 +32,10 @@ function buildHighlights(G) {
 
 function onPlayPhaseBegin({G, ctx}) {
     logger.debug('PLAY PHASE BEGIN', new Date())
+    // R6: start the game clock here, not in setup, so the game-over "clear time"
+    // counts from the first turn and not from match creation / lobby wait. Stamp
+    // once: a value pre-seeded by a test is left untouched.
+    if (!G.startedAt) G.startedAt = getSecTs()
     G.timerExpireAt = getSecTs() + G.timePerTurn
     return G
 }

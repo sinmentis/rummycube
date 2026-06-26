@@ -6,6 +6,7 @@ import {Client} from 'boardgame.io/client';
 import {buildTileObj, getTiles} from "../rummikub/util";
 import {BOARD_GRID_ID, COLOR, HAND_GRID_ID} from "../rummikub/constants";
 import {Local} from "boardgame.io/multiplayer";
+import {onPlayPhaseBegin} from "../rummikub/turn";
 import GameOverModal from '../rummikub/components/GameOverModal';
 
 const red4 = buildTileObj(4, COLOR.red, 0);
@@ -57,6 +58,22 @@ test('server builds gameover.highlights from this-game stats when a player clear
     expect(gameover.highlights.longestRun).toBe(3);
     expect(Number.isFinite(gameover.highlights.clearSeconds)).toBe(true);
     expect(gameover.highlights.clearSeconds).toBeGreaterThanOrEqual(2);
+});
+
+// ---- The game clock starts at play-begin, not at match setup ----------------
+test('onPlayPhaseBegin stamps the game clock so clear time excludes the lobby wait', () => {
+    // setup leaves startedAt null; the clock starts when play actually begins.
+    const G = {timePerTurn: 60000, startedAt: null};
+    onPlayPhaseBegin({G, ctx: {}});
+    expect(typeof G.startedAt).toBe('number');
+    expect(G.startedAt).toBeGreaterThan(0);
+});
+
+test('onPlayPhaseBegin does not overwrite a start time that is already set', () => {
+    const seeded = Date.now() - 5000;
+    const G = {timePerTurn: 60000, startedAt: seeded};
+    onPlayPhaseBegin({G, ctx: {}});
+    expect(G.startedAt).toBe(seeded);
 });
 
 // ---- Layer (b): GameOverModal renders highlights + Share --------------------
