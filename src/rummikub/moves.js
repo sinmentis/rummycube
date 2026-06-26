@@ -19,12 +19,12 @@ import {
     getTileValue, isJoker, freezeSeqJokers, isSequenceValid,
 } from "./util.js";
 import {original} from "immer"
-import {current} from 'immer';
 
 import {pushTilesToGrid} from "./orderTiles.js";
 import {orderTilesBySource, boardRowTiles} from "./dndUtil.js";
 import {insertWithPush} from "./insertPush.js";   // explicit .js so node src/server.js boots
 import {manipulationScore} from "./juice/comboMath.js";
+import {logger} from './logger.js';
 
 import { INVALID_MOVE } from 'boardgame.io/dist/cjs/core.js';
 
@@ -44,8 +44,7 @@ function drawTile({G, ctx, playerID, events}, doRollback = true) {
             tiles.push(tile)
         }
     }
-    console.log(`tiles pool: ${current(G.tilesPool)}`)
-    console.log(`last circle ${current(G.lastCircle)}`)
+    logger.debug('draw', {poolLeft: G.tilesPool.length})
     if (!G.tilesPool.length) {
         G.lastCircle.push(ctx.currentPlayer)
     }
@@ -457,7 +456,7 @@ function _setConnection({G, ctx, playerID}, connected) {
 }
 
 function onPlayPhaseBegin({G, ctx}) {
-    console.log('PLAY PHASE BEGIN', new Date())
+    logger.debug('PLAY PHASE BEGIN', new Date())
     G.timerExpireAt = getSecTs() + G.timePerTurn
     return G
 }
@@ -481,7 +480,7 @@ function forfeitSeat(G, ctx, seat, events) {
 }
 
 function onTurnBegin({G, ctx, events}) {
-    console.log('ON TURN BEGIN', new Date())
+    logger.debug('ON TURN BEGIN', new Date())
     const seat = ctx.currentPlayer
     const seatIdx = Number(seat)
     // Defensive defaults so matches created before WS-12 (no connected arrays) still run.
@@ -527,7 +526,7 @@ function onTurnBegin({G, ctx, events}) {
 }
 
 function onTurnEnd({G, ctx, events}) {
-    console.log('ON TURN END', new Date())
+    logger.debug('ON TURN END', new Date())
     G.timerExpireAt = null
     checkGameOver(G, ctx, events)
 }
