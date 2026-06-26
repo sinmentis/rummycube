@@ -417,6 +417,23 @@ function retrieveJoker({G, ctx, playerID}, jokerTileId, tileId) {
     }
 }
 
+const EXTEND_TURN_MS = 15000;
+
+// One-time per-turn "+15s" relief. Server-authoritative: the deadline lives in
+// G.timerExpireAt and this move only ever moves it FORWARD, only for the current
+// player (the playerID guard), and only once per turn (onTurnBegin re-arms the
+// flag). The forceEndTurn deadline guard is untouched, so this can never shorten
+// a turn; a reject returns INVALID_MOVE and the immer draft is discarded (no-op).
+function extendTurn({G, ctx, playerID}) {
+    if (playerID !== ctx.currentPlayer) return INVALID_MOVE
+    if (!Array.isArray(G.turnExtended)) G.turnExtended = []
+    const seat = Number(ctx.currentPlayer)
+    if (G.turnExtended[seat]) return INVALID_MOVE          // already extended this turn
+    if (!G.timerExpireAt) return INVALID_MOVE
+    G.turnExtended[seat] = true
+    G.timerExpireAt = G.timerExpireAt + EXTEND_TURN_MS
+}
+
 function submitMeld({G, ctx, playerID, events}) {
     if (playerID !== ctx.currentPlayer) return INVALID_MOVE
     if (!isBoardHasNewTiles(G)) return INVALID_MOVE
@@ -487,6 +504,9 @@ function onTurnBegin({G, ctx, events}) {
     if (!Array.isArray(G.connected)) G.connected = []
     if (!Array.isArray(G.disconnectTurns)) G.disconnectTurns = []
     if (!Array.isArray(G.forfeited)) G.forfeited = []
+    if (!Array.isArray(G.turnExtended)) G.turnExtended = []
+    // R5b-T6: a fresh turn re-arms the one-time +15s extension for this seat.
+    G.turnExtended[seatIdx] = false
 
     if (G.forfeited[seatIdx]) {
         // Already retired: nothing to wait for, let an opponent force-advance at once.
@@ -556,6 +576,7 @@ export {
     insertTilesWithPush,
     validatePlayerMove,
     submitMeld,
+    extendTurn,
     retrieveJoker,
     onTurnBegin,
     onTurnEnd,

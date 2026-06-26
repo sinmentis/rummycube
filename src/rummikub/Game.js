@@ -1,6 +1,6 @@
 import {Stage} from 'boardgame.io/dist/cjs/core.js';
 import {getTiles, playerView} from './util.js'
-import {drawTile, endTurn, forceEndTurn, forfeitTurn, insertTilesWithPush, moveTiles, onPlayPhaseBegin, onTurnBegin, onTurnEnd, redo, retrieveJoker, submitMeld, undo, _setConnection} from "./moves.js";
+import {drawTile, endTurn, extendTurn, forceEndTurn, forfeitTurn, insertTilesWithPush, moveTiles, onPlayPhaseBegin, onTurnBegin, onTurnEnd, redo, retrieveJoker, submitMeld, undo, _setConnection} from "./moves.js";
 import {GAME_NAME, HAND_COLS, HAND_GRID_ID, HAND_ROWS, TILES_TO_DRAW} from "./constants.js";
 import {orderByColorVal, orderByValColor} from "./orderTiles.js";
 
@@ -50,6 +50,9 @@ const Rummikub = {
             connected: Array(ctx.numPlayers).fill(true),
             disconnectTurns: Array(ctx.numPlayers).fill(0),
             forfeited: Array(ctx.numPlayers).fill(false),
+            // R5b-T6: per-seat "+15s already used this turn" flag, reset each
+            // turn in onTurnBegin (defensive default there for legacy matches).
+            turnExtended: Array(ctx.numPlayers).fill(false),
         }
     },
     phases: {
@@ -80,6 +83,7 @@ const Rummikub = {
         forfeitTurn,
         submitMeld,
         retrieveJoker,
+        extendTurn,
         undo,
         redo,
         _setConnection,

@@ -511,6 +511,18 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             drawTile()
         }}>{`Draw${drawCount > 1 ? ' ×2' : ''}`}
     </button>)
+
+    // R5b-T6: one-time +15s turn extension. Server-authoritative — moves.extendTurn
+    // only ever pushes G.timerExpireAt forward, once per turn, for the current
+    // player. Disabled off-turn, while waiting, and once already used this turn.
+    const canExtend = isMyTurn && !waiting && !G.turnExtended?.[Number(playerID)]
+    const extendBut = (<button disabled={!canExtend}
+                               className={'rummikub-button secondary-action'}
+                               title={'Add 15 seconds to your turn (once per turn)'}
+                               onClick={() => {
+                                   moves.extendTurn()
+                               }}>+15s
+    </button>)
     const {board, hands} = buildGridsFromTilePositions(G.tilePositions, ctx.numPlayers)
 
     // T8 (WS-G): keyboard tap-to-place. firstFreeBoardCell is the v1 landing target
@@ -750,6 +762,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                                 onOrderByValColor()
                             }}>Sort: colours
                             </button>
+                            {extendBut}
                         </div>
                         <div className="controls-primary">
                             {drawOrEnd}
