@@ -40,3 +40,24 @@ function removeAll(rem, block) {
     }
     return out;
 }
+
+// Two-pass cluster partition encoding the owner's rule: break an existing valid
+// block only if the whole cluster ends all-valid (Pass 1); otherwise keep every
+// pre-drop valid block and arrange only the rest (Pass 2).
+export function partitionCluster(clusterTiles, preDropValidBlocks) {
+    const all = bestPartition(clusterTiles);
+    if (all.leftover.length === 0) return all;          // Pass 1: all-valid, breaking allowed
+
+    // Pass 2: fix pre-drop valid blocks, partition the remainder.
+    const fixed = preDropValidBlocks.map(b => b.slice());
+    let rest = clusterTiles.slice();
+    for (const block of fixed) rest = removeOnce(rest, block);
+    const sub = bestPartition(rest);
+    return {blocks: [...fixed, ...sub.blocks], leftover: sub.leftover};
+}
+
+function removeOnce(arr, block) {
+    const out = arr.slice();
+    for (const id of block) { const i = out.indexOf(id); if (i !== -1) out.splice(i, 1); }
+    return out;
+}

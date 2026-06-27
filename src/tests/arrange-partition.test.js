@@ -21,3 +21,19 @@ test('covers one run and leaves an unmakeable remainder (size only — leftover 
   expect(p.blocks[0].length).toBe(3);
   expect(p.leftover).toHaveLength(2);
 });
+
+import {partitionCluster} from '../rummikub/arrange/partition';
+
+test('Pass1: all-valid split is taken even though it breaks the pre-drop 5-run', () => {
+  const pre = [[r(1), r(2), r(3), r(4), r(5)]];
+  const p = partitionCluster([r(1), r(2), r(3), r(3, 1), r(4), r(5)], pre);
+  expect(p.leftover).toEqual([]);
+  expect(sizes(p.blocks)).toEqual([3, 3]);   // 123 + 345
+});
+
+test('Pass2: no all-valid -> pre-drop run preserved, new tiles leftover', () => {
+  const pre = [[r(5), r(6), r(7)]];
+  const p = partitionCluster([r(5), r(6), r(7), b(7), k(7)], pre);
+  expect(p.blocks).toEqual([[r(5), r(6), r(7)]]);     // run kept intact
+  expect(new Set(p.leftover)).toEqual(new Set([b(7), k(7)]));
+});
