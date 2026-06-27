@@ -254,3 +254,76 @@
         max-height: 60vh;
     }
 }
+
+/* ── Chat bubbles ─────────────────────────────────────────────────────────
+   Transient speech bubble anchored to a player's .avatar circle. The outer
+   .chat-bubble positions (per side); the inner .chat-bubble-box is the visible,
+   animated box. Display-only: never blocks tile dragging. */
+.chat-bubble {
+    position: absolute;
+    z-index: 5;
+    pointer-events: none;
+}
+.chat-bubble-box {
+    max-width: 220px;
+    width: max-content;
+    padding: 6px 10px;
+    border-radius: var(--r-lg, 14px);
+    background: var(--bubble-bg, #fbf3df);
+    color: #2a2118;
+    box-shadow: var(--elev-2, 0 14px 26px rgba(0, 0, 0, .42));
+    font-size: .8rem;
+    line-height: 1.25;
+    text-align: left;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    /* clamp a long (up to 200-char) message so the bubble can't balloon */
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    position: relative;
+    animation: chat-bubble-in .15s ease-out;
+    transition: opacity .2s ease;
+}
+.chat-bubble.leaving .chat-bubble-box { opacity: 0; }
+
+/* tail: a small rotated square sharing the box background */
+.chat-bubble-box::after {
+    content: "";
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: var(--bubble-bg, #fbf3df);
+    transform: rotate(45deg);
+}
+
+/* per-side placement on the OUTER anchor + tail position + grow origin */
+.chat-bubble-up    { bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 10px; }
+.chat-bubble-up    .chat-bubble-box { transform-origin: bottom center; }
+.chat-bubble-up    .chat-bubble-box::after { bottom: -4px; left: 50%; margin-left: -5px; }
+
+.chat-bubble-down  { top: 100%; left: 50%; transform: translateX(-50%); margin-top: 10px; }
+.chat-bubble-down  .chat-bubble-box { transform-origin: top center; }
+.chat-bubble-down  .chat-bubble-box::after { top: -4px; left: 50%; margin-left: -5px; }
+
+.chat-bubble-right { left: 100%; top: 50%; transform: translateY(-50%); margin-left: 10px; }
+.chat-bubble-right .chat-bubble-box { transform-origin: left center; }
+.chat-bubble-right .chat-bubble-box::after { left: -4px; top: 50%; margin-top: -5px; }
+
+.chat-bubble-left  { right: 100%; top: 50%; transform: translateY(-50%); margin-right: 10px; }
+.chat-bubble-left  .chat-bubble-box { transform-origin: right center; }
+.chat-bubble-left  .chat-bubble-box::after { right: -4px; top: 50%; margin-top: -5px; }
+
+@keyframes chat-bubble-in {
+    from { opacity: 0; transform: scale(.85); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .chat-bubble-box { animation-name: chat-bubble-fade; }
+}
+@keyframes chat-bubble-fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
