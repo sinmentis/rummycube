@@ -1,4 +1,4 @@
-import {BOARD_COLS, BOARD_GRID_ID, HAND_COLS, HAND_GRID_ID, HAND_ROWS} from "./constants.js";
+import {BOARD_GRID_ID, HAND_COLS, HAND_GRID_ID, HAND_ROWS} from "./constants.js";
 import {
     isBoardHasNewTiles,
     isFirstMoveValid,
@@ -17,8 +17,8 @@ import {
 import {original} from "immer"
 
 import {pushTilesToGrid} from "./orderTiles.js";
-import {orderTilesBySource, boardRowTiles} from "./dndUtil.js";
-import {insertWithPush} from "./insertPush.js";   // explicit .js so node src/server.js boots
+import {orderTilesBySource} from "./dndUtil.js";
+import {arrangeBoard} from "./arrange/index.js";   // explicit .js so node src/server.js boots
 import {computePlayScore} from "./scoring/playScore.js";
 import {logger} from './logger.js';
 
@@ -129,13 +129,12 @@ function moveTiles({G, ctx, playerID}, col, row, destGridId, tileIdObj, selected
     }
 }
 
-// Authoritative "auto-snap + insert/push": drop N dragged tiles onto a single board
-// row, rippling the colliding run aside (T1's insertWithPush). Mirrors moveTiles'
-// signature. Geometric only — it never calls isOverlap/isBoardValid; run/group
-// validity stays a submit-time concern. The whole cascade is one reducer pass and one
-// undo entry; an INVALID_MOVE discards the immer draft so G is untouched.
+// Authoritative board drop: write the dragged tiles to the landing columns, then
+// hand the post-drop board to the pure arrangeBoard engine to reflow the cluster the
+// drop landed in toward valid blocks (server-authoritative, semantic — not geometric).
+// Mirrors moveTiles' signature. The whole cascade is one reducer pass and one undo
+// entry; an INVALID_MOVE discards the immer draft so G is untouched.
 function insertTilesWithPush({G, ctx, playerID}, col, row, destGridId, tileIdObj, selectedTiles) {
-    const T = col;
     if (playerID !== ctx.currentPlayer) return INVALID_MOVE;
     if (destGridId !== BOARD_GRID_ID) return INVALID_MOVE;
 
@@ -143,40 +142,36 @@ function insertTilesWithPush({G, ctx, playerID}, col, row, destGridId, tileIdObj
     const selection = (selectedTiles.length && selectedTiles.indexOf(tileId) !== -1)
         ? orderTilesBySource(selectedTiles, G.tilePositions)
         : [tileId];
-    const N = selection.length;
 
-    // The target row's existing occupants, excluding the dragged selection
-    // (shared with the client's drop dispatch via dndUtil.boardRowTiles).
-    const rowTiles = boardRowTiles(G.tilePositions, row, selection);
-
-    const plan = insertWithPush(rowTiles, T, N, BOARD_COLS - 1);
-    if (!plan) return INVALID_MOVE;
-
-    // Only push after a feasible plan: one snapshot => one undo restores the whole
-    // arrangement (mirrors moveTiles:79 semantics).
-    if (ctx.currentPlayer === playerID) G.gameStateStack.push(getGameState(G));
-
-    // (1) Pushed board tiles: change ONLY col, keep id/row/gridId/tmp/playerID.
-    for (const id in plan.shifts) {
-        const p = G.tilePositions[id];
-        G.tilePositions[id] = {...p, col: plan.shifts[id]};
-    }
-    // (2) Dragged tiles land at newCols with moveTiles' flags (no isOverlap call).
+    // 1) write the dropped tiles to the landing columns (col, col+1, ...) as tmp.
     for (let i = 0; i < selection.length; i++) {
         const id = selection[i];
         const p = G.tilePositions[id];
         if (!p) return INVALID_MOVE;
         let flags;
-        if (p.gridId === HAND_GRID_ID) {            // hand -> board
-            if (String(p.playerID) !== String(playerID)) return INVALID_MOVE;   // must: reject moving an opponent's hand tile
-            if (ctx.phase === 'playersJoin') return INVALID_MOVE;   // same as moveTiles
+        if (p.gridId === HAND_GRID_ID) {
+            if (String(p.playerID) !== String(playerID)) return INVALID_MOVE;
+            if (ctx.phase === 'playersJoin') return INVALID_MOVE;
             flags = {tmp: true, playerID: null};
-        } else if (p.gridId === BOARD_GRID_ID) {    // board -> board (re-arrange committed/tmp tiles)
+        } else if (p.gridId === BOARD_GRID_ID) {
             flags = {tmp: p.tmp, playerID: p.playerID};
         } else {
             return INVALID_MOVE;
         }
-        G.tilePositions[id] = {id: p.id, col: plan.newCols[i], row, gridId: BOARD_GRID_ID, ...flags};
+        G.tilePositions[id] = {id, col: col + i, row, gridId: BOARD_GRID_ID, ...flags};
+    }
+
+    // 2) reflow the cluster the drop landed in (pure, server-authoritative).
+    const result = arrangeBoard(G.tilePositions, {droppedIds: selection, row, col});
+    if (!result.ok) return INVALID_MOVE;   // immer discards the draft -> non-destructive snap-back
+
+    // 3) one snapshot so a single undo restores the whole arrangement.
+    if (ctx.currentPlayer === playerID) G.gameStateStack.push(getGameState(G));
+
+    for (const id in result.placements) {
+        const p = G.tilePositions[id];
+        const {row: nr, col: nc} = result.placements[id];
+        G.tilePositions[id] = {...p, row: nr, col: nc};
     }
 }
 
