@@ -76,6 +76,16 @@ body {
     flex: 1 1 auto;
     min-height: 0;
     overflow: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* The GridContainer "Centered" wrapper: stretch to fill .ref's height so the
+   grid's 1fr rows have a definite height to divide (else 1fr collapses to the
+   tile min and the fit never happens). Width stays from its inline style. */
+.ref > div {
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 /* Transform-only kick target. The board "kick" animates THIS thin wrapper so the
@@ -342,8 +352,15 @@ div.grid-container {
     background-image:
         linear-gradient(to right, rgba(255, 255, 255, .04) 1px, transparent 1px),
         linear-gradient(to bottom, rgba(255, 255, 255, .04) 1px, transparent 1px);
-    background-size: 2.2vw 7vh, 2.2vw 7vh;
+    /* Cell lines follow the now-responsive row height: vertical = 1/9 of the
+       container height; horizontal stays at the fixed desktop col (2.2vw). */
+    background-size: 2.2vw calc(100% / 9), 2.2vw calc(100% / 9);
     background-position: 0 0;
+    /* Fill .ref so 1fr rows divide the available height; clamp each row to a
+       legibility floor, then .ref's overflow:auto takes over (scroll fallback). */
+    height: 100%;
+    margin-top: 0;
+    grid-template-rows: repeat(9, minmax(var(--board-row-min, 34px), 1fr)) !important;
 }
 
 /* ============================================================
@@ -406,6 +423,25 @@ div.tile {
     font-size: clamp(15px, 1.7vw, 26px);
     line-height: 1;
     transition: transform .12s ease, box-shadow .12s ease;
+}
+
+/* Board cells size responsively (the grid rows are minmax(--board-row-min,1fr)),
+   so board tiles fill their cell instead of the fixed 2.0vw/5.4vh of the base
+   .tile. A 2px cell padding keeps a constant inter-tile gap at any cell size.
+   Hand tiles (outside .ref) keep their 44px touch size. */
+.ref .grid-item {
+    padding: 2px;
+}
+.ref div.tile {
+    width: 100%;
+    height: 100%;
+}
+/* The tile value lives in .tile-text; the .tile element carries an inline
+   font-size (getTileStyle), so the responsive size must target .tile-text (no
+   inline font) to win. Sizing it to the cell keeps two-digit values inside the
+   now-smaller board cells instead of clipping. Hand .tile-text is untouched. */
+.ref .tile-text {
+    font-size: clamp(9px, 1.4vw, 18px);
 }
 
 /* tactile lift on hover (visual only — transform doesn't affect layout/DnD) */
@@ -1114,7 +1150,7 @@ svg.fa-smile-beam {
     .ref .grid-container {
         grid-template-columns: repeat(32, minmax(0, 1fr)) !important;
         /* keep the faint cell lines aligned to the fitted mobile track */
-        background-size: calc(100% / 32) 7vh, calc(100% / 32) 7vh;
+        background-size: calc(100% / 32) calc(100% / 9), calc(100% / 32) calc(100% / 9);
     }
 
     /* Wood rack: pinned to the bottom of the column, always visible. */
@@ -1166,12 +1202,17 @@ svg.fa-smile-beam {
        Hand tiles keep the 44px target because they live outside .ref. */
     .ref div.tile {
         width: 100%;
-        height: 5.4vh;
+        height: 100%;
         min-width: 0;
         min-height: 0;
         border-radius: 3px;
-        font-size: clamp(8px, 2.6vw, 14px);
         overflow: hidden;
+    }
+
+    /* Board value scales to the fitted mobile cell (see desktop .ref .tile-text;
+       the inline font on .tile means .tile-text is the element to size). */
+    .ref .tile-text {
+        font-size: clamp(8px, 2.6vw, 13px);
     }
 
     div.tile:hover {
