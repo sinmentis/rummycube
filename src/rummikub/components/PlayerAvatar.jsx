@@ -2,6 +2,7 @@ import React, {useEffect, useState} from "react";
 import {stringToColor} from "./domUtil";
 import {catAvatarUrl} from "../avatars/catAvatar";
 import {useCountdown} from "../hooks/useCountdown";
+import ChatBubble from "./ChatBubble";
 
 const RADIUS = 45;
 const STROKE = 6;
@@ -10,7 +11,7 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 // 5 seconds with a motion-gated pulse — a second cue beyond the ring colour.
 const LOW_TIME_MS = 5000;
 
-const PlayerAvatarWithTimer = ({name, matchId, seatId, tiles, isActive, isConnected, timerExpireAt, totalTime, showTurnTimer}) => {
+const PlayerAvatarWithTimer = ({name, matchId, seatId, tiles, isActive, isConnected, timerExpireAt, totalTime, showTurnTimer, bubble, bubbleSide = "up"}) => {
     const [dashOffset, setDashOffset] = useState(CIRCUMFERENCE);
     const [strokeColor, setStrokeColor] = useState("#cda24b");
 
@@ -74,6 +75,7 @@ const PlayerAvatarWithTimer = ({name, matchId, seatId, tiles, isActive, isConnec
                 </svg> : ''}
                 <span className="username">{name}</span>
                 <span className="tile-count">{tiles}</span>
+                {bubble && <ChatBubble key={bubble.id} text={bubble.text} side={bubbleSide} leaving={bubble.leaving}/>}
             </div>
         </div>
     );

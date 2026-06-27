@@ -38,6 +38,7 @@ import {useSyncingCue} from "./hooks/useSyncingCue";
 import {useComboCelebration} from "./hooks/useComboCelebration";
 import {useDropDispatch} from "./hooks/useDropDispatch";
 import {seatConnected} from "../seats/seatConnection";
+import {useChatBubbles} from "../hooks/useChatBubbles";
 import every from "lodash/every.js";
 
 const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, events, chatMessages, sendChatMessage, isConnected}) {
@@ -141,6 +142,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         G, matchData, playerID, activeTile,
         selectedTiles: state.selectedTiles, clearSyncing,
     });
+    const chatBubbles = useChatBubbles(chatMessages, {ttlMs: 5000});
     const [showInvalidTiles, setShowInvalidTiles] = useState(false);
     const [validTiles, setValidTiles] = useState([])
     // Inline English reason for the last rejected submit. Non-destructive: tiles
@@ -482,6 +484,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             timerExpireAt={showTurnTimer ? G.timerExpireAt : null}
             timePerTurn={G.timePerTurn}
             showTurnTimer={showTurnTimer}
+            bubbles={chatBubbles}
         />
     )
 
@@ -498,6 +501,8 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                                        ? G.handCounts[playerID]
                                        : count2dArrItems(hands[playerID])}
                                    isConnected={seatConnected(G.connected, Number(playerID), selfData.isConnected)}
+                                   bubble={chatBubbles[String(playerID)] || null}
+                                   bubbleSide="up"
                                    timerExpireAt={showTurnTimer ? G.timerExpireAt : null}
                                    totalTime={G.timePerTurn}
                                    showTurnTimer={showTurnTimer}/>
