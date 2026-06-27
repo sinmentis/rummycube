@@ -10,7 +10,7 @@ export function isValidBlock(tiles) {
 
 // Enumerate every valid run/group (in valid order) drawn from `rem` that
 // includes the non-joker `anchor`. Jokers in `rem` are used as wild fillers.
-// Does NOT generate a 13->1 wrap run (rare; documented v1 limitation).
+// Does NOT generate a 13->1 wrap run (rare; a known v1 limitation).
 export function blocksContaining(rem, anchor) {
     const out = [];
     if (isJoker(anchor)) return out;                 // jokers fill other anchors' blocks

@@ -4,7 +4,7 @@ import {Client} from 'boardgame.io/client';
 import {Rummikub} from '../rummikub/Game';
 import {onPlayPhaseBegin} from '../rummikub/moves';
 import {buildTileObj, getTiles} from '../rummikub/util';
-import {BOARD_COLS, BOARD_GRID_ID, COLOR, HAND_GRID_ID} from '../rummikub/constants';
+import {BOARD_GRID_ID, COLOR, HAND_GRID_ID} from '../rummikub/constants';
 
 // S3-U8: tap-to-place. A tile is placed by two taps (select a tile, then tap an
 // empty board cell) with NO drag, reusing the same validated resolveDropSlot path
@@ -114,22 +114,34 @@ test('two taps (select tile, then tap empty board cell) place the tile with no d
     expect(mockBuzz).not.toHaveBeenCalled();
 });
 
-test('a multi-select onto a row with no contiguous space is rejected — no move, no Undo, a buzz', () => {
-    const t1 = buildTileObj(6, COLOR.red, 0);
-    const t2 = buildTileObj(7, COLOR.red, 0);
+test('a hopeless multi-select tap routes through push but is non-destructive (server snaps back)', () => {
+    // The client no longer makes a geometric decision: any in-bounds tap routes to
+    // the semantic insertTilesWithPush move, which is authoritative. Here four
+    // pairwise-unrelated tiles (red2, blue5, black8, orange11) form a 4-wide cluster
+    // when the pair drops at cols 4,5 beside the board's black8/orange11. Tight
+    // flankers at cols 1 and 10 leave only a 6-col window, but four separated loose
+    // tiles need seven columns, so arrangeBoard rejects. The move is a no-op: tiles
+    // stay in hand, Undo stays disabled. The client, blind to that outcome, plays an
+    // optimistic 'place' and does NOT buzz — the snap-back is the server's call.
+    const t1 = buildTileObj(2, COLOR.red, 0);
+    const t2 = buildTileObj(5, COLOR.blue, 0);
+    const u1 = buildTileObj(8, COLOR.black, 0);
+    const u2 = buildTileObj(11, COLOR.orange, 0);
+    const f1 = buildTileObj(3, COLOR.orange, 0);
+    const f2 = buildTileObj(9, COLOR.black, 0);
     const client = startClient(() => {
         const tilePositions = {};
         // Two selectable tiles in player 0's hand.
         tilePositions[t1] = {id: t1, col: 0, row: 0, gridId: HAND_GRID_ID, playerID: '0'};
         tilePositions[t2] = {id: t2, col: 1, row: 0, gridId: HAND_GRID_ID, playerID: '0'};
-        // Fill board row 0 completely EXCEPT an isolated empty at col 10, so a
-        // 2-tile selection has no contiguous run anywhere in that row -> reject.
-        let id = 5000;
-        for (let c = 0; c < BOARD_COLS; c++) {
-            if (c === 10) continue;
-            tilePositions[id] = {id, col: c, row: 0, gridId: BOARD_GRID_ID, playerID: null, tmp: false};
-            id++;
-        }
+        // Board: flankers at 1 and 10, cluster neighbours at 6 and 7.
+        const bt = (id, col) => {
+            tilePositions[id] = {id, col, row: 0, gridId: BOARD_GRID_ID, playerID: null, tmp: false};
+        };
+        bt(f1, 1);
+        bt(u1, 6);
+        bt(u2, 7);
+        bt(f2, 10);
         return {
             timePerTurn: 600000, tilesPool: getTiles(), tilePositions,
             prevTilePositions: tilePositions, firstMoveDone: [true, true],
@@ -144,17 +156,18 @@ test('a multi-select onto a row with no contiguous space is rejected — no move
     const t2El = document.getElementById(String(t2));
     fireEvent.click(t2El.querySelector('.tile-text'), {ctrlKey: true});
 
-    // Tap the only empty board cell (row 0, col 10). It is isolated, so the
-    // contiguous-run rule rejects the 2-tile selection.
+    // Tap the empty board cell at col 4; the pair would write to cols 4,5.
     const boardGrid = document.querySelectorAll('.grid-container')[0];
     const cells = boardGrid.querySelectorAll('.grid-item');
-    fireEvent.click(cells[10]);
+    fireEvent.click(cells[4]);
 
-    // Nothing moved, Undo stays disabled, and a light buzz fired.
+    // Non-destructive: nothing moved, Undo stays disabled.
     expect(client.getState().G.tilePositions[t1].gridId).toBe(HAND_GRID_ID);
     expect(client.getState().G.tilePositions[t2].gridId).toBe(HAND_GRID_ID);
     expect(client.getState().G.gameStateStack.length).toBe(0);
     expect(screen.getByRole('button', {name: 'Undo'})).toBeDisabled();
-    expect(mockBuzz).toHaveBeenCalled();
-    expect(mockPlay).not.toHaveBeenCalledWith('place');
+    // The client routed to push without client-side geometry, so it optimistically
+    // played 'place' and did NOT buzz — the snap-back came from the server.
+    expect(mockPlay).toHaveBeenCalledWith('place');
+    expect(mockBuzz).not.toHaveBeenCalled();
 });

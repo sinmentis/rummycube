@@ -170,31 +170,37 @@ test('dragging a value-MISMATCHED hand tile onto the joker falls through to inse
     expect(mockPlay).toHaveBeenCalledWith('place');
 });
 
-test('dragging onto a FREE board cell routes to moveTiles', () => {
+test('dragging onto a FREE board cell routes to insertTilesWithPush (the client makes no geometry call)', () => {
     const moves = renderBoard(jokerBoard([red5]));
 
-    // col 6 is empty; a single tile there snaps and moves, no push, no retrieve.
+    // col 6 is empty; the new client routes ANY in-bounds board drop to push so the
+    // engine can re-tidy the cluster — there is no client-side snap-vs-push split.
     act(() => { mockDnd.onDragEnd({active: {id: red5}, over: {id: 'b:6:0'}}); });
 
-    expect(moves.moveTiles).toHaveBeenCalledTimes(1);
-    expect(moves.moveTiles.mock.calls[0][0]).toBe(6); // snapped col
-    expect(moves.moveTiles.mock.calls[0][1]).toBe(0); // row
-    expect(moves.moveTiles.mock.calls[0][2]).toBe('b');
+    expect(moves.insertTilesWithPush).toHaveBeenCalledTimes(1);
+    expect(moves.insertTilesWithPush.mock.calls[0][0]).toBe(6); // target col
+    expect(moves.insertTilesWithPush.mock.calls[0][1]).toBe(0); // row
+    expect(moves.insertTilesWithPush.mock.calls[0][2]).toBe('b');
     expect(moves.retrieveJoker).not.toHaveBeenCalled();
-    expect(moves.insertTilesWithPush).not.toHaveBeenCalled();
+    expect(moves.moveTiles).not.toHaveBeenCalled();
     expect(mockBuzz).not.toHaveBeenCalled();
+    expect(mockPlay).toHaveBeenCalledWith('place');
 });
 
-test('dragging onto a board run with no room to push (insertWithPush -> null) buzzes and sends no move', () => {
-    // Fill row 0 completely so the colliding run can shift neither way.
+test('dragging onto a full board run still routes to insertTilesWithPush (the server judges feasibility)', () => {
+    // Fill row 0 completely. The old client buzzed up-front on a hopeless push; the
+    // new client routes to push regardless and lets the authoritative move snap back
+    // (INVALID_MOVE) if there is no room — the client owns no geometry decision.
     const tilePositions = {[red5]: handTile(red5, 0, 1)};
     for (let c = 0; c < 32; c++) tilePositions[1000 + c] = boardTile(1000 + c, c, 0);
     const moves = renderBoard(tilePositions);
 
     act(() => { mockDnd.onDragEnd({active: {id: red5}, over: {id: 'b:5:0'}}); });
 
-    expect(mockBuzz).toHaveBeenCalled();
+    expect(moves.insertTilesWithPush).toHaveBeenCalledTimes(1);
+    expect(moves.insertTilesWithPush.mock.calls[0][0]).toBe(5);
     expect(moves.retrieveJoker).not.toHaveBeenCalled();
-    expect(moves.insertTilesWithPush).not.toHaveBeenCalled();
     expect(moves.moveTiles).not.toHaveBeenCalled();
+    expect(mockBuzz).not.toHaveBeenCalled();
+    expect(mockPlay).toHaveBeenCalledWith('place');
 });

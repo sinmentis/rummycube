@@ -1,241 +1,139 @@
-import React from 'react';
-import {render, act} from '@testing-library/react';
+import {Client} from 'boardgame.io/client';
+import {Local} from "boardgame.io/multiplayer";
+import {makeMatch} from "./__helpers__/makeMatch";
+import {resolveDropDispatch} from "../rummikub/dndUtil";
+import {buildTileObj, BlackJoker} from "../rummikub/util";
+import {BOARD_COLS, HAND_COLS, BOARD_GRID_ID, HAND_GRID_ID, COLOR} from "../rummikub/constants";
 
-// T4 (WS-6): the client board-drop / empty-cell-tap dispatch split. A board drop
-// (onDragEnd) or empty-cell tap (onCellTap) whose N-wide run lands IN BOUNDS on an
-// occupied span routes to the authoritative moves.insertTilesWithPush (auto-snap +
-// push). Free board targets, the hand, and OUT-OF-BOUNDS runs keep the existing
-// resolveDropSlot + moves.moveTiles near-edge-snap path. insertWithPush returning
-// null is non-destructive: a buzz, no move, selection cleared.
-//
-// jsdom has no layout for @dnd-kit's pointer measurement, so we mock @dnd-kit/core
-// to capture the DndContext's onDragStart/onDragEnd and drive them directly, and
-// mock GridContainer (the coach-card harness style) to capture onCellTap/onLongPress
-// off the board grid. moves is mocked so we assert which move the client dispatches.
+// =============================================================================
+// Board drop -> semantic reflow (§10 worked examples #5, #5b, #8, #10). The
+// client no longer makes a geometric occupancy decision: any in-bounds board
+// drop routes to moves.insertTilesWithPush, which writes the dragged tiles then
+// reflows the cluster they land in via the pure arrangeBoard engine. These tests
+// drive the move through a real boardgame.io Client+Local() harness and assert
+// the §10 outcomes (loose-tile separation, drop-side placement, protected runs),
+// then pin the two routing decisions (board -> push, hand -> snap) directly.
+// =============================================================================
 
-const mockDnd = {};
-jest.mock('@dnd-kit/core', () => {
-    const React = require('react');
-    return {
-        DndContext: ({children, onDragStart, onDragEnd}) => {
-            mockDnd.onDragStart = onDragStart;
-            mockDnd.onDragEnd = onDragEnd;
-            return React.createElement(React.Fragment, null, children);
-        },
-        DragOverlay: ({children}) => React.createElement(React.Fragment, null, children),
-        MouseSensor: function MouseSensor() {},
-        TouchSensor: function TouchSensor() {},
-        useSensor: () => undefined,
-        useSensors: () => [],
-        useDraggable: () => ({attributes: {}, listeners: {}, setNodeRef: () => {}, isDragging: false}),
-        useDroppable: () => ({isOver: false, setNodeRef: () => {}}),
-    };
-});
+const r = (v, variant = 0) => buildTileObj(v, COLOR.red, variant);
+const blue = (v, variant = 0) => buildTileObj(v, COLOR.blue, variant);
+const black = (v, variant = 0) => buildTileObj(v, COLOR.black, variant);
+const orange = (v, variant = 0) => buildTileObj(v, COLOR.orange, variant);
 
-const mockGrid = {};
-jest.mock('../rummikub/components/GridContainer', () => {
-    const React = require('react');
-    return function GridContainerMock(props) {
-        mockGrid[props.gridId] = {onCellTap: props.onCellTap, onLongPress: props.onLongPress};
-        return React.createElement('div', {'data-testid': `grid-${props.gridId}`});
-    };
-});
+const boardTileAt = (tp, id, col, row = 0) => { tp[id] = {id, col, row, gridId: BOARD_GRID_ID, tmp: false, playerID: null}; };
+const handTileAt = (tp, id, col, row = 0) => { tp[id] = {id, col, row, gridId: HAND_GRID_ID, playerID: '0'}; };
+const colsOf = (G, ids) => ids.map(id => G.tilePositions[id].col);
+const sortedColsOf = (G, ids) => colsOf(G, ids).slice().sort((a, b) => a - b);
 
-const mockBuzz = jest.fn();
-const mockPlay = jest.fn();
-jest.mock('../rummikub/sound/sfx', () => ({
-    play: (...a) => mockPlay(...a), place: () => {}, milestone: () => {}, buzz: (...a) => mockBuzz(...a),
-}));
-jest.mock('../rummikub/juice/effects', () => ({
-    celebrateGroups: () => {}, burstAt: () => {}, kick: () => {}, flash: () => {}, floatText: () => {},
-}));
-jest.mock('../rummikub/components/ChatPanel', () => () => <div/>);
-
-import Board from '../rummikub/components/Board';
-import {buildTileObj} from '../rummikub/util';
-import {COLOR} from '../rummikub/constants';
-
-// Two contiguous hand tiles for player 0 — long-pressing handA and holding for two
-// ticks selects the pair (handA, then handB to its right; the run is right-only).
-const handA = buildTileObj(1, COLOR.red, 0);
-const handB = buildTileObj(2, COLOR.red, 0);
-
-const matchData = [
-    {id: 0, name: 'Alice', isConnected: true},
-    {id: 1, name: 'Bob', isConnected: true},
-];
-
-function makeMoves() {
-    return {moveTiles: jest.fn(), insertTilesWithPush: jest.fn(), clearRecentlyDrawnTiles: jest.fn()};
+// A match whose start state is `tilePositions`, driven so player 0 is current.
+// A spare tile is parked in player 1's hand so ending their turn (to pass the
+// turn to seat 0) doesn't empty their rack and trip checkGameOver.
+function playArrange(tilePositions) {
+    const tp = {...tilePositions};
+    const keep = buildTileObj(13, COLOR.black, 1);
+    tp[keep] = {id: keep, col: 0, row: 0, gridId: HAND_GRID_ID, playerID: '1'};
+    const game = makeMatch({tilePositions: tp, prevTilePositions: tp, firstMoveDone: [true, true]});
+    const spec = {game, multiplayer: Local()};
+    const c0 = Client({...spec, playerID: '0'});
+    const c1 = Client({...spec, playerID: '1'});
+    c0.start();
+    c1.start();
+    c0.events.endPhase(); // playersJoin -> play (opens on seat 1)
+    if (c0.getState().ctx.currentPlayer !== '0') c1.events.endTurn(); // hand the turn to seat 0
+    return c0;
 }
 
-function renderBoard(tilePositions) {
-    const moves = makeMoves();
-    const G = {
-        tilePositions,
-        tilesPool: [],
-        gameStateStack: [],
-        redoMoveStack: [],
-        recentlyDrawnTiles: [],
-        lastPlay: null,
-        timerExpireAt: null,
-        timePerTurn: 30,
-        handCounts: {'0': 14, '1': 14},
-        firstMoveDone: [true, true],
-    };
-    const ctx = {phase: 'play', currentPlayer: '0', numPlayers: 2, gameover: null};
-    render(
-        <Board
-            G={G}
-            ctx={ctx}
-            moves={moves}
-            playerID={'0'}
-            matchData={matchData}
-            matchID={'m1'}
-            events={{endPhase: jest.fn()}}
-            chatMessages={[]}
-            sendChatMessage={() => {}}
-            isConnected={true}
-        />
-    );
-    return moves;
+test('§10 #5: b7 k7 dropped to the right of 567 -> 567 _ {7s} (run kept, loose 7s on the drop side)', () => {
+    const tp = {};
+    [5, 6, 7].forEach((v, i) => boardTileAt(tp, r(v), i)); // committed run 5 6 7 at cols 0,1,2
+    const b7 = blue(7), k7 = black(7);
+    handTileAt(tp, b7, 0); handTileAt(tp, k7, 1);
+    const c0 = playArrange(tp);
+
+    c0.moves.insertTilesWithPush(3, 0, BOARD_GRID_ID, {id: b7}, [b7, k7]); // drop just right of the run
+
+    const {G} = c0.getState();
+    expect(colsOf(G, [r(5), r(6), r(7)])).toEqual([0, 1, 2]); // no full-valid solution -> Pass 2 keeps the run
+    expect(sortedColsOf(G, [b7, k7])).toEqual([4, 5]);        // same-value loose 7s together, past the gap
+});
+
+test('§10 #5b: b7 k7 dropped to the left of 567 -> {7s} _ 567 (loose 7s follow the drop side)', () => {
+    const tp = {};
+    [5, 6, 7].forEach((v, i) => boardTileAt(tp, r(v), 5 + i)); // run 5 6 7 at cols 5,6,7
+    const b7 = blue(7), k7 = black(7);
+    handTileAt(tp, b7, 0); handTileAt(tp, k7, 1);
+    const c0 = playArrange(tp);
+
+    c0.moves.insertTilesWithPush(3, 0, BOARD_GRID_ID, {id: b7}, [b7, k7]); // drop to the left
+
+    const {G} = c0.getState();
+    expect(colsOf(G, [r(5), r(6), r(7)])).toEqual([5, 6, 7]); // run intact
+    expect(sortedColsOf(G, [b7, k7])).toEqual([2, 3]);        // loose 7s on the left, one gap before the run
+});
+
+test('§10 #8: b6 o6 dropped right of the joker run 5 J 7 -> 5 J 7 _ {6s} (formed joker run protected)', () => {
+    const tp = {};
+    boardTileAt(tp, r(5), 0);
+    boardTileAt(tp, BlackJoker, 1); // settled joker representing red 6
+    boardTileAt(tp, r(7), 2);
+    const b6 = blue(6), o6 = orange(6);
+    handTileAt(tp, b6, 0); handTileAt(tp, o6, 1);
+    const c0 = playArrange(tp);
+
+    c0.moves.insertTilesWithPush(3, 0, BOARD_GRID_ID, {id: b6}, [b6, o6]);
+
+    const {G} = c0.getState();
+    expect(G.tilePositions[r(5)].col).toBe(0);
+    expect(G.tilePositions[BlackJoker].col).toBe(1); // joker stays inside its protected run
+    expect(G.tilePositions[r(7)].col).toBe(2);
+    expect(sortedColsOf(G, [b6, o6])).toEqual([4, 5]); // loose 6s on the drop side
+});
+
+test('§10 #10: an unrelated b2 dropped beside k7 -> k7 _ b2 (unrelated loose tiles stay gap-separated)', () => {
+    const tp = {};
+    const k7 = black(7), b2 = blue(2);
+    boardTileAt(tp, k7, 5); // a single loose tile on the board
+    handTileAt(tp, b2, 0);
+    const c0 = playArrange(tp);
+
+    c0.moves.insertTilesWithPush(6, 0, BOARD_GRID_ID, {id: b2}, [b2]); // drop right next to it
+
+    const {G} = c0.getState();
+    // Different value and colour -> not related -> exactly one empty column between them.
+    expect(Math.abs(G.tilePositions[k7].col - G.tilePositions[b2].col)).toBe(2);
+});
+
+// =============================================================================
+// Client routing (pure resolveDropDispatch). The path that reaches the move
+// above: the board routes to push, the hand still snaps.
+// =============================================================================
+
+const boardTile = (id, col, row) => ({id, col, row, gridId: BOARD_GRID_ID, tmp: false, playerID: null});
+const handTile = (id, col, row) => ({id, col, row, gridId: HAND_GRID_ID, playerID: '0', tmp: false});
+
+function dispatch(overrides) {
+    return resolveDropDispatch({
+        playerID: '0', boardCols: BOARD_COLS, handCols: HAND_COLS, allowJokerSwap: true, ...overrides,
+    });
 }
 
-// A committed board tile sitting at (col,row).
-function boardTile(id, col, row) {
-    return {id, col, row, gridId: 'b', playerID: null, tmp: false};
-}
-// A hand tile for player 0 at (col,row).
-function handTile(id, col, row) {
-    return {id, col, row, gridId: 'h', playerID: '0'};
-}
-
-beforeEach(() => {
-    mockBuzz.mockClear();
-    mockPlay.mockClear();
+test('an in-bounds board drop routes to {kind:push} -> insertTilesWithPush (no client-side geometry)', () => {
+    const a = blue(7), b = black(7);
+    const tp = {[a]: handTile(a, 0, 0), [b]: handTile(b, 1, 0), 9001: boardTile(9001, 5, 0)};
+    const d = dispatch({tilePositions: tp, target: {gridId: BOARD_GRID_ID, col: 5, row: 0}, primaryId: a, selection: [a, b]});
+    expect(d.kind).toBe('push');
+    expect(d.args[0]).toBe(5);             // target col forwarded to the move
+    expect(d.args[1]).toBe(0);             // row
+    expect(d.args[2]).toBe(BOARD_GRID_ID); // destGridId 'b'
+    expect(d.args[3]).toEqual({id: a});    // tileIdObj
+    expect(d.args[4]).toEqual([a, b]);     // ordered selection
 });
 
-test('board drop onto an OCCUPIED run routes to insertTilesWithPush with the snapped args', () => {
-    // Two hand tiles selected (long-press the pair); the board has a committed tile
-    // at col 5, row 0. Dropping the pair so its run starts on col 5 hits that tile.
-    const tilePositions = {
-        [handA]: handTile(handA, 0, 0),
-        [handB]: handTile(handB, 1, 0),
-        [9001]: boardTile(9001, 5, 0),
-    };
-    const moves = renderBoard(tilePositions);
-
-    act(() => { mockGrid['b'].onLongPress(handA, 2); }); // 2 ticks: pick up handA + handB
-    act(() => { mockDnd.onDragEnd({active: {id: handA}, over: {id: 'b:5:0'}}); });
-
-    expect(moves.insertTilesWithPush).toHaveBeenCalledTimes(1);
-    const a = moves.insertTilesWithPush.mock.calls[0];
-    expect(a[0]).toBe(5);            // target col T
-    expect(a[1]).toBe(0);            // row
-    expect(a[2]).toBe('b');          // destGridId
-    expect(String(a[3].id)).toBe(String(handA)); // tileIdObj
-    expect(a[4].map(String)).toEqual([String(handA), String(handB)]); // ordered selection
-    expect(moves.moveTiles).not.toHaveBeenCalled();
-    expect(mockBuzz).not.toHaveBeenCalled();
-    expect(mockPlay).toHaveBeenCalledWith('place');
-});
-
-test('board drop onto a FREE target routes to moveTiles, not insertTilesWithPush', () => {
-    const tilePositions = {[handA]: handTile(handA, 0, 0)};
-    const moves = renderBoard(tilePositions);
-
-    act(() => { mockDnd.onDragEnd({active: {id: handA}, over: {id: 'b:3:0'}}); });
-
-    expect(moves.moveTiles).toHaveBeenCalledTimes(1);
-    expect(moves.moveTiles.mock.calls[0][0]).toBe(3); // snapped col
-    expect(moves.moveTiles.mock.calls[0][1]).toBe(0); // row
-    expect(moves.moveTiles.mock.calls[0][2]).toBe('b');
-    expect(moves.insertTilesWithPush).not.toHaveBeenCalled();
-    expect(mockBuzz).not.toHaveBeenCalled();
-});
-
-test('an OUT-OF-BOUNDS board drop (T+N>32) stays on the resolveDropSlot/moveTiles near-edge snap', () => {
-    // A 2-tile run dropped at col 31 would overflow (31+2 > 32). The row is free,
-    // so the existing path snaps it to the nearest legal run, NOT push and NOT reject.
-    const tilePositions = {
-        [handA]: handTile(handA, 0, 0),
-        [handB]: handTile(handB, 1, 0),
-    };
-    const moves = renderBoard(tilePositions);
-
-    act(() => { mockGrid['b'].onLongPress(handA, 2); }); // 2 ticks: pick up handA + handB
-    act(() => { mockDnd.onDragEnd({active: {id: handA}, over: {id: 'b:31:0'}}); });
-
-    expect(moves.moveTiles).toHaveBeenCalledTimes(1);
-    expect(moves.moveTiles.mock.calls[0][0]).toBe(30); // snapped back to 30,31
-    expect(moves.insertTilesWithPush).not.toHaveBeenCalled();
-    expect(mockBuzz).not.toHaveBeenCalled();
-});
-
-test('an occupied board drop whose push has no room (insertWithPush -> null) buzzes and sends no move', () => {
-    // Fill board row 0 completely so the colliding run can shift neither way.
-    const tilePositions = {[handA]: handTile(handA, 0, 1)};
-    for (let c = 0; c < 32; c++) tilePositions[1000 + c] = boardTile(1000 + c, c, 0);
-    const moves = renderBoard(tilePositions);
-
-    act(() => { mockDnd.onDragEnd({active: {id: handA}, over: {id: 'b:5:0'}}); });
-
-    expect(mockBuzz).toHaveBeenCalled();
-    expect(moves.insertTilesWithPush).not.toHaveBeenCalled();
-    expect(moves.moveTiles).not.toHaveBeenCalled();
-});
-
-test('a hand-row drop keeps moveTiles even when the target cell is occupied', () => {
-    // The guard is gridId === 'b'; a hand target whose run is occupied must NOT push.
-    const tilePositions = {
-        [handA]: handTile(handA, 5, 0), // dragged tile
-        [handB]: handTile(handB, 1, 0), // occupies the tapped/dropped target cell
-    };
-    const moves = renderBoard(tilePositions);
-
-    act(() => { mockDnd.onDragEnd({active: {id: handA}, over: {id: 'h:1:0'}}); });
-
-    expect(moves.moveTiles).toHaveBeenCalledTimes(1);
-    expect(moves.moveTiles.mock.calls[0][2]).toBe('h');
-    expect(moves.insertTilesWithPush).not.toHaveBeenCalled();
-});
-
-test('onCellTap on a free cell whose run overlaps an occupied neighbour routes to insertTilesWithPush', () => {
-    // The tapped cell (col 5) is empty but the 2-wide run overlaps a committed tile
-    // at col 6 — the same occupied-run split applies to tap placement.
-    const tilePositions = {
-        [handA]: handTile(handA, 0, 0),
-        [handB]: handTile(handB, 1, 0),
-        [9002]: boardTile(9002, 6, 0),
-    };
-    const moves = renderBoard(tilePositions);
-
-    act(() => { mockGrid['b'].onLongPress(handA, 2); }); // 2 ticks: pick up handA + handB
-    act(() => { mockGrid['b'].onCellTap('b', 5, 0); });
-
-    expect(moves.insertTilesWithPush).toHaveBeenCalledTimes(1);
-    const a = moves.insertTilesWithPush.mock.calls[0];
-    expect(a[0]).toBe(5);
-    expect(a[1]).toBe(0);
-    expect(a[2]).toBe('b');
-    expect(a[4].map(String)).toEqual([String(handA), String(handB)]);
-    expect(moves.moveTiles).not.toHaveBeenCalled();
-    expect(mockBuzz).not.toHaveBeenCalled();
-    expect(mockPlay).toHaveBeenCalledWith('place');
-});
-
-test('onCellTap on a fully free board run routes to moveTiles, not insertTilesWithPush', () => {
-    const tilePositions = {
-        [handA]: handTile(handA, 0, 0),
-        [handB]: handTile(handB, 1, 0),
-    };
-    const moves = renderBoard(tilePositions);
-
-    act(() => { mockGrid['b'].onLongPress(handA, 2); }); // 2 ticks: pick up handA + handB
-    act(() => { mockGrid['b'].onCellTap('b', 3, 0); });
-
-    expect(moves.moveTiles).toHaveBeenCalledTimes(1);
-    expect(moves.moveTiles.mock.calls[0][0]).toBe(3);
-    expect(moves.insertTilesWithPush).not.toHaveBeenCalled();
-    expect(mockBuzz).not.toHaveBeenCalled();
+test('a hand-row drop still routes to {kind:snap} -> moveTiles (the hand never pushes)', () => {
+    const a = blue(7);
+    const tp = {[a]: handTile(a, 5, 0)};
+    const d = dispatch({tilePositions: tp, target: {gridId: HAND_GRID_ID, col: 1, row: 0}, primaryId: a, selection: [a]});
+    expect(d.kind).toBe('snap');
+    expect(d.args[2]).toBe(HAND_GRID_ID);
+    expect(d.args[3]).toEqual({id: a});
 });

@@ -1,15 +1,163 @@
 import {makeMatch} from "./__helpers__/makeMatch";
 import {Client} from 'boardgame.io/client';
-import {getTiles} from "../rummikub/util";
-import {BOARD_GRID_ID, HAND_GRID_ID} from "../rummikub/constants";
+import {getTiles, buildTileObj, RedJoker} from "../rummikub/util";
+import {arrangeBoard} from "../rummikub/arrange/index";
+import {BOARD_GRID_ID, HAND_GRID_ID, COLOR} from "../rummikub/constants";
 import {Local} from "boardgame.io/multiplayer";
 import _ from "lodash";
 
-// Reducer-level tests for the authoritative insert-with-push move. Geometry only:
-// the move never validates tile numbers/colors, so the ids below are arbitrary but
-// distinct. Board row 2 starts as `[L L L _ 7 7 7]` at cols 0,1,2,_,4,5,6; dropping
-// two tiles at col 3 must ripple the three "7"s right to 5,6,7 and seat the dragged
-// pair at 3,4. Both seats get a symmetric two-tile hand so the test works whichever
+// =============================================================================
+// Semantic reflow (§10 worked examples). insertTilesWithPush now WRITES the
+// dragged tiles then hands the post-drop board to the pure arrangeBoard engine,
+// which reflows the cluster the drop landed in toward valid blocks (auto-snap,
+// separate, sort) — server-authoritative, semantic, not geometric. These tests
+// drive the move through a real boardgame.io Client+Local() harness and assert
+// the §10 outcomes (the spec's test oracle). The old geometric-cascade /
+// atomic-overlap / out-of-range / geometric-undo tests asserted the behaviour
+// THIS engine deliberately replaced and are gone.
+// =============================================================================
+
+const r = (v, variant = 0) => buildTileObj(v, COLOR.red, variant);
+const boardTileAt = (tp, id, col, row = 0) => { tp[id] = {id, col, row, gridId: BOARD_GRID_ID, tmp: false, playerID: null}; };
+const handTileAt = (tp, id, col, row = 0) => { tp[id] = {id, col, row, gridId: HAND_GRID_ID, playerID: '0'}; };
+const colsOf = (G, ids) => ids.map(id => G.tilePositions[id].col);
+const sortedColsOf = (G, ids) => colsOf(G, ids).slice().sort((a, b) => a - b);
+
+// A match whose start state is `tilePositions`, driven so player 0 is current.
+// A spare tile is parked in player 1's hand so ending their turn (to pass the
+// turn to seat 0) doesn't empty their rack and trip checkGameOver.
+function playArrange(tilePositions) {
+    const tp = {...tilePositions};
+    const keep = buildTileObj(13, COLOR.black, 1);
+    tp[keep] = {id: keep, col: 0, row: 0, gridId: HAND_GRID_ID, playerID: '1'};
+    const game = makeMatch({tilePositions: tp, prevTilePositions: tp, firstMoveDone: [true, true]});
+    const spec = {game, multiplayer: Local()};
+    const c0 = Client({...spec, playerID: '0'});
+    const c1 = Client({...spec, playerID: '1'});
+    c0.start();
+    c1.start();
+    c0.events.endPhase(); // playersJoin -> play (opens on seat 1)
+    if (c0.getState().ctx.currentPlayer !== '0') c1.events.endTurn(); // hand the turn to seat 0
+    return c0;
+}
+
+test('§10 #1: r1..r5 + a duplicate r3 reflows to 123 _ 345 (two valid runs, one-gap split)', () => {
+    const tp = {};
+    [1, 2, 3, 4, 5].forEach((v, i) => boardTileAt(tp, r(v), i));
+    const dup = r(3, 1);
+    handTileAt(tp, dup, 0);
+    const c0 = playArrange(tp);
+
+    c0.moves.insertTilesWithPush(5, 0, BOARD_GRID_ID, {id: dup}, [dup]);
+
+    const {G} = c0.getState();
+    // 1 2 3 _ 3 4 5 : the six tiles occupy 0,1,2,4,5,6 with col 3 the separator.
+    expect(sortedColsOf(G, [r(1), r(2), r(3), dup, r(4), r(5)])).toEqual([0, 1, 2, 4, 5, 6]);
+});
+
+test('§10 #2: a 789 run dropped next to a committed 123 reflows to 123 _ 789', () => {
+    const tp = {};
+    [1, 2, 3].forEach((v, i) => boardTileAt(tp, r(v), i));
+    const d7 = r(7), d8 = r(8), d9 = r(9);
+    handTileAt(tp, d7, 0); handTileAt(tp, d8, 1); handTileAt(tp, d9, 2);
+    const c0 = playArrange(tp);
+
+    c0.moves.insertTilesWithPush(3, 0, BOARD_GRID_ID, {id: d7}, [d7, d8, d9]);
+
+    const {G} = c0.getState();
+    expect(colsOf(G, [r(1), r(2), r(3)])).toEqual([0, 1, 2]); // 123 stays put
+    expect(colsOf(G, [d7, d8, d9])).toEqual([4, 5, 6]);       // 789 seated past the gap
+});
+
+test('§10 #3: r4 dropped into the single gap of 123 _ 567 bridges to one contiguous 7-run', () => {
+    const tp = {};
+    [1, 2, 3].forEach((v, i) => boardTileAt(tp, r(v), i));
+    [5, 6, 7].forEach((v, i) => boardTileAt(tp, r(v), 4 + i));
+    const d4 = r(4);
+    handTileAt(tp, d4, 0);
+    const c0 = playArrange(tp);
+
+    c0.moves.insertTilesWithPush(3, 0, BOARD_GRID_ID, {id: d4}, [d4]);
+
+    const {G} = c0.getState();
+    expect(sortedColsOf(G, [r(1), r(2), r(3), d4, r(5), r(6), r(7)])).toEqual([0, 1, 2, 3, 4, 5, 6]);
+});
+
+test('§10 #7: a joker dropped onto 567 forms a contiguous 4-run (either end of the run)', () => {
+    const tp = {};
+    [5, 6, 7].forEach((v, i) => boardTileAt(tp, r(v), i));
+    handTileAt(tp, RedJoker, 0);
+    const c0 = playArrange(tp);
+
+    c0.moves.insertTilesWithPush(3, 0, BOARD_GRID_ID, {id: RedJoker}, [RedJoker]);
+
+    const {G} = c0.getState();
+    // The solver may seat the joker on either end; assert contiguity only.
+    expect(sortedColsOf(G, [r(5), r(6), r(7), RedJoker])).toEqual([0, 1, 2, 3]);
+});
+
+test('§10 #7b: a joker dropped into the gap of r5 _ r7 fills the hole -> r5 J r7', () => {
+    const tp = {};
+    boardTileAt(tp, r(5), 0);
+    boardTileAt(tp, r(7), 2);
+    handTileAt(tp, RedJoker, 0);
+    const c0 = playArrange(tp);
+
+    c0.moves.insertTilesWithPush(1, 0, BOARD_GRID_ID, {id: RedJoker}, [RedJoker]);
+
+    const {G} = c0.getState();
+    expect(G.tilePositions[r(5)].col).toBe(0);
+    expect(G.tilePositions[RedJoker].col).toBe(1);
+    expect(G.tilePositions[r(7)].col).toBe(2);
+});
+
+test('§10 #11: a source cluster of r5 r7 (after r6 is dragged out) re-tidies to 2 gap-separated loose tiles', () => {
+    // §10 #11 is a SOURCE re-tidy: dragging r6 out of r5 r6 r7 leaves r5 and r7,
+    // which cannot form a run, so they settle as two loose tiles one gap apart.
+    // No move wires source re-tidy today (drag-out is moveTiles, which does not
+    // re-arrange), so this pins the engine outcome directly via arrangeBoard.
+    const tp = {};
+    boardTileAt(tp, r(5), 5);
+    boardTileAt(tp, r(7), 7);
+
+    const out = arrangeBoard(tp, {droppedIds: [r(5)], row: 0, col: 5});
+
+    expect(out.ok).toBe(true);
+    expect(Math.abs(out.placements[r(5)].col - out.placements[r(7)].col)).toBe(2);
+});
+
+test('a single undo reverts the WHOLE insert-with-push reflow (one snapshot)', () => {
+    const tp = {};
+    [1, 2, 3].forEach((v, i) => boardTileAt(tp, r(v), i));
+    const d7 = r(7), d8 = r(8), d9 = r(9);
+    handTileAt(tp, d7, 0); handTileAt(tp, d8, 1); handTileAt(tp, d9, 2);
+    const c0 = playArrange(tp);
+
+    c0.moves.insertTilesWithPush(3, 0, BOARD_GRID_ID, {id: d7}, [d7, d8, d9]);
+    // The move reflowed (123 _ 789) and pushed exactly one undo snapshot.
+    expect(c0.getState().G.tilePositions[d7].gridId).toBe(BOARD_GRID_ID);
+    expect(c0.getState().G.gameStateStack.length).toBe(1);
+
+    c0.moves.undo();
+
+    const {G} = c0.getState();
+    // One undo restores the entire pre-drop arrangement in a single step.
+    expect(colsOf(G, [r(1), r(2), r(3)])).toEqual([0, 1, 2]);
+    [d7, d8, d9].forEach(id => expect(G.tilePositions[id].gridId).toBe(HAND_GRID_ID));
+    expect(G.gameStateStack.length).toBe(0);
+    const tmpOnBoard = Object.values(G.tilePositions).filter(p => p && p.gridId === BOARD_GRID_ID && p.tmp);
+    expect(tmpOnBoard.length).toBe(0);
+});
+
+// =============================================================================
+// Move guards (reducer-level). These pin the authoritative move's ownership /
+// turn / phase / destination checks, which sit BEFORE the engine and are
+// unaffected by the semantic reflow above.
+// =============================================================================
+
+// Reducer-level fixture for the move's guard tests below. The move never
+// validates tile numbers/colors, so the ids here are arbitrary but distinct.
+// Both seats get a symmetric two-tile hand so the guard tests work whichever
 // seat boardgame.io makes current.
 function buildPositions() {
     const board = (id, col) => ({id, col, row: 2, gridId: BOARD_GRID_ID, tmp: false, playerID: null});
@@ -62,71 +210,6 @@ function startPlay(matchID, fullView = false) {
     const oppSeat = current === "0" ? "1" : "0";
     return {c0, c1, current, cur, other, curDrop, oppHand, oppSeat};
 }
-
-test('insertTilesWithPush cascades the colliding run right and seats the dragged pair as tmp', () => {
-    const {cur, curDrop} = startPlay('m-itwp-cascade');
-
-    cur.moves.insertTilesWithPush(3, 2, BOARD_GRID_ID, {id: curDrop[0]}, curDrop);
-
-    const {G} = cur.getState();
-    // Dragged pair -> board tmp tiles at newCols [3,4], ownership cleared (public tmp).
-    expect(G.tilePositions[curDrop[0]]).toEqual({id: curDrop[0], col: 3, row: 2, gridId: BOARD_GRID_ID, tmp: true, playerID: null});
-    expect(G.tilePositions[curDrop[1]]).toEqual({id: curDrop[1], col: 4, row: 2, gridId: BOARD_GRID_ID, tmp: true, playerID: null});
-    // The three 7s shifted right by one; col is the ONLY field that changed.
-    expect(G.tilePositions[207]).toEqual({id: 207, col: 5, row: 2, gridId: BOARD_GRID_ID, tmp: false, playerID: null});
-    expect(G.tilePositions[208]).toEqual({id: 208, col: 6, row: 2, gridId: BOARD_GRID_ID, tmp: false, playerID: null});
-    expect(G.tilePositions[209]).toEqual({id: 209, col: 7, row: 2, gridId: BOARD_GRID_ID, tmp: false, playerID: null});
-    // Left block untouched.
-    expect(G.tilePositions[201].col).toBe(0);
-    expect(G.tilePositions[203].col).toBe(2);
-});
-
-test('insertTilesWithPush is atomic: a dragged tile may land on a column occupied before the shift', () => {
-    const {cur, curDrop} = startPlay('m-itwp-atomic');
-    // 7a sits at col4 BEFORE the move and the dragged pair targets [3,4]; a naive
-    // "reject on overlap" would refuse. Applied in one reducer pass, 7a slides to col5
-    // and the dragged tile takes col4.
-    expect(cur.getState().G.tilePositions[207].col).toBe(4);
-
-    cur.moves.insertTilesWithPush(3, 2, BOARD_GRID_ID, {id: curDrop[0]}, curDrop);
-
-    const {G} = cur.getState();
-    expect(G.tilePositions[curDrop[1]].col).toBe(4); // dragged tile took the formerly-occupied col
-    expect(G.tilePositions[207].col).toBe(5);        // 7a moved out of the way in the same move
-    const cols = Object.values(G.tilePositions)
-        .filter(p => p && p.gridId === BOARD_GRID_ID && p.row === 2)
-        .map(p => p.col);
-    expect(new Set(cols).size).toBe(cols.length); // no two row-2 tiles share a column
-    expect(cols.slice().sort((a, b) => a - b)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
-});
-
-test('insertTilesWithPush with an out-of-range plan is INVALID_MOVE and leaves G unchanged', () => {
-    const {cur, curDrop} = startPlay('m-itwp-null');
-    const before = _.cloneDeep(cur.getState().G);
-    // T=31,N=2 -> T+N-1=32 > maxCol(31): insertWithPush returns null, move rejects.
-    cur.moves.insertTilesWithPush(31, 2, BOARD_GRID_ID, {id: curDrop[0]}, curDrop);
-    expect(cur.getState().G).toEqual(before);
-});
-
-test('a single undo reverts the whole insert-with-push (run back + dragged tiles back in hand)', () => {
-    const {cur, current, curDrop} = startPlay('m-itwp-undo');
-    cur.moves.insertTilesWithPush(3, 2, BOARD_GRID_ID, {id: curDrop[0]}, curDrop);
-    expect(cur.getState().G.tilePositions[207].col).toBe(5); // sanity: push happened
-
-    cur.moves.undo();
-
-    const {G} = cur.getState();
-    // Run restored to 4,5,6.
-    expect(G.tilePositions[207].col).toBe(4);
-    expect(G.tilePositions[208].col).toBe(5);
-    expect(G.tilePositions[209].col).toBe(6);
-    // Dragged tiles back in the current seat's hand (read from the owner's view).
-    expect(G.tilePositions[curDrop[0]]).toEqual({id: curDrop[0], col: 0, row: 0, gridId: HAND_GRID_ID, playerID: current, tmp: false});
-    expect(G.tilePositions[curDrop[1]]).toEqual({id: curDrop[1], col: 1, row: 0, gridId: HAND_GRID_ID, playerID: current, tmp: false});
-    // No tmp tile left on the board.
-    const tmpOnBoard = Object.values(G.tilePositions).filter(p => p && p.gridId === BOARD_GRID_ID && p.tmp);
-    expect(tmpOnBoard.length).toBe(0);
-});
 
 test('insertTilesWithPush from a non-current player is INVALID_MOVE and does not advance the turn', () => {
     const {cur, other, current, oppHand} = startPlay('m-itwp-noncurrent');

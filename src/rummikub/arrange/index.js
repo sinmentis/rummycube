@@ -14,8 +14,8 @@ export function arrangeBoard(tilePositions, drop) {
 
     const part = partitionCluster(cluster.tiles, cluster.preDropValidBlocks);
     const dropSide = col <= cluster.span.left ? "left" : "right";
-    const window = freeWindow(tilePositions, row, cluster.tiles, cluster.span);
-    const laid = layoutCluster(part, dropSide, cluster.span, window);
+    const bounds = freeWindow(tilePositions, row, cluster.tiles, cluster.span);
+    const laid = layoutCluster(part, dropSide, cluster.span, bounds);
     if (laid.reject) return {placements: {}, ok: false};
 
     const placements = {};

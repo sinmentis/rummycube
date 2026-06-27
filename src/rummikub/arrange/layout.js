@@ -5,20 +5,20 @@ import {getTileValue, getTileColor, isJoker} from "../tile/codec.js";
 // separated by one empty column. Leftover keeps >=1 gap from blocks; related
 // loose tiles (same value, or same colour & adjacent value) stay together,
 // unrelated ones are gap-separated. Leftover units sit on the `dropSide`. The
-// run of units is anchored to `span` on the drop side and clamped into `window`
+// run of units is anchored to `span` on the drop side and clamped into `bounds`
 // (the columns the cluster may occupy without touching a non-cluster tile);
-// overflowing the window rejects (never moves a non-cluster tile).
-export function layoutCluster({blocks, leftover}, dropSide, span, window) {
+// overflowing the bounds rejects (never moves a non-cluster tile).
+export function layoutCluster({blocks, leftover}, dropSide, span, bounds) {
     const orderedBlocks = blocks.slice().sort((a, b) => minVal(a) - minVal(b));
     const groups = groupLeftover(leftover);
     const units = dropSide === "left" ? [...groups, ...orderedBlocks] : [...orderedBlocks, ...groups];
     if (!units.length) return {cols: {}};
 
     const width = units.reduce((s, u) => s + u.length, 0) + (units.length - 1);
-    if (width > window.right - window.left + 1) return {reject: true};
+    if (width > bounds.right - bounds.left + 1) return {reject: true};
 
     let start = dropSide === "left" ? span.right - width + 1 : span.left;
-    start = Math.max(window.left, Math.min(start, window.right - width + 1)); // clamp into window
+    start = Math.max(bounds.left, Math.min(start, bounds.right - width + 1)); // clamp into bounds
     const cols = {};
     let c = start;
     for (const unit of units) { for (const id of unit) cols[id] = c++; c++; /* one gap */ }
