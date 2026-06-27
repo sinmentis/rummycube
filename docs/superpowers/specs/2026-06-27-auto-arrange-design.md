@@ -1,122 +1,122 @@
-# Auto-Arrange Engine — Design Spec
+# 牌桌自动整理引擎 — 设计文档
 
-**Date:** 2026-06-27
-**Status:** Approved (design), pending implementation plan
-**Scope:** Step 1 of 2. This spec is the **validity-aware auto-arrange engine** (server-authoritative). Step 2 (separate spec, after this lands) is the **no-scroll responsive fit** — shrink the board so every tile is visible without scrolling.
+**日期:** 2026-06-27
+**状态:** 设计已确认,待写实现计划
+**范围:** 两步中的第一步。本文档是 **validity-aware 自动整理引擎**(服务端权威)。第二步(引擎落地后单独写)是 **不滚动自适应** —— 把牌桌缩放到一屏,所有牌都看得见、永不滚动。
 
-## Goal
+## 目标
 
-Make the board organize itself. When a player drops tile(s), the affected region reflows **toward a valid layout**: tiles that can connect into a valid run/group snap together; a junction that would be invalid is held apart by a gap; a connectable block is re-ordered for the player. The player never spends time tidying the table — the system does it, while never destroying a set the player already built.
+让牌桌自己整理。玩家落牌时,受影响的区域朝 **合法方向** 重排:能连成合法 run/group 的牌自动吸附;接上会变非法的接缝用空格隔开;能连起来的块自动排好序。玩家不再花时间整理桌面 —— 系统代劳,且 **绝不拆掉玩家已经摆好的组**。
 
-## Background — the current model and the bug
+## 背景 —— 现有模型与 bug
 
-The board is a grid of `BOARD_ROWS = 9` × `BOARD_COLS = 32` cells. Within a **row**, a maximal run of **contiguous occupied columns** is a *sequence*; a gap (≥1 empty column) breaks one sequence from the next (`extractSeqs`, moveValidation.js:25). A sequence is **valid** when it is a **run** (same colour, consecutive values, length ≥3; one `13→1` wrap is allowed, with `1` at the end — `countSeqScore`, tile/sequence.js:171) or a **group** (same value, distinct colours, length ≥3). Jokers are wild and validated in place (`isSequenceValid` / `freezeSeqJokers`). Mid-game the board may be invalid; only **submit** validates the whole board.
+牌桌是 `BOARD_ROWS = 9` × `BOARD_COLS = 32` 的格子。在**一行**内,**连续占用的列**构成一个 *序列(sequence)*;空格(≥1 个空列)把前后两个序列隔开(`extractSeqs`,moveValidation.js:25)。序列**合法**的条件:是一条 **run**(同色、连续点数、长度 ≥3;允许一次 `13→1` 绕回,且 `1` 在末尾 —— `countSeqScore`,tile/sequence.js:171),或一个 **group**(同点数、不同色、长度 ≥3)。joker 是通配,就地校验(`isSequenceValid` / `freezeSeqJokers`)。中盘牌桌可以非法,只有 **submit** 才校验整桌。
 
-Today, dropping tiles routes through `resolveDropDispatch` → `insertWithPush` (insertPush.js), which is **purely geometric**: it ripples colliding tiles aside and re-opens separators by **position only** — it never reads numbers or colours. So the board never moves *toward validity*; the player still rearranges by hand. The owner's verdict: this push "has no practical value." This spec replaces that geometric push with a **semantic** engine.
+现状:落牌走 `resolveDropDispatch` → `insertWithPush`(insertPush.js),这套是**纯几何**的:只按**位置**把碰撞的牌挤开、重开分隔 —— 从不读点数或颜色。所以牌桌永远不会**朝合法方向**移动,玩家还得手动整理。owner 的评价:这个 push「没有实际使用价值」。本文档用一个**语义化**引擎取代它。
 
-## The two triggers (the system intervenes only here)
+## 两个触发点(系统只在这里介入)
 
-The player keeps **free positioning**. The engine acts only when:
+玩家保留**自由摆位**。引擎只在以下两种情况动作:
 
-1. **Snap / tidy on drop** — a drop reflows the **cluster** it lands in (defined below). Rows and blocks the player did not touch stay exactly where the player put them.
-2. **Space pressure** — if a reflow needs more room than its row has, intact sets are moved to make room (slide → relocate across rows → reject), described in §6.4.
+1. **落牌时的吸附/整理** —— 一次落牌只重排它落入的那个 **簇(cluster)**(定义见下)。玩家没碰过的行和块,停在玩家放的地方不动。
+2. **空间不够** —— 如果重排需要的地方超出本行所有,就移动完整的组来腾地方(横向平移 → 跨行搬家 → 拒绝),见 §6.4。
 
-There is **no proactive centering or compaction**. A set on row 2 and a set on row 9 both stay put when there is room. "Centering" exists only as a tie-break **direction** when a forced relocation must choose a row (§6.4).
+**没有常驻的居中或紧凑化**。一组放第 2 行、一组放第 9 行,只要放得下就各待原地。「居中」只在被迫搬家、必须选一行落脚时,作为**方向**的平手偏好存在(§6.4)。
 
-## Definitions
+## 术语定义
 
-- **Cluster** — given a drop at `(row, col)`, the maximal set of tiles in `row` reachable from the dropped tiles across gaps of **≤1 empty column**. Tiles separated by **≥2 empty columns** are a different region and are never read or moved by this drop.
-- **Pre-drop valid block** — a contiguous sequence inside the cluster that was already a valid run/group **before** this drop.
-- **Leftover** — cluster tiles the solver could not place in a valid block (allowed mid-game).
+- **簇 (cluster)** —— 给定一次落点 `(row, col)`,从落下的牌出发、在 `row` 内跨 **≤1 个空列** 的间隙能连到的最大一组牌。隔着 **≥2 个空列** 的牌属于另一个区域,这次落牌既不读取也不移动它们。
+- **落前合法块 (pre-drop valid block)** —— 簇内在本次落牌**之前**就已经是合法 run/group 的连续序列。
+- **散牌 (leftover)** —— 求解器无法塞进任何合法块的簇内牌(中盘允许存在)。
 
-## §6 The arrange algorithm
+## §6 整理算法
 
-`arrangeBoard(tilePositions, drop) → { placements, ok }`, where `drop = { droppedIds, row, col }`. `placements` maps each affected `tileId → { gridId:'b', row, col }`; `ok:false` means **reject** (the move becomes `INVALID_MOVE`, a non-destructive snap-back). The function is **pure** and **deterministic** (same inputs → same output) so the boardgame.io client (optimistic) and server (authoritative) agree.
+`arrangeBoard(tilePositions, drop) → { placements, ok }`,其中 `drop = { droppedIds, row, col }`。`placements` 把每个受影响的 `tileId` 映射到 `{ gridId:'b', row, col }`;`ok:false` 表示**拒绝**(该 move 变成 `INVALID_MOVE`,非破坏性弹回)。本函数是**纯函数**且**确定性**的(相同输入 → 相同输出),这样 boardgame.io 的客户端(乐观执行)与服务端(权威执行)结果一致。
 
-### §6.1 Cluster identification
-From the dropped tiles' landing columns in `row`, expand left and right across ≤1-gap hops to collect the cluster's tiles and record which contiguous sub-runs were **pre-drop valid blocks**.
+### §6.1 识别簇
+从落下的牌在 `row` 中的落点列出发,向左右跨 ≤1 空格逐跳收集簇内的牌,并记录其中哪些连续子段是**落前合法块**。
 
-### §6.2 The partition solver (the core)
-Find how to split the cluster's tiles into valid blocks. **Two passes** encode the owner's iron rule — *break an existing set only if everything ends up valid*:
+### §6.2 切分求解器(核心)
+把簇内的牌切分成若干合法块。**两遍法**精确编码 owner 的铁律 —— *只有最终全部合法,才允许拆既有组*:
 
-- **Pass 1 — all-valid.** Search for a partition of the **whole** cluster into valid blocks with **zero leftover**. If one or more exist, pick the best (see objective) and use it. Reaching all-valid is the *only* licence to reorder/split/merge/break a pre-drop valid block.
-- **Pass 2 — preserve (no all-valid exists).** Keep every pre-drop valid block intact (it may be **extended** by adjacent dropped tiles if it stays valid — e.g. `r5 r6 r7` + `r4` → `r4 r5 r6 r7`, but never destroyed). Arrange the remaining tiles (dropped + any pre-drop leftover) into the best valid blocks; whatever still doesn't fit a block is **leftover**.
+- **Pass 1 —— 全合法。** 搜索把**整个簇**切成若干合法块、**零散牌**的方案。只要存在一个或多个,就选最优的用(目标见下)。**达成全合法是唯一允许重排/拆分/合并/破坏落前合法块的许可。**
+- **Pass 2 —— 保留(不存在全合法时)。** 保持每个落前合法块不变(它**可以被相邻落下的牌延长**,只要延长后仍合法 —— 例如 `r5 r6 r7` + `r4` → `r4 r5 r6 r7`,但绝不被拆毁)。把其余的牌(落下的 + 任何落前散牌)排成尽量好的合法块;仍塞不进块的就是**散牌**。
 
-**Objective (tie-breaks, in order):** (1) maximise coverage (fewest leftover tiles); (2) fewest blocks (longest runs/groups); (3) **stability** — fewest tiles moved from their current columns / most pre-drop block boundaries preserved (least visual churn). Ties resolve deterministically by a fixed tile ordering.
+**目标(平手依次比较):** (1) 覆盖最多(散牌最少);(2) 块数最少(run/group 最长);(3) **稳定性** —— 移动的牌最少 / 保留最多落前块边界(视觉抖动最小)。仍平手则按固定的牌排序确定性决出。
 
-**Jokers** are ordinary wild tiles to the solver — candidate blocks are validated with `isSequenceValid` (which already freezes jokers to their represented value). The "settled joker is protected" behaviour falls out of Pass 2 (a not-all-valid cluster keeps its existing valid block, joker included).
+**joker** 对求解器就是普通通配牌 —— 候选块用 `isSequenceValid` 校验(它已会把 joker 冻结成其代表值)。「桌上已成型的 joker 受保护」这一行为自然从 Pass 2 得出(拼不出全合法的簇会保留它的既有合法块,joker 在内)。
 
-**Bound + fallback.** The search is a memoised DFS over the cluster's tile multiset (only forming a block that includes the smallest uncovered tile, pruning by remaining multiset). A row's cluster is small (≤ a row's worth, realistically ≤14), so this is tractable. For a pathological cluster (> 20 tiles, effectively never) fall back to the existing greedy `tryOrderTiles` / `groupValidSequences`.
+**有界 + 兜底。** 搜索是对簇内牌多重集做带记忆化的 DFS(只组建包含「最小未覆盖牌」的块,按剩余多重集剪枝)。一行的簇很小(顶多一行的量,现实 ≤14 张),完全可算。遇到病态的簇(>20 张,基本不会发生)退回现有的贪心 `tryOrderTiles` / `groupValidSequences`。
 
-### §6.3 Layout within the row
-- **Order inside a valid block is canonical**, not drop-position-driven: lay each block in the **validated order** the solver found (a run ascending, except the one `13→1` wrap keeps `1` at the end — use the solver's order, never a naive ascending sort; group colour order is free).
-- **Blocks are separated by exactly one empty column.**
-- **Leftover** keeps **≥1 empty column** from every valid block. Related loose tiles (same value, or adjacent values/colour) stay **together**; unrelated loose tiles are **gap-separated** so they never read as one (invalid) block (e.g. leftover `b7 k7` → `b7 k7`; leftover `b7` + `y2` → `b7 _ y2`).
-- **Which side a leftover / new block attaches** = the side of the cluster **nearest the drop column**: drop near the cluster's left end → left side; near the middle or right end → right side; tie → right. (Order *inside* a valid block is still canonical; only the leftover/new block's **side** follows the pointer.)
+### §6.3 行内布局
+- **合法块内部顺序是规范的**,不由落点决定:每个块按求解器找到的**合法顺序**铺(run 升序,唯一例外是 `13→1` 绕回保持 `1` 在末尾 —— 用求解器给的顺序,**绝不**天真升序;group 颜色顺序随意)。
+- **块与块之间正好隔 1 个空列。**
+- **散牌**与任何合法块**至少隔 1 个空列**。能凑一起的散牌(同点数,或邻近点数/颜色)**聚在一起**;不相干的散牌**用空格隔开**,免得看起来像一个(其实非法的)块(例:散牌 `b7 k7` → `b7 k7`;散牌 `b7` + `y2` → `b7 _ y2`)。
+- **散牌/新块贴在合法块的哪一侧** = 簇里**离落点列最近**的那一侧:落点靠簇的左端 → 摆左边;靠中间或右端 → 摆右边;平手归右。(合法块**内部**仍是规范顺序;只有散牌/新块的**那一侧**跟随鼠标。)
 
-### §6.4 Space management (only when §6.3 needs more room than the row has)
-Applied after the cluster's target layout is known:
-1. **Expand** into the row's adjacent free columns.
-2. **Slide** a blocking **complete valid set** horizontally (intact — never reordered or broken) to free columns.
-3. **Relocate across rows.** If the row has no horizontal room, move the blocking complete set **whole** to another row that has enough contiguous free space. Cascading is allowed — one drop may shuffle several rows. The **direction** (up vs down) prefers whichever is **closer to the board's vertical centre**; deterministic tie-break by row index.
-4. **Reject** (`ok:false`, snap-back) only if no arrangement fits anywhere — essentially never once Step 2's shrink-to-fit lands, because the board's capacity (9×32) far exceeds the tiles in play.
+### §6.4 空间管理(仅当 §6.3 需要的地方超出本行所有时)
+在簇的目标布局确定后施加:
+1. **展开** —— 占用本行相邻的空列。
+2. **横向平移** —— 把挡路的**完整合法组**在本行横向整体平移(不拆、不重排)到空列。
+3. **跨行搬家** —— 本行横向也没地方时,把挡路的完整组**整体**搬到另一行里有足够连续空位的地方。**允许连锁** —— 一次落牌可能牵动好几行。**方向**(上 vs 下)优先选**离牌桌竖直中心更近**的那侧;平手按行号确定性决出。
+4. **拒绝**(`ok:false`,弹回)—— 仅当哪儿都塞不下时。一旦第二步的缩放到一屏落地,这基本不会发生,因为牌桌容量(9×32)远大于在场的牌。
 
-The set that yields is always a **bystander**; the cluster the player is actively dropping into stays in its row and expands. Relocation moves **whole valid sets only** — it never breaks or reorders a set. Termination: each relocation targets a row with strictly enough existing free space (or cascades to one), bounded by the finite board; failure → reject.
+让位的永远是**旁观组**;玩家正在落牌的那一簇留在本行展开。搬家**只移动完整合法组** —— 绝不拆或重排一个组。终止性:每次搬家都搬向有足够现成空位的行(或连锁到这样一行),受有限牌桌约束,失败 → 拒绝。
 
-## §7 Joker handling (summary)
-- **Dropped joker** — treated as wild by the solver; used to complete/extend a block **only** under the all-valid rule (§6.2).
-- **Settled joker in a valid block** — protected by Pass 2; never extracted to form something else unless the whole cluster goes all-valid.
-- **Explicit retrieve stays separate** — dropping a hand tile **exactly** onto a settled board joker that sits in a valid sequence with a **matching value** still swaps the joker back to hand (`jokerSwapTarget`, dndUtil.js). The dispatch checks retrieve **first**; auto-arrange handles everything else. The two never conflict.
+## §7 joker 处理(汇总)
+- **丢下来的 joker** —— 当通配牌交给求解器;**仅在**全合法规则下(§6.2)被用来凑成/延长块。
+- **桌上已成型块里的 joker** —— 受 Pass 2 保护;除非整簇能全合法,否则绝不被抠出去凑别的。
+- **显式 retrieve 保持独立** —— 把一张手牌**精确**丢到桌上某个、处在合法序列内且**点数匹配**的 joker 上,仍然把 joker 换回手里(`jokerSwapTarget`,dndUtil.js)。dispatch **先**判定 retrieve;自动整理处理其余一切。两者永不冲突。
 
-## §8 Architecture
+## §8 架构
 
-- **Server-authoritative.** The arrange runs **inside the boardgame.io move**. The client runs the move optimistically and the server authoritatively — the same pure engine — so every client sees the same result. Submit-time validation is unchanged.
-- **Pure, DOM-free engine** in a new `src/rummikub/arrange/` package (joins the shared kernel that must stay DOM-free per `docs/ARCHITECTURE.md`). Reuses `isSequenceValid` / `extractSeqs` / `tryOrderTiles` / `groupValidSequences`.
-- **Move atomicity.** The engine computes `placements` purely; the move applies them in one immer update. A `reject` returns `INVALID_MOVE`, so the draft is discarded and `G` is untouched (the architecture's move-atomicity invariant).
-- **Replaces the geometric push.** `resolveDropDispatch` keeps the **joker-retrieve** branch, drops the geometric **push/bridge/snap** decision, and instead computes `drop = {droppedIds, row, col}` and dispatches the **arrange move**. `insertWithPush` is superseded; its pure column-ripple may be reused internally by §6.4's horizontal **slide**, but it is no longer the placement decision.
-- **Client** sends only `(droppedIds, row, col)`; the move does cluster → solve → layout → space → apply. Simpler client, authoritative server.
+- **服务端权威。** 整理跑在 **boardgame.io 的 move 里**。客户端乐观执行、服务端权威执行 —— 同一份纯引擎 —— 所以每个客户端看到相同结果。submit 时的校验不变。
+- **纯函数、DOM-free 引擎**,放在新的 `src/rummikub/arrange/` 包(加入 `docs/ARCHITECTURE.md` 规定必须 DOM-free 的共享内核)。复用 `isSequenceValid` / `extractSeqs` / `tryOrderTiles` / `groupValidSequences`。
+- **move 原子性。** 引擎纯函数地算出 `placements`;move 在一次 immer 更新里应用它们。`reject` 返回 `INVALID_MOVE`,immer draft 被丢弃、`G` 不变(架构里的 move 原子性不变量)。
+- **取代几何 push。** `resolveDropDispatch` 保留 **joker-retrieve** 分支,去掉几何 **push/bridge/snap** 决策,改为算出 `drop = {droppedIds, row, col}` 并 dispatch **arrange move**。`insertWithPush` 被取代;它纯列位移的部分可被 §6.4 的横向**平移**内部复用,但不再是落点决策。
+- **客户端**只发 `(droppedIds, row, col)`;move 完成 cluster → solve → layout → space → apply。客户端更简单,服务端权威。
 
-## §9 Module structure (deep modules, clear seams)
+## §9 模块结构(深模块、清晰接缝)
 
-- `src/rummikub/arrange/cluster.js` — pure: `(tilePositions, row, col, droppedIds) → { tiles, preDropValidBlocks }`.
-- `src/rummikub/arrange/partition.js` — pure: `(clusterTiles, preDropValidBlocks) → { blocks, leftover }` (the two-pass solver; the riskiest unit, gets the most tests).
-- `src/rummikub/arrange/layout.js` — pure: `(partition, dropSide, rowOccupancy, boardDims) → placements | needsSpace` (§6.3 + the §6.4 space manager, incl. cross-row relocation).
-- `src/rummikub/arrange/index.js` — `arrangeBoard(tilePositions, drop)` orchestrator returning `{ placements, ok }`.
+- `src/rummikub/arrange/cluster.js` —— 纯:`(tilePositions, row, col, droppedIds) → { tiles, preDropValidBlocks }`。
+- `src/rummikub/arrange/partition.js` —— 纯:`(clusterTiles, preDropValidBlocks) → { blocks, leftover }`(两遍法求解器;风险最高的单元,测试最多)。
+- `src/rummikub/arrange/layout.js` —— 纯:`(partition, dropSide, rowOccupancy, boardDims) → placements | needsSpace`(§6.3 + §6.4 的空间管理,含跨行搬家)。
+- `src/rummikub/arrange/index.js` —— `arrangeBoard(tilePositions, drop)` 编排器,返回 `{ placements, ok }`。
 
-## §10 Worked examples (the test oracle)
+## §10 Worked examples(测试 oracle)
 
-Notation: `r5` = red 5, `b`/`k`/`y` other colours, `J` = joker, `_` = one empty column. Drop pointer noted where it matters.
+记号:`r5` = 红 5,`b`/`k`/`y` 其它颜色,`J` = joker,`_` = 一个空列。鼠标落点在影响结果时标注。
 
-| # | Board (row) | Drop | Result | Why |
+| # | 牌桌(某行) | 落牌 | 结果 | 原因 |
 |---|---|---|---|---|
-| 1 | `r1 r2 r3 r4 r5` | `r3` | `r1 r2 r3 _ r3 r4 r5` | Pass 1 all-valid `123`+`345`; canonical order |
-| 2 | `r1 r2 r3` near `r7 r8 r9` (no gap) | place `789` by `123` | `r1 r2 r3 _ r7 r8 r9` | Pass 1 `123`+`789`; separator keeps both valid |
-| 3 | `r1 r2 r3 _ r5 r6 r7` | `r4` | `r1 r2 r3 r4 r5 r6 r7` | Pass 1 one 7-run; bridge across the single gap |
-| 4 | `r3 r4 r5` | `r6` dropped on the **left** of r3 | `r3 r4 r5 r6` | Order inside a run is canonical; drop side irrelevant for a *merged* tile |
-| 5 | `r5 r6 r7`, drop near r6/r7 | `b7 k7` | `r5 r6 r7 _ b7 k7` | No all-valid → Pass 2 keeps run; `b7 k7` leftover on the **right** (pointer side) |
-| 5b | `r5 r6 r7`, drop on **r5** | `b7 k7` | `b7 k7 _ r5 r6 r7` | Same, leftover on the **left** (pointer side) |
-| 6 | row A `r5 r6 r7`; row B `b1 b2` (invalid) | `r4` on row A | `r4 r5 r6 r7` on A; B untouched | "All-valid" judged on the **cluster only**, not the whole board |
-| 7 | `r5 r6 r7` (J=… n/a) | `J` | `r5 r6 r7 J` | Joker wild, all-valid 4-run |
-| 7b | `r5 _ r7` | `J` between | `r5 J r7` | Joker bridges the gap (J = r6) |
-| 8 | `r5 J r7` (J=r6, valid) | `b6 k6` | `r5 J r7 _ b6 k6` | Pass 2 protects the settled joker; `b6 k6` leftover |
-| 9 | `r1…r9` (9-run) at cols 0–8; `b1 b2 b3` at cols 11–13 | second `r5` | `r12345 _ r56789` on the row; `b1 b2 b3` **slid/relocated** to keep a gap | §6.4: cluster expands, bystander set yields (intact); cross-row if no horizontal room |
-| 10 | leftover `b7` and unrelated `y2` | — | `… _ b7 _ y2` | Unrelated loose tiles gap-separated |
-| 11 | `r5 r6 r7`, drag **r6 out** to hand | remove r6 | `r5 r7` (collapsed, 2-tile leftover) | Source cluster re-tidies; can't reform → leftover until refilled |
+| 1 | `r1 r2 r3 r4 r5` | `r3` | `r1 r2 r3 _ r3 r4 r5` | Pass 1 全合法 `123`+`345`;规范顺序 |
+| 2 | `r1 r2 r3` 紧贴 `r7 r8 r9`(无空隙) | 把 `789` 放到 `123` 旁 | `r1 r2 r3 _ r7 r8 r9` | Pass 1 `123`+`789`;分隔保两者合法 |
+| 3 | `r1 r2 r3 _ r5 r6 r7` | `r4` | `r1 r2 r3 r4 r5 r6 r7` | Pass 1 一条 7-run;跨单空隙桥接 |
+| 4 | `r3 r4 r5` | `r6` 丢在 r3 **左边** | `r3 r4 r5 r6` | run 内顺序规范;**合并**进来的牌落点无关 |
+| 5 | `r5 r6 r7`,落点靠 r6/r7 | `b7 k7` | `r5 r6 r7 _ b7 k7` | 无全合法 → Pass 2 保留顺子;`b7 k7` 散牌摆**右**(鼠标侧) |
+| 5b | `r5 r6 r7`,落点在 **r5** | `b7 k7` | `b7 k7 _ r5 r6 r7` | 同上,散牌摆**左**(鼠标侧) |
+| 6 | A 行 `r5 r6 r7`;B 行 `b1 b2`(非法) | 在 A 行落 `r4` | A 行 `r4 r5 r6 r7`;B 行不动 | 「全合法」只判**这一簇**,不看整桌 |
+| 7 | `r5 r6 r7` | `J` | `r5 r6 r7 J` | joker 通配,全合法 4-run |
+| 7b | `r5 _ r7` | `J` 丢中间 | `r5 J r7` | joker 补洞(J = r6) |
+| 8 | `r5 J r7`(J=r6,合法) | `b6 k6` | `r5 J r7 _ b6 k6` | Pass 2 保护已成型的 joker;`b6 k6` 散牌 |
+| 9 | `r1…r9`(9-run)占 0–8 列;`b1 b2 b3` 占 11–13 列 | 第二张 `r5` | 本行 `r12345 _ r56789`;`b1 b2 b3` 被**平移/搬家**留出空隙 | §6.4:簇展开,旁观组让位(整组不拆);横向无地方则跨行 |
+| 10 | 散牌 `b7` 与不相干的 `y2` | — | `… _ b7 _ y2` | 不相干散牌各自隔开 |
+| 11 | `r5 r6 r7`,把 **r6 拖出**到手 | 移除 r6 | `r5 r7`(收拢,2 张散牌) | 源头簇重新整理;凑不齐 → 散牌等补 |
 
-## §11 Testing strategy
+## §11 测试策略
 
-- **Unit (pure, the bulk):** `partition.js` against §10's solver cases + adversarial multisets (duplicates, two jokers, mixed run/group clusters, the `13→1` wrap, "all-valid exists vs not"). `cluster.js` (≤1-gap membership, ≥2-gap exclusion). `layout.js` (canonical order, ≥1-gap separators, leftover grouping/gapping, drop-side selection, and the §6.4 slide/relocate/cascade/center/reject paths).
-- **Move-level:** a board-mounting / reducer test that the arrange move applies `placements` atomically, rejects (`INVALID_MOVE`, no-op) when `ok:false`, and that the joker-retrieve path still fires for an exact-on-joker drop.
-- **Determinism:** the same drop on the same board yields identical `placements` (client == server).
-- **Regression / superseded tests:** submit-time `isBoardValid` and **joker-retrieve** tests stay green (that path is preserved). The **geometric-push** tests (`insert-tiles-with-push`, `board-insert-push-dispatch`) assert the *old* behaviour that this engine replaces — they are **rewritten** to assert the new semantic outcomes. `multi-drag-order` and `tap-to-place` are updated to the new arrange results where the geometric layout differs. This is an intended behaviour change, not a regression.
+- **单元(纯函数,大头):** `partition.js` 跑 §10 的求解器用例 + 对抗性多重集(重复牌、双 joker、run/group 混合簇、`13→1` 绕回、「存在全合法 vs 不存在」)。`cluster.js`(≤1 空格成簇、≥2 空格排除)。`layout.js`(规范顺序、≥1 空格分隔、散牌聚拢/隔开、落点选边,以及 §6.4 的平移/搬家/连锁/居中/拒绝路径)。
+- **move 级:** 一个挂载 board / reducer 的测试,验证 arrange move 原子地应用 `placements`、`ok:false` 时 `INVALID_MOVE`(无副作用)、且精确落在 joker 上时 joker-retrieve 路径照常触发。
+- **确定性:** 同一牌桌同一落牌产出完全相同的 `placements`(客户端 == 服务端)。
+- **回归 / 被取代的测试:** submit 时的 `isBoardValid` 与 **joker-retrieve** 测试保持绿(该路径保留)。**几何 push** 测试(`insert-tiles-with-push`、`board-insert-push-dispatch`)断言的是本引擎取代掉的**旧**行为 —— 它们被**重写**为新的语义结果。`multi-drag-order`、`tap-to-place` 在几何布局有差异处更新为新整理结果。这是有意的行为变更,不是回归。
 
-## §12 Risks & phasing notes (for the plan)
+## §12 风险与分步提示(给 plan)
 
-- The **partition solver** (§6.2) and the **cross-row space manager** (§6.4 step 3) are the two hard, high-risk units. The plan should build the engine **core first** (cluster → solver → in-row layout → in-row slide → reject), which already delivers the owner's pain relief on a 32-wide row (horizontal room is almost always enough), then add **cross-row relocation + cascade** as an additive, separately-tested step. If cross-row proves disproportionately complex, in-row slide + reject is an acceptable interim (the owner asked for cross-row, so it stays in scope — only its sequencing is deferrable).
-- Determinism is load-bearing for server authority — every tie-break must be fixed, never order-of-iteration dependent.
+- **切分求解器**(§6.2)和**跨行空间管理**(§6.4 第 3 步)是两个最难、风险最高的单元。plan 应**先做引擎核心**(cluster → solver → 行内布局 → 行内平移 → 拒绝),这一步在 32 列宽的行上已经能解决 owner 的痛点(横向几乎总是够),然后把**跨行搬家 + 连锁**作为可增量、可单独测试的一步加上。万一跨行复杂度过高,「行内平移 + 拒绝」是可接受的临时态(owner 明确要跨行,所以它仍在范围内 —— 只是顺序可延后)。
+- 确定性对服务端权威是承重的 —— 每个平手判定都必须固定,绝不依赖遍历顺序。
 
-## §13 Out of scope (this spec)
+## §13 不在本文档范围内
 
-- **No-scroll responsive fit (Step 2, separate spec):** shrink/auto-size tiles so the whole board is visible without scrolling. Today `.ref` is `overflow:auto` (board.css:78); Step 2 removes the scroll and sizes cells to fit. This spec assumes the current scrollable board.
-- **Proactive whole-board centering / compaction:** explicitly **not** wanted — the player keeps free positioning; centering is only a relocation tie-break (§6.4).
-- **Cross-row manipulation as a single gesture** beyond moving a bystander set for space — normal play (drag a tile to another row) is unchanged.
+- **不滚动自适应(第二步,单独文档):** 缩放/自适应牌的大小,让整桌一屏可见、不滚动。现状 `.ref` 是 `overflow:auto`(board.css:78);第二步去掉滚动、按可用面积定格子尺寸。本文档假设当前可滚动的牌桌。
+- **常驻的整桌居中 / 紧凑化:** 明确**不要** —— 玩家保留自由摆位,居中只是搬家时的方向偏好(§6.4)。
+- **把跨行 manipulation 当作单一手势**(除了为腾地方搬动旁观组之外):正常玩法(把牌拖到另一行)不变。
