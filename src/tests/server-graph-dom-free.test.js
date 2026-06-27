@@ -25,6 +25,7 @@ const SERVER_GRAPH_MODULES = [
   '../rummikub/arrange/blocks.js',
   '../rummikub/arrange/partition.js',
   '../rummikub/arrange/layout.js',
+  '../rummikub/arrange/space.js',
   '../rummikub/arrange/index.js',
 ];
 
