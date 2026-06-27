@@ -22,3 +22,28 @@ test('extractBlocks splits each row into contiguous segments, excluding cluster 
     {row: 3, start: 10, width: 2, tiles: [b(1), b(2)]},
   ]);
 });
+
+import {__test} from '../rummikub/arrange/space';
+const {findSlot} = __test;
+const blk = (row, start, width) => ({row, start, width, tiles: Array.from({length: width}, (_, i) => 1000 + i)});
+
+test('findSlot slides within the block row to the nearest free slot (>=1 gap from finalized)', () => {
+  // cluster finalized at row 2 cols [0,10]; a width-3 block originally at col 11
+  const finalized = new Map([[2, [[0, 10]]]]);
+  const slot = findSlot(blk(2, 11, 3), finalized, 4, 9, 32);
+  // free in row 2 is [12,31] (cols 0..11 blocked by [0,10] expanded to [0,11]); nearest to 11 -> 12
+  expect(slot).toEqual({row: 2, start: 12});
+});
+
+test('findSlot relocates toward centre when the own row has no room', () => {
+  // row 2 fully blocked; centre row 4 free
+  const finalized = new Map([[2, [[0, 31]]]]);
+  const slot = findSlot(blk(2, 5, 3), finalized, 4, 9, 32);
+  expect(slot).toEqual({row: 4, start: 0});   // own row none -> nearest-to-centre row 4, leftmost
+});
+
+test('findSlot returns null when nothing fits anywhere', () => {
+  const finalized = new Map();
+  for (let r = 0; r < 9; r++) finalized.set(r, [[0, 31]]); // every row full
+  expect(findSlot(blk(2, 5, 3), finalized, 4, 9, 32)).toBeNull();
+});
