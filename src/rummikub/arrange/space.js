@@ -84,3 +84,39 @@ function findSlot(block, finalized, centerRow, rows, cols) {
 // Test-only handle so the pure helpers can be unit-tested without exporting them
 // into the module's public surface.
 export const __test = {findSlot, freeGaps, rowsByCenter};
+
+// Sequential cluster-priority placement. The cluster is fixed (highest
+// priority); every other block is placed once, in a deterministic order (nearest
+// to the cluster first), into space free of FINALIZED blocks, then finalized.
+// Cascade emerges: placing a block over a not-yet-finalized block forces that
+// block to relocate when its turn comes. Finalized region only grows, each block
+// is placed once -> terminates. Unmovable block -> reject. Only blocks that
+// actually moved get a placement entry.
+export function relocateForCluster(blocks, cluster, rows, cols) {
+    const centerRow = (rows - 1) / 2;
+    const clusterCenter = (cluster.start + cluster.end) / 2;
+    const finalized = new Map([[cluster.row, [[cluster.start, cluster.end]]]]);
+
+    const ordered = blocks.slice().sort((a, b) => {
+        const ra = Math.abs(a.row - cluster.row), rb = Math.abs(b.row - cluster.row);
+        if (ra !== rb) return ra - rb;
+        const ca = Math.abs(a.start + a.width / 2 - clusterCenter);
+        const cb = Math.abs(b.start + b.width / 2 - clusterCenter);
+        if (ca !== cb) return ca - cb;
+        if (a.row !== b.row) return a.row - b.row;
+        return a.start - b.start;
+    });
+
+    const placements = {};
+    for (const block of ordered) {
+        const slot = findSlot(block, finalized, centerRow, rows, cols);
+        if (!slot) return {reject: true};
+        if (!finalized.has(slot.row)) finalized.set(slot.row, []);
+        finalized.get(slot.row).push([slot.start, slot.start + block.width - 1]);
+        if (slot.row === block.row && slot.start === block.start) continue; // no move
+        for (let i = 0; i < block.tiles.length; i++) {
+            placements[block.tiles[i]] = {gridId: BOARD_GRID_ID, row: slot.row, col: slot.start + i};
+        }
+    }
+    return {placements};
+}

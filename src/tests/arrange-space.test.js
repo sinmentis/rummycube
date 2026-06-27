@@ -47,3 +47,48 @@ test('findSlot returns null when nothing fits anywhere', () => {
   for (let r = 0; r < 9; r++) finalized.set(r, [[0, 31]]); // every row full
   expect(findSlot(blk(2, 5, 3), finalized, 4, 9, 32)).toBeNull();
 });
+
+import {relocateForCluster} from '../rummikub/arrange/space';
+
+test('a same-row neighbour slides; an untouched far block does not move', () => {
+  // cluster row 2 [0,10]; neighbour [b? width3] at row2 start11; a far block row5 start0 width3
+  const neighbour = {row: 2, start: 11, width: 3, tiles: [b(1), b(2), b(3)]};
+  const far = {row: 5, start: 0, width: 3, tiles: [r(7), r(8), r(9)]};
+  const res = relocateForCluster([neighbour, far], {row: 2, start: 0, end: 10}, 9, 32);
+  // neighbour slides to cols 12-14 (row 2); far block untouched -> no placement entry
+  expect(res.placements[b(1)]).toEqual({gridId: 'b', row: 2, col: 12});
+  expect(res.placements[b(3)]).toEqual({gridId: 'b', row: 2, col: 14});
+  expect(res.placements[r(7)]).toBeUndefined();   // far, unmoved
+});
+
+test('cascade: a block pushed onto another row relocates the block already there', () => {
+  // cluster fills row 2 [0,31] (no in-row room). neighbour originally row2 -> must go cross-row.
+  // row 4 (centre) already has a block at [0,2]; the incoming block takes [0,..] only if free,
+  // else the centre rows fill and the resident is pushed too. Construct so BOTH move.
+  const incoming = {row: 2, start: 5, width: 30, tiles: Array.from({length: 30}, (_, i) => 2000 + i)};
+  const resident = {row: 4, start: 0, width: 3, tiles: [r(1), r(2), r(3)]};
+  const res = relocateForCluster([incoming, resident], {row: 2, start: 0, end: 31}, 9, 32);
+  // incoming (width 30) can't fit row 2; goes to centre row 4 at col 0; resident's [0,2] now
+  // overlaps finalized -> resident relocates to another row. Both have placements; rows differ.
+  expect(res.reject).toBeUndefined();
+  expect(res.placements[2000].row).toBe(4);            // incoming landed on row 4
+  expect(res.placements[r(1)]).toBeTruthy();           // resident was pushed (cascade)
+  expect(res.placements[r(1)].row).not.toBe(4);        // resident no longer on row 4
+});
+
+test('reject when the board is full', () => {
+  const blocks = [{row: 0, start: 0, width: 3, tiles: [r(1), r(2), r(3)]}];
+  // cluster occupies row 0 fully; every other row pre-finalized-full is simulated by a wide block per row
+  const full = [];
+  for (let row = 1; row < 9; row++) full.push({row, start: 0, width: 32, tiles: [row * 100]});
+  const res = relocateForCluster([...blocks, ...full], {row: 0, start: 0, end: 31}, 9, 32);
+  expect(res.reject).toBe(true);
+});
+
+test('deterministic: shuffled block input yields identical placements', () => {
+  const n = {row: 2, start: 11, width: 3, tiles: [b(1), b(2), b(3)]};
+  const f = {row: 5, start: 0, width: 3, tiles: [r(7), r(8), r(9)]};
+  const a = relocateForCluster([n, f], {row: 2, start: 0, end: 10}, 9, 32);
+  const c = relocateForCluster([f, n], {row: 2, start: 0, end: 10}, 9, 32);
+  expect(c.placements).toEqual(a.placements);
+});
