@@ -23,14 +23,6 @@ function getTestPlayerClient() {
 }
 
 const App = function () {
-
-    function KeyCheck(e) {
-        if (e.key === 'F8') {
-            debugger;
-        }
-    }
-
-    window.addEventListener('keydown', KeyCheck, false);
     return (
         <>
             <div className={"navbar justify-content-center"}>
