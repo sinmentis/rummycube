@@ -5,6 +5,7 @@
 ### Online multiplayer rummy tiles — play with friends in your browser
 
 <a href="https://game.shunlyu.com"><img src="https://img.shields.io/badge/play-game.shunlyu.com-2da44e?style=for-the-badge" alt="Play"></a>
+<a href="https://github.com/sinmentis/rummycube/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/sinmentis/rummycube/ci.yml?branch=main&style=for-the-badge&label=CI" alt="CI"></a>
 <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-447ad6?style=for-the-badge" alt="MIT License"></a>
 <img src="https://img.shields.io/badge/node-22.x-339933?style=for-the-badge" alt="Node 22">
 
@@ -21,13 +22,13 @@ Create a room, share the link, and play in the browser on desktop or phone — n
 
 ## Features
 
-- **Real-time multiplayer** for 2–4 players over WebSocket — moves sync instantly.
-- **No accounts.** Create a room, share the link or room code, pick a nickname, play.
-- **Premium classic look** — green felt table, ivory beveled tiles, a wooden rack.
-- **Drag and drop on mouse and touch** — phones included — with tap-to-multiselect for moving whole sets at once.
-- **One-screen mobile layout** — the board scrolls while your rack stays pinned at the bottom.
-- **Juicy animations and sound** — tiles lift, settle and pop; a mute toggle if you'd rather play quiet.
-- **Fair play, built in** — the server owns the rules and the turn clock (you can't stall it), and a refresh or a dropped connection drops you right back into your seat.
+- **Real-time multiplayer** for 2–4 players over WebSocket — moves sync instantly. No accounts: share a room link or code, pick a nickname, play.
+- **Self-tidying board** — drop your tiles and the table reorganizes itself; runs and groups snap into place, so you arrange the game, not the pixels.
+- **Fits any screen** — the whole board stays in view on desktop or phone, no scrolling, with your rack always pinned in reach.
+- **Mouse and touch** — drag-and-drop everywhere, plus tap-to-multiselect to move a whole set at once.
+- **Polished and juicy** — green felt, ivory beveled tiles, a wooden rack; tiles lift, settle and pop, with sound and a mute toggle.
+- **Quick chat** — speech bubbles pop from each player's seat.
+- **Fair play, built in** — the server owns the rules and the turn clock, and a refresh or dropped connection drops you right back into your seat.
 - **Solo test mode** — try the whole thing on your own, no second player needed.
 
 ## How to play
@@ -72,6 +73,21 @@ Run the test suite:
 ```shell
 npm test
 ```
+
+## Self-host
+
+One container runs everything — the boardgame.io server and the built
+frontend on a single port (`9119`):
+
+```shell
+cp .env.example .env.production   # point REACT_APP_SERVER_* at your host
+docker build -t rummycube .
+docker run -p 9119:9119 rummycube
+```
+
+Then open `http://localhost:9119`. The live demo at
+[game.shunlyu.com](https://game.shunlyu.com) runs this exact image as a
+rootless Podman container behind a Cloudflare Tunnel.
 
 ## Solo test mode
 
