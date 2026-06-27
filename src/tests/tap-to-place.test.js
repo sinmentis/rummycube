@@ -114,15 +114,15 @@ test('two taps (select tile, then tap empty board cell) place the tile with no d
     expect(mockBuzz).not.toHaveBeenCalled();
 });
 
-test('a hopeless multi-select tap routes through push but is non-destructive (server snaps back)', () => {
-    // The client no longer makes a geometric decision: any in-bounds tap routes to
-    // the semantic insertTilesWithPush move, which is authoritative. Here four
+test('a multi-select tap whose cluster overflows the row commits via push, relocating neighbours (space management)', () => {
+    // The client makes no geometric decision: any in-bounds tap routes to the
+    // semantic insertTilesWithPush move, which is authoritative. Here four
     // pairwise-unrelated tiles (red2, blue5, black8, orange11) form a 4-wide cluster
-    // when the pair drops at cols 4,5 beside the board's black8/orange11. Tight
-    // flankers at cols 1 and 10 leave only a 6-col window, but four separated loose
-    // tiles need seven columns, so arrangeBoard rejects. The move is a no-op: tiles
-    // stay in hand, Undo stays disabled. The client, blind to that outcome, plays an
-    // optimistic 'place' and does NOT buzz — the snap-back is the server's call.
+    // when the pair drops at cols 4,5 beside the board's black8/orange11. The tight
+    // 6-col window can't hold the four gap-separated loose tiles (they need seven
+    // columns), so arrangeBoard no longer rejects: it re-lays the cluster across the
+    // row and slides the two flankers out of its way. The move commits as one
+    // undoable step; the client plays an optimistic 'place' and does NOT buzz.
     const t1 = buildTileObj(2, COLOR.red, 0);
     const t2 = buildTileObj(5, COLOR.blue, 0);
     const u1 = buildTileObj(8, COLOR.black, 0);
@@ -161,13 +161,21 @@ test('a hopeless multi-select tap routes through push but is non-destructive (se
     const cells = boardGrid.querySelectorAll('.grid-item');
     fireEvent.click(cells[4]);
 
-    // Non-destructive: nothing moved, Undo stays disabled.
-    expect(client.getState().G.tilePositions[t1].gridId).toBe(HAND_GRID_ID);
-    expect(client.getState().G.tilePositions[t2].gridId).toBe(HAND_GRID_ID);
-    expect(client.getState().G.gameStateStack.length).toBe(0);
-    expect(screen.getByRole('button', {name: 'Undo'})).toBeDisabled();
-    // The client routed to push without client-side geometry, so it optimistically
-    // played 'place' and did NOT buzz — the snap-back came from the server.
+    // Space management committed the move: all six tiles sit on the board, row 0, on
+    // distinct columns. The loose tiles land gap-separated at 1 3 5 7; the flankers
+    // slide clear of the cluster span (orange3 1->9, black9 10->11).
+    const pos = id => client.getState().G.tilePositions[id];
+    for (const id of [t1, t2, u1, u2, f1, f2]) {
+        expect(pos(id).gridId).toBe(BOARD_GRID_ID);
+        expect(pos(id).row).toBe(0);
+    }
+    expect(new Set([t1, t2, u1, u2, f1, f2].map(id => pos(id).col)).size).toBe(6);
+    expect(pos(f1).col).toBe(9);    // relocated out of the cluster's way
+    expect(pos(f2).col).toBe(11);
+    // Committed as exactly one undoable step.
+    expect(client.getState().G.gameStateStack.length).toBe(1);
+    expect(screen.getByRole('button', {name: 'Undo'})).not.toBeDisabled();
+    // The client routed to push without client-side geometry: optimistic 'place', no buzz.
     expect(mockPlay).toHaveBeenCalledWith('place');
     expect(mockBuzz).not.toHaveBeenCalled();
 });
