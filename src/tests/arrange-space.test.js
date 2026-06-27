@@ -92,3 +92,30 @@ test('deterministic: shuffled block input yields identical placements', () => {
   const c = relocateForCluster([f, n], {row: 2, start: 0, end: 10}, 9, 32);
   expect(c.placements).toEqual(a.placements);
 });
+
+test('deterministic: tie-broken blocks competing for the same space are shuffle-invariant', () => {
+  // cluster fills row 4 [0,31] (centre 15.5), so both neighbours (originally row 4) must relocate.
+  // Both have rowDist 0 and width 4; starts 10 and 17 are equidistant from centre-2 (13.5),
+  // so they TIE on keys 1-2 and the order is decided only by the `start` tie-breaker.
+  // Whoever sorts first takes row 3 cols 0-3; the other takes row 3 cols 5-8. If the comparator
+  // lost the start key, Array.sort stability would let input order flip the outcome.
+  const cluster = {row: 4, start: 0, end: 31};
+  const left = {row: 4, start: 10, width: 4, tiles: [b(1), b(2), b(3), b(4)]};   // centre 12
+  const right = {row: 4, start: 17, width: 4, tiles: [r(1), r(2), r(3), r(4)]};  // centre 19
+  const a = relocateForCluster([left, right], cluster, 9, 32);
+  const c = relocateForCluster([right, left], cluster, 9, 32);
+  expect(c.placements).toEqual(a.placements);
+  // and the tie-breaker put `left` (smaller start) ahead -> it lands leftmost on the nearest centre row
+  expect(a.placements[b(1)]).toEqual({gridId: 'b', row: 3, col: 0});
+  expect(a.placements[r(1)]).toEqual({gridId: 'b', row: 3, col: 5});
+});
+
+test('extractBlocks splits one row into multiple blocks at a real (non-excluded) gap', () => {
+  // row 1: r1 r2 (cols 0-1) | gap at col 2 | r4 r5 (cols 3-4); exclude nothing -> two blocks
+  const positions = tp([[r(1), 0, 1], [r(2), 1, 1], [r(4), 3, 1], [r(5), 4, 1]]);
+  const blocks = extractBlocks(positions, []).sort((x, y) => x.start - y.start);
+  expect(blocks).toEqual([
+    {row: 1, start: 0, width: 2, tiles: [r(1), r(2)]},
+    {row: 1, start: 3, width: 2, tiles: [r(4), r(5)]},
+  ]);
+});
