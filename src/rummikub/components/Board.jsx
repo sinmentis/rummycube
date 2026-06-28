@@ -26,6 +26,7 @@ import * as fx from "../juice/effects";
 import {countPlacedThisTurn} from "../juice/comboMath";
 const ComboOverlay = lazy(() => import("./ComboOverlay"));
 import ChatPanel from "./ChatPanel";
+import AbilityCodex from "./AbilityCodex";
 import CoachCard from "./CoachCard";
 import HintsToggle from "./HintsToggle";
 import IconButton from "./IconButton";
@@ -660,6 +661,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                    matchData={matchData}
                    matchID={matchID}
                    playerID={playerID}/>
+        {G.mode === 'chaos' && <AbilityCodex/>}
     </DndContext>
 }
 

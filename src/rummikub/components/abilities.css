@@ -161,3 +161,193 @@
         animation: none;
     }
 }
+
+/* ===== Ability Codex: floating help FAB + reference panel (SP1b T2) ===== */
+/* Mirrors the chat FAB collapse mechanism (see chat.css): the codex lives as a
+   fixed FAB beside the chat FAB; tapping it swaps the FAB out for a floating
+   panel via .codex-root.open. Static reference only — lists every ability card
+   grouped by rarity plus a short "how Chaos works" primer. */
+.codex-root {
+    position: fixed;
+    top: calc(var(--nav-h, 54px) + 8px);
+    /* Sit beside (to the left of) the chat FAB: its 52px disc + an 8px corner
+       gap + a 12px gap between the two FABs, so the two never overlap. */
+    right: calc(8px + 52px + 12px);
+    z-index: 65;
+    font-family: 'Poppins', system-ui, sans-serif;
+    pointer-events: none; /* only the FAB / panel are interactive */
+}
+
+/* Floating action button — the codex collapses to this FAB at every width;
+   tapping it expands the panel as a floating overlay (see .codex-root.open). */
+.codex-fab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+    position: relative;
+    width: 52px;
+    height: 52px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(123, 74, 36, .94);
+    color: var(--cream, #f7eed8);
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 0 0 1.5px rgba(200, 162, 74, .8), 0 8px 20px rgba(0, 0, 0, .42);
+}
+.codex-fab:hover { background: rgba(123, 74, 36, 1); }
+
+.codex-panel {
+    position: relative;
+    pointer-events: auto;
+    width: 344px;
+    max-width: 94vw;
+    max-height: 72vh;
+    display: none;
+    flex-direction: column;
+    background: var(--parchment, linear-gradient(180deg, #fbf6e8 0%, #f1e6cb 100%));
+    border: 1px solid var(--parchment-border, #cbae7e);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: var(--elev-2, 0 14px 26px rgba(0, 0, 0, .42));
+}
+
+/* Collapsed by default at every width: the FAB shows, the panel stays hidden
+   until opened. Opening swaps the FAB out for the panel overlay. */
+.codex-root.open .codex-fab { display: none; }
+.codex-root.open .codex-panel { display: flex; }
+
+.codex-head {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 11px 14px;
+    background: var(--wood-bar, #7b4a24);
+    color: var(--cream, #f7eed8);
+}
+.codex-head b {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: .3px;
+}
+.codex-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border: none;
+    background: transparent;
+    color: #e7dcc1;
+    font-size: 15px;
+    line-height: 1;
+    padding: 2px 4px;
+    cursor: pointer;
+    border-radius: 6px;
+}
+.codex-close:hover { background: rgba(255, 255, 255, .18); }
+
+.codex-howto {
+    flex: 0 0 auto;
+    padding: 11px 14px;
+    border-bottom: 1px dashed var(--parchment-border, #cbae7e);
+}
+.codex-howto b {
+    display: block;
+    margin-bottom: 3px;
+    font-size: 12px;
+    font-weight: 800;
+    color: #205233;
+}
+.codex-howto p {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--ink, #3b2c1a);
+}
+
+.codex-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 6px 12px 12px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(123, 74, 36, .5) transparent;
+}
+.codex-body::-webkit-scrollbar { width: 7px; }
+.codex-body::-webkit-scrollbar-thumb { background: rgba(123, 74, 36, .45); border-radius: 4px; }
+
+.codex-gh {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 2px 7px;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--ink-soft, #6f5b3e);
+}
+.codex-sw {
+    flex: 0 0 auto;
+    width: 15px;
+    height: 15px;
+    border-radius: 5px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .28);
+}
+.codex-sw.w { background: var(--parchment, #f1e6cb); border: 1px solid var(--parchment-border, #cbae7e); }
+.codex-sw.b { background: var(--blue-frame, #13478f); border: 1px solid var(--blue-edge, #4f82c8); }
+.codex-sw.g { background: var(--brass-foil, #b8893a); border: 1px solid #f0d894; }
+
+.codex-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+    padding: 7px 8px;
+    border-radius: 10px;
+    background: rgba(255, 253, 246, .72);
+    border: 1px solid rgba(120, 90, 40, .16);
+}
+.codex-row.r-b { background: rgba(19, 71, 143, .08); border-color: rgba(19, 71, 143, .22); }
+.codex-row.r-g { background: rgba(205, 162, 75, .15); border-color: rgba(205, 162, 75, .36); }
+
+.codex-ic {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    background: radial-gradient(closest-side, #fff, rgba(255, 255, 255, .4));
+    box-shadow: inset 0 0 0 1px rgba(120, 90, 40, .2);
+}
+.codex-tx { flex: 1; min-width: 0; }
+.codex-tx b { display: block; font-size: 12.5px; color: var(--ink, #3b2c1a); }
+.codex-tx span { display: block; font-size: 10.5px; line-height: 1.35; color: var(--ink-soft, #6f5b3e); }
+
+/* Narrow screens: mirror the chat FAB's move clear of the top HUD into the
+   bottom-right corner (still beside chat). When open, drop the beside-offset so
+   the panel uses the full corner, and widen it like the chat panel. */
+@media (max-width: 820px) {
+    .codex-root {
+        top: auto;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+        right: calc(env(safe-area-inset-right, 0px) + 12px + 52px + 12px);
+    }
+    .codex-root.open {
+        right: calc(env(safe-area-inset-right, 0px) + 12px);
+    }
+    .codex-root.open .codex-panel {
+        width: 86vw;
+        max-width: 86vw;
+        max-height: 64vh;
+    }
+}
