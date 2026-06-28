@@ -45,7 +45,7 @@ const Rummikub = {
             for (let p = 0; p < ctx.numPlayers; p++) {
                 abilityHands[p.toString()] = [deck.pop(), deck.pop()];
             }
-            abilityFields = {mode, abilityDeck: deck, abilityHands, abilityDiscard: []};
+            abilityFields = {mode, abilityDeck: deck, abilityHands, abilityDiscard: [], jokerHeat: {}};
         }
         return {
             ...abilityFields,

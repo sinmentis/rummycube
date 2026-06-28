@@ -11,6 +11,13 @@ test('chaos setup deals 2 ability cards each and tracks the deck', () => {
   expect(G.abilityDiscard).toEqual([]);
 });
 
+test('chaos setup initializes empty jokerHeat; classic has none', () => {
+  const chaos = Rummikub.setup({ctx: {numPlayers: 2}, random: mkRandom()}, {timePerTurn: 10, chaos: true});
+  expect(chaos.jokerHeat).toEqual({});
+  const classic = Rummikub.setup({ctx: {numPlayers: 2}, random: mkRandom()}, {timePerTurn: 10});
+  expect(classic.jokerHeat).toBeUndefined();
+});
+
 test('classic setup is unchanged: no ability fields', () => {
   const G = Rummikub.setup({ctx: {numPlayers: 2}, random: mkRandom()}, {timePerTurn: 10});
   expect(G.mode).toBe('classic');
