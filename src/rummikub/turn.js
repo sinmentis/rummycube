@@ -9,6 +9,7 @@ import {
 } from "./util.js";
 import {original} from "immer"
 import {logger} from './logger.js';
+import {settleJokerBombs} from "./abilities/jokerBomb.js";
 
 
 // Disconnected-seat tuning. Both are [PLACEHOLDER] pending Game Design / Product:
@@ -122,9 +123,10 @@ function onTurnBegin({G, ctx, events, random}) {
     return G
 }
 
-function onTurnEnd({G, ctx, events}) {
+function onTurnEnd({G, ctx, events, random}) {
     logger.debug('ON TURN END', new Date())
     G.timerExpireAt = null
+    if (G.jokerHeat) settleJokerBombs({G, ctx, random, events})
     checkGameOver(G, ctx, events)
 }
 
