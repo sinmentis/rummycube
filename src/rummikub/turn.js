@@ -58,7 +58,20 @@ function forfeitSeat(G, ctx, seat, events) {
     }
 }
 
-function onTurnBegin({G, ctx, events}) {
+// Chaos DLC turn-start side effects. Pure mutation of G; safe on a plain object
+// OR an immer draft (no `original`), so it unit-tests directly. Expires this
+// seat's peek grant (a round elapsed) + 30% one-card drip from the ability deck.
+function applyChaosTurnStart({G, seat, random}) {
+    if (G.mode !== 'chaos') return;
+    if (G.peekGrants) delete G.peekGrants[seat];
+    if (Array.isArray(G.abilityDeck) && G.abilityDeck.length
+        && random && random.Number() < 0.3) {
+        if (!G.abilityHands[seat]) G.abilityHands[seat] = [];
+        G.abilityHands[seat].push(G.abilityDeck.pop());
+    }
+}
+
+function onTurnBegin({G, ctx, events, random}) {
     logger.debug('ON TURN BEGIN', new Date())
     const seat = ctx.currentPlayer
     const seatIdx = Number(seat)
@@ -104,6 +117,8 @@ function onTurnBegin({G, ctx, events}) {
         G.lastTimeout = null
     }
 
+    applyChaosTurnStart({G, seat, random})
+
     return G
 }
 
@@ -133,6 +148,7 @@ function checkGameOver(G, ctx, events) {
 export {
     GRACE_MS,
     N_FORFEIT_TURNS,
+    applyChaosTurnStart,
     checkGameOver,
     onPlayPhaseBegin,
     onTurnBegin,
