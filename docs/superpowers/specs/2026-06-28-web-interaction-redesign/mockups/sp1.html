@@ -1,0 +1,1581 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RummyCube · Chaos DLC — SP1 Ability-Card Backbone (UI Mockup)</title>
+<style>
+/* ============================================================================
+   RummyCube — Chaos DLC / SP1 ability-card backbone — STATIC VISUAL MOCKUP
+   Single self-contained file. No build tooling, no frameworks, no network font.
+   All visuals are derived from the app's real design tokens
+   (src/rummikub/theme/classic.css + components/board.css) so it reads native.
+   ========================================================================== */
+
+:root{
+  /* —— felt table —— */
+  --felt: radial-gradient(120% 120% at 50% 0%, #3a7d4f 0%, #245733 70%, #1c4528 100%);
+  --felt-base:#1c4528;
+  --felt-vignette: inset 0 0 60px rgba(0,0,0,.45);
+  --set-glow: radial-gradient(closest-side, rgba(120,255,150,.55), rgba(120,255,150,0));
+
+  /* —— ivory number tiles —— */
+  --tile-face: linear-gradient(180deg,#fffdf4 0%,#f3ead5 60%,#e9dcc0 100%);
+  --tile-face-solid:#f4ecd6;
+  --tile-sheen: linear-gradient(180deg,
+      rgba(255,255,255,.55) 0%, rgba(255,255,255,.12) 16%,
+      rgba(255,255,255,0) 40%, rgba(125,95,45,.04) 76%, rgba(125,95,45,.15) 100%);
+  --tile-border: rgba(120,90,40,.25);
+  --tile-shadow: 0 7px 9px rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.95), inset 0 -4px 7px rgba(120,90,40,.18);
+  --tile-shadow-mini: 0 3px 5px rgba(0,0,0,.35), inset 0 2px 0 rgba(255,255,255,.92), inset 0 -3px 5px rgba(120,90,40,.18);
+  --tile-shadow-lift: 0 18px 22px rgba(0,0,0,.5), inset 0 2px 0 rgba(255,255,255,.95);
+  /* tile number suit colors */
+  --c-red:#b3162a; --c-black:#1c1c1c; --c-blue:#13478f; --c-orange:#a85c08;
+
+  /* —— wooden rack + table edge —— */
+  --rack: linear-gradient(180deg,#8a5a2b,#5e3a18);
+  --rack-border: rgba(40,24,8,.55);
+  --rack-highlight: inset 0 3px 6px rgba(255,220,170,.28), inset 0 -6px 14px rgba(0,0,0,.30);
+  --wood-bar: linear-gradient(180deg, #4a2c12 0%, #34200e 55%, #28190a 100%);
+  --wood-bar-edge: inset 0 1px 0 rgba(255,210,150,.18), inset 0 -1px 0 rgba(0,0,0,.5);
+
+  /* —— brass / parchment / ink —— */
+  --brass:#cda24b; --brass-soft:rgba(205,162,75,.5);
+  --brass-foil: linear-gradient(150deg,#7a5c1e 0%, #b8893a 34%, #f0d894 52%, #b8893a 70%, #7a5c1e 100%);
+  --cream:#f5edd8; --ink:#3b2c1a; --ink-soft:#6f5b3e;
+  --parchment: linear-gradient(180deg, #fbf6e8 0%, #f1e6cb 100%);
+  --parchment-border:#cbae7e;
+  --avatar-rim: rgba(255,250,238,.92);
+  --avatar-glow: rgba(255,196,92,.85);
+
+  /* —— rarity accents (uncommon=blue tied to #13478f, rare=brass foil) —— */
+  --blue-frame: linear-gradient(180deg,#1a3f74 0%, #13478f 55%, #0e2f5e 100%);
+  --blue-edge:#4f82c8;
+
+  /* —— radii + elevation —— */
+  --r-sm:6px; --r-md:10px; --r-lg:14px; --r-xl:18px;
+  --elev-1: 0 2px 6px rgba(0,0,0,.3);
+  --elev-2: 0 14px 26px rgba(0,0,0,.42);
+
+  --font: 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  font-family:var(--font);
+  color:var(--ink);
+  background:
+    radial-gradient(140% 90% at 50% -10%, #2b6440 0%, #1c4528 60%, #122e1b 100%) fixed;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  padding-bottom:80px;
+}
+
+/* ---- page chrome ---- */
+.topbar{
+  position:sticky; top:0; z-index:50;
+  background:var(--wood-bar); box-shadow:var(--wood-bar-edge), 0 6px 18px rgba(0,0,0,.45);
+  border-bottom:2px solid var(--brass-soft);
+  padding:12px 20px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+}
+.topbar .mark{
+  font-weight:800; letter-spacing:.5px; color:var(--cream);
+  font-size:18px; text-shadow:0 1px 2px rgba(0,0,0,.5);
+}
+.topbar .mark b{color:var(--brass)}
+.topbar .tag{
+  font-size:11.5px; font-weight:700; letter-spacing:.6px; text-transform:uppercase;
+  color:#2b1708; background:var(--brass-foil); border:1px solid #f0d894;
+  padding:3px 9px; border-radius:999px;
+}
+.topbar .spacer{flex:1}
+.topbar .note{color:#e8dcbd; font-size:12px; opacity:.9}
+
+.wrap{max-width:1180px; margin:0 auto; padding:26px 18px 0}
+
+/* ---- panels ---- */
+.panel{
+  background:rgba(13,32,21,.55);
+  border:1px solid rgba(205,162,75,.28);
+  border-radius:var(--r-xl);
+  margin:0 0 30px;
+  overflow:hidden;
+  box-shadow:var(--elev-2);
+  backdrop-filter:blur(2px);
+}
+.panel-head{
+  display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;
+  padding:15px 20px;
+  background:linear-gradient(180deg, rgba(74,44,18,.92), rgba(40,25,12,.92));
+  border-bottom:1px solid var(--brass-soft);
+}
+.panel-num{
+  font-weight:800; font-size:13px; color:#2b1708;
+  background:var(--brass-foil); border:1px solid #f0d894;
+  width:28px; height:28px; border-radius:50%;
+  display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto;
+  box-shadow:0 2px 5px rgba(0,0,0,.4);
+}
+.panel-title{color:var(--cream); font-weight:800; font-size:17px; margin:0}
+.panel-sub{color:#cdbfa0; font-weight:500; font-size:13px; margin-left:2px}
+.annot{
+  color:#e7dcc1; font-size:13px; line-height:1.5; margin:0;
+  padding:12px 20px; background:rgba(0,0,0,.18);
+  border-bottom:1px dashed rgba(205,162,75,.25);
+}
+.annot b{color:var(--brass)}
+.annot code{background:rgba(0,0,0,.35); color:#ffe7ad; padding:1px 6px; border-radius:5px; font-size:12px}
+.stage{padding:24px 20px; display:flex; flex-wrap:wrap; gap:22px; align-items:flex-start}
+.stage.center{justify-content:center}
+.substage{display:flex; flex-direction:column; gap:10px; align-items:center}
+.sublabel{
+  font-size:12px; font-weight:700; letter-spacing:.4px; color:#1c1c1c;
+  background:var(--cream); border:1px solid var(--parchment-border);
+  padding:4px 11px; border-radius:999px;
+}
+.callout{
+  max-width:300px; font-size:12.5px; line-height:1.5; color:#efe6cf;
+  background:rgba(0,0,0,.22); border-left:3px solid var(--brass);
+  padding:10px 12px; border-radius:8px;
+}
+.callout b{color:#ffd98a}
+
+/* ============================================================================
+   IVORY NUMBER TILE
+   ========================================================================== */
+.tile{
+  position:relative; width:34px; height:46px; border-radius:var(--r-sm);
+  background-color:var(--tile-face-solid); background-image:var(--tile-sheen);
+  border:1px solid var(--tile-border); box-shadow:var(--tile-shadow-mini);
+  display:flex; align-items:center; justify-content:center;
+  font-weight:800; font-size:20px; line-height:1; user-select:none; letter-spacing:.5px;
+}
+.tile.sm{width:28px; height:38px; font-size:16px}
+.tile-red{color:var(--c-red)} .tile-black{color:var(--c-black)}
+.tile-blue{color:var(--c-blue)} .tile-orange{color:var(--c-orange)}
+.tile .joker{font-size:20px}
+.meld{display:inline-flex; gap:3px; padding:6px; border-radius:10px}
+.meld.glow{background:var(--set-glow)}
+
+/* ============================================================================
+   WOODEN RACK
+   ========================================================================== */
+.rack{
+  position:relative; display:inline-flex; gap:5px; align-items:flex-end;
+  padding:12px 14px 14px; border-radius:var(--r-xl);
+  background:var(--rack); border:1px solid var(--rack-border);
+  box-shadow:var(--rack-highlight), var(--elev-2);
+}
+
+/* ============================================================================
+   CIRCULAR AVATAR + presence cue + timer ring
+   ========================================================================== */
+.avatar{
+  position:relative; width:60px; height:60px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-weight:800; color:#fff; font-size:22px;
+  background:linear-gradient(135deg,#8fc56a,#5d7e30);
+  box-shadow:0 0 0 3px var(--avatar-rim), 0 0 0 4px rgba(0,0,0,.22), 0 5px 12px rgba(0,0,0,.4);
+  text-shadow:0 1px 2px rgba(0,0,0,.35);
+}
+.avatar.p2{background:linear-gradient(135deg,#e0a35a,#a85c08)}
+.avatar.p3{background:linear-gradient(135deg,#7aa6e0,#13478f)}
+.avatar.p4{background:linear-gradient(135deg,#c98bd0,#7a3a86)}
+.avatar.self{background:linear-gradient(135deg,#6fcf8f,#246b3c)}
+.avatar.active{
+  box-shadow:0 0 0 3px var(--avatar-rim), 0 0 0 4px rgba(0,0,0,.22),
+    0 0 16px 5px var(--avatar-glow), 0 0 34px 12px rgba(255,196,92,.42);
+}
+.avatar.selectable{cursor:pointer; box-shadow:0 0 0 3px #ffe09a, 0 0 0 6px rgba(205,162,75,.55), 0 0 18px 6px rgba(255,196,92,.5)}
+.avatar.targeted{
+  box-shadow:0 0 0 4px #fff0a0, 0 0 0 8px #e23b3b, 0 0 0 12px rgba(226,59,59,.38), 0 0 26px 9px rgba(255,90,60,.5);
+  animation:targetPulse 1.1s ease-in-out infinite;
+}
+.seat{display:flex; flex-direction:column; align-items:center; gap:5px; position:relative}
+.seat .nm{
+  font-size:11px; font-weight:700; color:#fff; background:rgba(0,0,0,.55);
+  padding:1px 8px; border-radius:9px; text-shadow:0 1px 2px rgba(0,0,0,.6);
+}
+.timer-ring{position:absolute; top:-8px; left:-8px; transform:rotate(-90deg)}
+.timer-ring .secs{
+  font-weight:800; font-size:22px; fill:#fffaf0; paint-order:stroke;
+  stroke:rgba(0,0,0,.55); stroke-width:3px;
+}
+
+/* presence cue — "has ability cards", NEVER a number */
+.cue{
+  position:absolute; top:-10px; right:-16px; width:34px; height:30px;
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,.5));
+}
+.cue::before{ /* soft purple/brass aura */
+  content:""; position:absolute; inset:-7px; border-radius:50%;
+  background:radial-gradient(closest-side, rgba(177,120,224,.55), rgba(177,120,224,0));
+}
+.cue i{
+  position:absolute; width:18px; height:24px; border-radius:4px;
+  background:linear-gradient(160deg,#2c1c3c,#120a1c);
+  border:1px solid var(--brass-soft);
+  box-shadow:inset 0 0 0 1px rgba(205,162,75,.3);
+}
+.cue i:nth-child(1){left:2px; top:4px; transform:rotate(-14deg)}
+.cue i:nth-child(2){left:8px; top:2px; transform:rotate(0deg)}
+.cue i:nth-child(3){left:14px; top:4px; transform:rotate(14deg)}
+.cue b{ /* tiny chaos glyph, decorative */
+  position:absolute; right:-2px; bottom:-2px; z-index:3;
+  width:14px; height:14px; border-radius:50%; background:var(--brass-foil);
+  border:1px solid #f0d894; color:#2b1708; font-size:9px; font-weight:800;
+  display:flex; align-items:center; justify-content:center;
+}
+/* R6 — brief pulse the MOMENT a card is gained (decorative; chip is always-on).
+   Base opacity:0 → under reduce-motion it stays invisible and the constant chip
+   carries the meaning. Never a count, never a face. */
+.cue.gained::after{
+  content:""; position:absolute; inset:-7px; border-radius:50%; pointer-events:none; z-index:0;
+  border:2px solid rgba(177,120,224,.9); opacity:0;
+  animation:cueGain 1.05s ease-out 3;
+}
+@keyframes cueGain{
+  0%{opacity:.95; transform:scale(.6)}
+  70%{opacity:0; transform:scale(2.1)}
+  100%{opacity:0; transform:scale(2.1)}
+}
+
+/* ============================================================================
+   ABILITY CARD
+   ========================================================================== */
+.acard{
+  position:relative; width:138px; min-height:190px; border-radius:13px;
+  padding:9px 9px 8px; display:flex; flex-direction:column; gap:6px;
+  border:2px solid var(--parchment-border); background:var(--parchment);
+  box-shadow:var(--elev-2); color:var(--ink); overflow:hidden; flex:0 0 auto;
+}
+.acard--blue{background:var(--blue-frame); border-color:var(--blue-edge); color:var(--cream)}
+.acard--gold{background:var(--brass-foil); border-color:#f0d894; color:#2b1708}
+.acard--gold .acard-foil{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(115deg, transparent 30%, rgba(255,255,255,.55) 47%, transparent 64%);
+  background-size:250% 250%; mix-blend-mode:screen;
+  animation:foil 4.5s linear infinite;
+}
+@keyframes foil{0%{background-position:120% 0}100%{background-position:-120% 0}}
+
+.acard-head{display:flex; justify-content:space-between; align-items:flex-start; gap:8px; z-index:2}
+.acard-name{line-height:1.1; min-width:0}
+.acard-name b{display:block; font-size:15.5px; font-weight:800}
+/* the SINGLE secondary (non-color) rarity cue: one small word on its own line.
+   No letter gem, no pips — frame/foil colour carries rarity, the word backs it up. */
+.acard-rar{
+  display:inline-flex; align-items:center; margin-top:5px; vertical-align:middle;
+  font-size:8px; font-weight:800; letter-spacing:1.3px; text-transform:uppercase; white-space:nowrap;
+  padding:2.5px 8px; border-radius:999px;
+  background:rgba(120,90,40,.12); color:#8a6a2f; border:1px solid rgba(120,90,40,.30);
+}
+.acard--blue .acard-rar{background:rgba(255,255,255,.14); color:#eaf2ff; border-color:rgba(207,225,255,.5)}
+.acard--gold .acard-rar{background:rgba(43,23,8,.13); color:#3f2a0c; border-color:rgba(90,61,18,.5)}
+
+.acard-icon{
+  align-self:center; width:60px; height:60px; border-radius:50%; margin:2px 0;
+  display:flex; align-items:center; justify-content:center; font-size:30px; z-index:2;
+  background:radial-gradient(closest-side, rgba(255,255,255,.9), rgba(255,255,255,.35));
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.5), 0 3px 8px rgba(0,0,0,.3);
+}
+.acard--blue .acard-icon{background:radial-gradient(closest-side, rgba(207,225,255,.95), rgba(120,160,220,.4))}
+.acard--gold .acard-icon{background:radial-gradient(closest-side,#fff6df,#e7c879)}
+
+/* effect plaque — ALWAYS light/dark for contrast even on blue/gold frames */
+.acard-effect{
+  z-index:2; margin-top:auto;
+  background:rgba(255,253,246,.94); color:var(--ink);
+  border:1px solid rgba(120,90,40,.25); border-radius:8px;
+  padding:6px 7px; font-size:11px; line-height:1.32; font-weight:600;
+}
+.acard-effect span{display:block; font-weight:500; opacity:.72; font-size:9.5px; margin-top:1px}
+
+/* selected / lifted */
+.acard.lifted{transform:translateY(-14px) rotate(-1deg); box-shadow:0 26px 34px rgba(0,0,0,.55); outline:3px solid #ffe09a; outline-offset:2px}
+
+/* equipped (Shield held) */
+.acard.equipped{outline:3px solid #7fe0a3; outline-offset:2px; padding-top:16px}
+.equip-sash{
+  position:absolute; top:-9px; left:50%; transform:translateX(-50%); z-index:5;
+  background:linear-gradient(180deg,#2f9d5f,#1f7a47); color:#fff;
+  font-size:9px; font-weight:800; letter-spacing:.5px; padding:3px 12px; border-radius:999px;
+  white-space:nowrap; border:1px solid rgba(255,255,255,.4);
+  box-shadow:0 3px 8px rgba(0,0,0,.45);
+}
+
+/* card BACK */
+.acard--back{
+  background:
+    radial-gradient(120% 120% at 50% 0%, #34503c 0%, #1c3326 70%),
+    var(--wood-bar);
+  border:2px solid var(--brass); align-items:center; justify-content:center;
+  display:flex;
+}
+.acard--back .frame{
+  position:absolute; inset:8px; border:1.5px solid var(--brass-soft); border-radius:9px;
+}
+.acard--back .emblem{
+  width:62px; height:62px; border-radius:50%;
+  background:var(--brass-foil); border:2px solid #f0d894;
+  display:flex; align-items:center; justify-content:center;
+  color:#2b1708; font-size:30px; font-weight:800;
+  box-shadow:0 4px 12px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.6);
+}
+.acard--back .sub{position:absolute; bottom:14px; color:#e7dcc1; font-size:9px; letter-spacing:2px; font-weight:700}
+
+/* the ability LEDGE (brass-trimmed shelf that holds your fanned cards) */
+.ledge{
+  position:relative; padding:12px 14px 14px; border-radius:var(--r-xl);
+  background:linear-gradient(180deg,#3a2410,#241407);
+  border:1px solid var(--rack-border);
+  box-shadow:inset 0 2px 0 rgba(205,162,75,.35), inset 0 -8px 16px rgba(0,0,0,.4), var(--elev-2);
+}
+.ledge::before{
+  content:""; position:absolute; left:10px; right:10px; top:6px; height:2px;
+  background:linear-gradient(90deg, transparent, var(--brass-soft), transparent);
+}
+.ledge-label{
+  position:absolute; top:-11px; left:14px;
+  font-size:10.5px; font-weight:800; letter-spacing:.5px; text-transform:uppercase;
+  color:#2b1708; background:var(--brass-foil); border:1px solid #f0d894;
+  padding:2px 9px; border-radius:999px;
+}
+.fan{display:flex; align-items:flex-end}
+.fan .acard{width:104px; min-height:150px; margin-left:-74px; transition:margin .18s ease, transform .18s ease; --rb:#c9ab6e}
+.fan .acard:first-child{margin-left:0}
+.fan .acard--blue{--rb:#3b6fc0}
+.fan .acard--gold{--rb:#e7c879}
+/* rarity top-edge bar — stays glanceable even when a card is tucked behind the next */
+.fan .acard::before{content:""; position:absolute; top:0; left:0; right:0; height:7px; z-index:6;
+  background:var(--rb); box-shadow:inset 0 -1px 0 rgba(0,0,0,.18)}
+/* stack so the front (last) card sits on top, no label bleed from cards behind */
+.fan .acard:nth-child(1){z-index:1}.fan .acard:nth-child(2){z-index:2}
+.fan .acard:nth-child(3){z-index:3}.fan .acard:nth-child(4){z-index:4}
+.fan .acard:nth-child(5){z-index:5}
+.fan .acard .acard-name b{font-size:12px}
+.fan .acard .acard-icon{width:42px; height:42px; font-size:21px}
+.fan .acard .acard-effect{font-size:9.5px}
+/* resting: only the front card shows its full face; the rest become clean rarity tabs */
+.fan .acard:not(:last-child) .acard-head,
+.fan .acard:not(:last-child) .acard-icon,
+.fan .acard:not(:last-child) .acard-effect{opacity:0; transition:opacity .15s ease}
+/* hover: fan out and reveal every label cleanly (no bleed) */
+.fan:hover .acard{margin-left:-16px; transform:translateY(-8px)}
+.fan:hover .acard:first-child{margin-left:0}
+.fan:hover .acard:not(:last-child) .acard-head,
+.fan:hover .acard:not(:last-child) .acard-icon,
+.fan:hover .acard:not(:last-child) .acard-effect{opacity:1}
+.fan .acard:hover{transform:translateY(-14px)}
+
+/* ============================================================================
+   ACTION SHEET / parchment panels (reuse coach-card look)
+   ========================================================================== */
+.sheet{
+  width:300px; background:var(--parchment); border:2px solid var(--parchment-border);
+  border-radius:var(--r-lg); padding:14px; color:var(--ink);
+  box-shadow:0 18px 40px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.6);
+}
+.sheet h4{margin:0 0 3px; font-size:15px; font-weight:800}
+.sheet .lead{margin:0 0 11px; font-size:12px; color:var(--ink-soft); line-height:1.4}
+.seg{display:flex; gap:6px; padding:5px; background:rgba(0,0,0,.07); border-radius:11px; margin-bottom:11px}
+.seg button{
+  flex:1; border:none; background:transparent; cursor:pointer; border-radius:8px;
+  padding:9px 8px; font-family:var(--font); font-weight:700; font-size:12.5px; color:var(--ink-soft);
+  min-height:44px;
+}
+.seg button .zh{display:block; font-size:13px} .seg button .en{font-size:10px; opacity:.8}
+.seg button.on{background:linear-gradient(180deg,#2f6a43,#235536); color:var(--cream); box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.seg button.on.fd{background:linear-gradient(180deg,#5b4a8f,#3c2f66)}
+
+.declare{
+  border:1px dashed var(--brass); border-radius:10px; padding:10px;
+  background:rgba(91,74,143,.08); margin-bottom:11px;
+}
+.declare .lbl{font-size:11px; font-weight:800; color:#4a3a86; letter-spacing:.3px; margin-bottom:7px; text-transform:uppercase}
+.claim{display:flex; flex-wrap:wrap; gap:6px}
+.claim button{
+  border:1px solid var(--parchment-border); background:#fffdf6; color:var(--ink);
+  border-radius:8px; padding:6px 9px; font-family:var(--font); font-size:11.5px; font-weight:600; cursor:pointer;
+}
+.claim button.pick{background:#2b1708; color:#ffdc8c; border-color:#2b1708}
+.hide{display:none}
+
+.btn{
+  font-family:var(--font); font-weight:700; font-size:13.5px; border:none; cursor:pointer;
+  border-radius:10px; padding:11px 16px; min-height:44px; width:100%;
+}
+.btn-primary{color:var(--cream); background:linear-gradient(180deg,#3a7d50,#205233); box-shadow:0 4px 0 #163a23, 0 6px 16px rgba(0,0,0,.32)}
+.btn-primary:active{transform:translateY(2px); box-shadow:0 2px 0 #163a23}
+.btn-gold{color:#2b1708; background:var(--brass-foil); box-shadow:0 4px 0 #9c7a2f}
+.btn-ghost{background:transparent; border:1px solid var(--parchment-border); color:var(--ink); box-shadow:none}
+.btn-row{display:flex; gap:8px}
+.btn-row .btn{width:auto; flex:1}
+
+/* toast / banners */
+.toast{
+  display:inline-flex; align-items:center; gap:9px; padding:9px 14px; border-radius:999px;
+  background:rgba(20,16,10,.9); color:#fffaf0; font-weight:700; font-size:13px;
+  box-shadow:0 8px 20px rgba(0,0,0,.45); border:1px solid var(--brass-soft);
+}
+.toast .dot{width:9px;height:9px;border-radius:50%;background:#57d977}
+.toast.bad .dot{background:#ff6b6b}
+.turn-banner{
+  display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border-radius:999px;
+  background:rgba(20,16,10,.82); color:#fffaf0; font-weight:700; font-size:13px;
+  box-shadow:0 4px 12px rgba(0,0,0,.4);
+}
+.turn-banner .turn-dot{width:10px;height:10px;border-radius:50%;background:#57d977}
+
+/* ============================================================================
+   MATCH VIEW felt + dock
+   ========================================================================== */
+.match{
+  width:100%; max-width:820px; border-radius:18px; overflow:hidden;
+  box-shadow:var(--elev-2); border:1px solid rgba(0,0,0,.4);
+}
+.felt{
+  position:relative; height:330px; background:var(--felt); box-shadow:var(--felt-vignette);
+}
+.felt .pos, .felt-m .pos{position:absolute}
+.seat-top{top:14px; left:50%; transform:translateX(-50%)}
+.seat-left{left:20px; top:120px}
+.seat-right{right:20px; top:96px}
+.board-melds{position:absolute; left:50%; top:150px; transform:translate(-50%,-50%); display:flex; gap:14px; flex-wrap:wrap; justify-content:center; width:80%}
+.dock{
+  position:relative; background:var(--wood-bar); box-shadow:var(--wood-bar-edge);
+  padding:30px 14px 16px; display:flex; gap:20px; align-items:flex-end; justify-content:center; flex-wrap:wrap;
+}
+.dock .self-name{
+  position:absolute; left:14px; top:-22px; z-index:6; display:flex; align-items:center; gap:8px;
+  padding:5px 10px 5px 5px; border-radius:12px; background:var(--rack); border:1px solid var(--rack-border);
+  box-shadow:var(--rack-highlight), var(--elev-1);
+}
+.dock .self-name .avatar{width:42px; height:42px; font-size:16px}
+.dock .self-name b{color:var(--cream); font-size:12px}
+.dock .turn-banner{position:absolute; right:16px; top:-20px; z-index:6; font-size:12px}
+.dock-rack{display:flex; flex-direction:column; gap:6px}
+.dock-tag{font-size:10px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:#e8d6b3}
+.dock-tag.ivory{color:#f1e7cf}
+
+/* ============================================================================
+   PHONE FRAME (mobile treatment)
+   ========================================================================== */
+.phone{
+  width:300px; border-radius:30px; padding:10px;
+  background:linear-gradient(180deg,#15110c,#070605); border:2px solid #3a2c18;
+  box-shadow:0 24px 50px rgba(0,0,0,.5), inset 0 0 0 2px rgba(205,162,75,.18);
+}
+.phone .scr{position:relative; height:520px; border-radius:22px; overflow:hidden; background:var(--felt-base)}
+.phone .nav{height:34px; background:var(--wood-bar); display:flex; align-items:center; justify-content:center; color:var(--cream); font-size:11px; font-weight:800; letter-spacing:.5px; box-shadow:var(--wood-bar-edge)}
+.phone .notch{position:absolute; top:0; left:50%; transform:translateX(-50%); width:90px; height:16px; background:#070605; border-radius:0 0 10px 10px; z-index:30}
+.phone .felt-m{position:relative; height:300px; background:var(--felt); box-shadow:var(--felt-vignette)}
+.phone .felt-m .seat-top{top:8px}
+.phone .felt-m .seat-left{left:8px; top:60px}
+.phone .felt-m .seat-right{right:8px; top:60px}
+.phone .felt-m .avatar{width:42px; height:42px; font-size:14px}
+.phone .felt-m .board-melds{top:118px; gap:8px}
+.phone .rack-m{position:absolute; bottom:0; left:0; right:0; background:var(--rack); border-top:1px solid var(--rack-border); box-shadow:var(--rack-highlight); padding:10px 8px 12px}
+.phone .rack-m .row{display:flex; gap:4px; overflow:hidden; justify-content:center}
+
+/* peek strip — card tops poking above the rack = the drawer affordance */
+.peek-strip{
+  position:absolute; left:0; right:0; bottom:80px; z-index:18;
+  display:flex; justify-content:center; gap:0; pointer-events:none;
+}
+.peek-strip .top{
+  width:54px; height:30px; border-radius:8px 8px 0 0; margin:0 -8px;
+  border:1.5px solid; border-bottom:none; box-shadow:0 -4px 10px rgba(0,0,0,.4);
+  display:flex; align-items:flex-end; justify-content:center; font-size:9px; font-weight:800; padding-bottom:2px;
+}
+.peek-strip .top.w{background:var(--parchment); border-color:var(--parchment-border); color:var(--ink)}
+.peek-strip .top.b{background:var(--blue-frame); border-color:var(--blue-edge); color:#cfe1ff}
+.peek-strip .top.g{background:var(--brass-foil); border-color:#f0d894; color:#2b1708}
+.drawer-handle{
+  position:absolute; left:50%; transform:translateX(-50%); bottom:108px; z-index:20;
+  background:var(--brass-foil); color:#2b1708; border:1px solid #f0d894;
+  font-size:10.5px; font-weight:800; letter-spacing:.4px; padding:4px 14px; border-radius:999px;
+  box-shadow:0 4px 10px rgba(0,0,0,.45); display:inline-flex; align-items:center; gap:6px;
+}
+.drawer-handle .grip{width:26px; height:4px; border-radius:3px; background:rgba(43,23,8,.5)}
+
+/* expanded drawer overlay */
+.drawer{
+  position:absolute; left:0; right:0; bottom:0; z-index:25;
+  background:linear-gradient(180deg,#3a2410,#1c1006);
+  border-top:2px solid var(--brass); border-radius:18px 18px 0 0;
+  box-shadow:0 -16px 30px rgba(0,0,0,.5); padding:8px 10px 14px;
+}
+.drawer .dh{display:flex; align-items:center; justify-content:center; padding:4px 0 8px}
+.drawer .dh .grip{width:42px; height:5px; border-radius:3px; background:rgba(205,162,75,.5)}
+.drawer .dtitle{display:flex; align-items:center; justify-content:space-between; margin:0 4px 8px; color:var(--cream); font-size:11px; font-weight:800; letter-spacing:.4px}
+.drawer .dtitle .x{color:#e7dcc1; font-size:14px}
+.drawer .swipe{display:flex; gap:8px; overflow-x:auto; padding:2px 2px 8px; scrollbar-width:thin}
+.drawer .swipe .acard{width:112px; min-height:152px}
+.drawer .swipe .acard .acard-icon{width:40px; height:40px; font-size:20px}
+.swipe-dots{display:flex; gap:5px; justify-content:center; margin-top:2px}
+.swipe-dots i{width:6px; height:6px; border-radius:50%; background:rgba(205,162,75,.4)}
+.swipe-dots i.on{background:var(--brass)}
+
+/* ============================================================================
+   PEEK — round-long foldable panel (persists until end of round, collapsible)
+   ========================================================================== */
+.peek-stagewrap{display:flex; flex-wrap:wrap; gap:24px; align-items:flex-start; justify-content:center}
+.peek-statecol{display:flex; flex-direction:column; align-items:center; gap:10px}
+.peek-board{position:relative; width:330px; max-width:100%; min-height:236px; border-radius:16px;
+  overflow:hidden; background:var(--felt); box-shadow:var(--felt-vignette)}
+.peek-board .board-melds{position:absolute; left:50%; top:52%; transform:translate(-50%,-50%); opacity:.4; margin:0}
+/* the docked panel (open) */
+.peek-panel{position:absolute; top:14px; right:14px; width:276px; border-radius:13px; overflow:hidden;
+  background:var(--parchment); border:2px solid var(--parchment-border); box-shadow:0 18px 38px rgba(0,0,0,.52)}
+.peek-phead{display:flex; align-items:center; gap:8px; padding:9px 11px;
+  background:linear-gradient(180deg,#2a59b0,#13478f); color:#eef4ff}
+.peek-phead .eye{font-size:15px}
+.peek-phead .ttl{font-size:11.5px; font-weight:800; line-height:1.25}
+.peek-phead .ttl small{display:block; font-weight:600; font-size:9px; opacity:.85; letter-spacing:.3px}
+.peek-fold{margin-left:auto; width:24px; height:24px; border-radius:7px; flex:none;
+  border:1px solid rgba(255,255,255,.34); background:rgba(255,255,255,.14); color:#fff;
+  display:flex; align-items:center; justify-content:center; font-size:12px; cursor:pointer}
+.peek-pbody{padding:11px 12px 12px}
+.peek-rack{display:flex; flex-wrap:wrap; gap:5px; padding:10px 11px; border-radius:11px;
+  background:var(--rack); box-shadow:var(--rack-highlight)}
+.peek-note{display:flex; align-items:center; gap:6px; margin-top:9px;
+  font-size:10px; font-weight:700; color:var(--ink-soft)}
+.peek-note .lk{color:#13478f}
+/* the folded handle (closed) — same corner, re-openable */
+.peek-tab{position:absolute; top:14px; right:14px; display:inline-flex; align-items:center; gap:8px;
+  padding:9px 13px; border-radius:12px; cursor:pointer; border:1px solid rgba(255,255,255,.2);
+  background:linear-gradient(180deg,#2a59b0,#13478f); color:#eef4ff; font-size:11.5px; font-weight:800;
+  box-shadow:0 10px 22px rgba(0,0,0,.45)}
+.peek-tab .chev{opacity:.85; font-size:12px}
+
+/* ============================================================================
+   SHIELD trigger
+   ========================================================================== */
+.shield-chip{
+  display:inline-flex; align-items:center; gap:9px; padding:8px 13px 8px 9px; border-radius:14px;
+  background:linear-gradient(180deg,#244b35,#16321f); border:1px solid rgba(127,224,163,.5);
+  box-shadow:var(--elev-1); color:var(--cream);
+}
+.shield-chip .orb{
+  width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-size:18px; background:radial-gradient(closest-side,#7fe0a3,#1f7a47); box-shadow:0 0 12px rgba(127,224,163,.6);
+}
+.shield-chip b{font-size:12.5px; display:block} .shield-chip span{font-size:10.5px; opacity:.82}
+.attack-line{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.arrow{color:#ff8a8a; font-size:22px; font-weight:800}
+.block-burst{
+  position:relative; width:96px; height:96px; border-radius:50%;
+  background:radial-gradient(closest-side, rgba(127,224,163,.55), rgba(127,224,163,0));
+  display:flex; align-items:center; justify-content:center;
+}
+.block-burst .ring{position:absolute; inset:14px; border:3px solid #7fe0a3; border-radius:50%; box-shadow:0 0 18px rgba(127,224,163,.7)}
+.block-burst .ico{font-size:34px}
+
+/* ============================================================================
+   MODE ENTRY
+   ========================================================================== */
+.lobby-card{
+  width:100%; max-width:420px; padding:20px; background:var(--parchment);
+  border:1px solid var(--parchment-border); border-radius:18px;
+  box-shadow:0 18px 40px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.6);
+}
+.lobby-card h3{margin:0 0 4px; font-size:17px; color:var(--ink)}
+.lobby-card .hint{margin:0 0 16px; font-size:12px; color:var(--ink-soft)}
+.mode-row{display:flex; gap:12px; margin-bottom:14px}
+.mode-opt{
+  flex:1; border:2px solid var(--parchment-border); border-radius:14px; padding:14px 12px; cursor:pointer;
+  background:#fffdf6; text-align:center; position:relative;
+}
+.mode-opt .ic{font-size:26px} .mode-opt b{display:block; font-size:14px; margin-top:4px; color:var(--ink)}
+.mode-opt .en{font-size:10px; color:var(--ink-soft)}
+.mode-opt.on{border-color:var(--brass); background:linear-gradient(180deg,#fff6df,#f3e3b6); box-shadow:0 0 0 3px rgba(205,162,75,.28)}
+.mode-opt .badge{position:absolute; top:-9px; right:-7px; background:var(--brass-foil); color:#2b1708; font-size:9px; font-weight:800; padding:2px 7px; border-radius:999px; border:1px solid #f0d894}
+.coach{
+  margin-top:6px; padding:11px 13px; background:linear-gradient(180deg,#fbf6e8,#f1e6cb);
+  border:2px solid var(--parchment-border); border-radius:14px;
+  box-shadow:0 8px 20px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.6);
+}
+.coach .obj{font-weight:800; font-size:12.5px; color:#205233; margin:0 0 3px}
+.coach .rule{font-size:11.5px; line-height:1.45; color:var(--ink); margin:0}
+
+/* ============================================================================
+   JOKER AMBIENT HEAT — danger is encoded in the joker TILE's background colour
+   (cool ivory → amber → hot red); the precise % shows ONLY on hover.
+   ========================================================================== */
+.danger-set{display:flex; flex-direction:column; align-items:center; gap:10px}
+.jwrap{position:relative; display:inline-flex}
+.joker-meld{display:inline-flex; gap:3px; padding:7px; border-radius:10px; background:rgba(0,0,0,.10)}
+.jtile.heat-low{background-color:#f3ead0}            /* safe → cool ivory */
+.jtile.heat-med{background-color:#eaa53c}            /* warming → amber   */
+.jtile.heat-high{background-color:#d23a2b}           /* danger → hot red  */
+.jtile.heat-med .joker,.jtile.heat-high .joker{filter:drop-shadow(0 1px 1px rgba(0,0,0,.35))}
+.jtile.heat-high{box-shadow:var(--tile-shadow-mini),0 0 0 2px rgba(210,58,43,.55),0 0 12px 2px rgba(210,58,43,.4)}
+.jheat-pop{
+  position:absolute; bottom:calc(100% + 10px); left:50%; transform:translateX(-50%);
+  z-index:20; display:none; width:152px; padding:9px 11px; border-radius:11px;
+  background:rgba(20,16,10,.93); border:1px solid var(--brass-soft);
+  color:#fffaf0; box-shadow:var(--elev-2); text-align:left;
+}
+.jwrap:hover .jheat-pop,.jheat-pop.show{display:block}
+.jheat-pop::after{content:""; position:absolute; top:100%; left:50%; margin-left:-6px;
+  border:6px solid transparent; border-top-color:rgba(20,16,10,.93)}
+/* downward variant — used for the always-open demo so it never collides upward */
+.jheat-pop.below{bottom:auto; top:calc(100% + 10px)}
+.jheat-pop.below::after{top:auto; bottom:100%; border-top-color:transparent; border-bottom-color:rgba(20,16,10,.93)}
+.jheat-pop .ph{display:flex; align-items:center; justify-content:space-between; font-size:10px; font-weight:800; letter-spacing:.4px; margin-bottom:6px}
+.jheat-pop .ph .pct{font-size:15px}
+.jheat-pop .pbar{height:7px; border-radius:5px; background:rgba(255,255,255,.16); overflow:hidden}
+.jheat-pop .pbar i{display:block; height:100%; border-radius:5px; background:linear-gradient(90deg,#f2c14e,#e8893b,#d2402f)}
+.jheat-pop .pnote{margin-top:6px; font-size:9.5px; color:#e8d6b3; line-height:1.4}
+.heat-scale{display:flex; align-items:center; gap:10px; color:#efe6cf; font-size:11px; flex-wrap:wrap}
+.heat-scale .sw{display:inline-block; width:20px; height:26px; border-radius:5px; border:1px solid var(--tile-border); vertical-align:middle; margin-right:5px}
+/* joker mood ramp — the clown's face morphs in step with the heat colour */
+.face-ramp{display:flex; gap:9px; flex-wrap:wrap; align-items:flex-end}
+.face-ramp .rl{align-self:center; font-size:10.5px; font-weight:800; letter-spacing:.4px; color:#efe6cf; margin-right:1px}
+.face-ramp .frx{display:flex; flex-direction:column; align-items:center; gap:4px}
+.face-ramp .fc{width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+  font-size:19px; border:1px solid var(--tile-border); box-shadow:var(--tile-shadow-mini)}
+.face-ramp .frx i{font-style:normal; font-size:9.5px; font-weight:700; color:#e7dcc1; letter-spacing:.3px}
+.face-ramp .arr{align-self:center; color:#9c8a63; font-weight:800; font-size:13px}
+
+/* legend */
+.legend{display:flex; flex-wrap:wrap; gap:18px}
+.legend .item{display:flex; gap:10px; align-items:flex-start; max-width:320px}
+.legend .sw{width:34px; height:46px; border-radius:8px; flex:0 0 auto; border:2px solid; box-shadow:var(--elev-1)}
+.legend .sw.w{background:var(--parchment); border-color:var(--parchment-border)}
+.legend .sw.b{background:var(--blue-frame); border-color:var(--blue-edge)}
+.legend .sw.g{background:var(--brass-foil); border-color:#f0d894}
+.legend .tx{color:#efe6cf; font-size:12.5px; line-height:1.45}
+.legend .tx b{color:#fff}
+
+.kv{display:flex; flex-wrap:wrap; gap:10px 26px; color:#efe6cf; font-size:12.5px}
+.kv div b{color:#ffd98a}
+
+.footer{color:#bcae8d; font-size:12px; text-align:center; padding:10px 0 0; line-height:1.6}
+
+/* ============================================================================
+   REV-2 — cast→target beam, target pulse, Ability Codex FAB + panel, coach list
+   ========================================================================== */
+/* cast → target beam (rendered as a still SVG frame) */
+.beam-stage{position:relative; width:470px; max-width:100%; height:250px; margin:0 auto;
+  border-radius:16px; overflow:hidden; background:var(--felt); box-shadow:var(--felt-vignette)}
+.beam-svg{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:4}
+.beam-core{stroke:url(#beamGrad); stroke-width:6; stroke-linecap:round; fill:none;
+  filter:drop-shadow(0 0 7px rgba(255,180,90,.85))}
+.beam-flow{stroke:#fff7e6; stroke-width:2.4; stroke-linecap:round; fill:none;
+  stroke-dasharray:3 13; animation:beamflow 1.1s linear infinite}
+@keyframes beamflow{to{stroke-dashoffset:-32}}
+.avatar.caster{box-shadow:0 0 0 3px #ffe9b0, 0 0 0 6px #cda24b, 0 0 18px 6px rgba(205,162,75,.6)}
+.tagpill{position:absolute; z-index:6; font-size:9.5px; font-weight:800; letter-spacing:.5px;
+  padding:3px 9px; border-radius:999px; white-space:nowrap; box-shadow:0 3px 8px rgba(0,0,0,.45)}
+.tagpill.is-caster{background:var(--brass-foil); color:#2b1708; border:1px solid #f0d894}
+.tagpill.is-target{background:#e23b3b; color:#fff; border:1px solid #ffb0a0}
+.tagpill.is-blocked{background:#2f9d5f; color:#fff; border:1px solid #b6f0c9}
+
+/* BLOCKED-by-Shield resolution: the beam snaps, a shield disc pops on the target.
+   All meaning is static (broken beam + disc + label); only the flow dashes animate. */
+.avatar.shielded{box-shadow:0 0 0 4px #d8ffe6, 0 0 0 8px #2f9d5f, 0 0 0 12px rgba(47,157,95,.32), 0 0 26px 9px rgba(127,224,163,.5)}
+.shield-pop{position:absolute; z-index:8; width:58px; height:58px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; font-size:28px;
+  background:radial-gradient(closest-side, rgba(127,224,163,.72), rgba(127,224,163,0));
+  filter:drop-shadow(0 4px 10px rgba(0,0,0,.45))}
+.shield-pop::before{content:""; position:absolute; inset:8px; border:3px solid #8af0b0; border-radius:50%;
+  box-shadow:0 0 16px rgba(127,224,163,.85)}
+.beam-core.broken{filter:drop-shadow(0 0 6px rgba(255,150,90,.8))}
+.beam-snap{stroke:#ffe0bd; stroke-width:3; stroke-linecap:round; fill:none;
+  filter:drop-shadow(0 0 5px rgba(255,160,90,.9))}
+
+/* bold target ring pulse — meaning lives in the static ring + ✓ label, not the motion */
+@keyframes targetPulse{
+  0%,100%{box-shadow:0 0 0 4px #fff0a0, 0 0 0 8px #e23b3b, 0 0 0 12px rgba(226,59,59,.38), 0 0 26px 9px rgba(255,90,60,.5)}
+  50%{box-shadow:0 0 0 4px #fff0a0, 0 0 0 11px #ff5a3c, 0 0 0 16px rgba(255,90,60,.28), 0 0 38px 14px rgba(255,90,60,.72)}
+}
+
+/* Ability Codex / Help — FABs mirror the chat speech-bubble FAB exactly */
+.fab-demo{position:relative; width:300px; height:300px; border-radius:16px; overflow:hidden;
+  background:var(--felt); box-shadow:var(--felt-vignette)}
+.fab-stack{position:absolute; right:16px; bottom:16px; display:flex; flex-direction:column; gap:12px; align-items:flex-end}
+.fab{width:52px; height:52px; border-radius:50%; border:none; cursor:pointer; position:relative;
+  display:inline-flex; align-items:center; justify-content:center; font-size:22px; color:var(--cream);
+  background:rgba(123,74,36,.94); box-shadow:0 0 0 1.5px rgba(200,162,74,.8), 0 8px 20px rgba(0,0,0,.42)}
+.fab .dot{position:absolute; top:5px; right:5px; width:12px; height:12px; border-radius:50%;
+  background:#e2554e; box-shadow:0 0 0 2px rgba(244,234,210,.92)}
+.fab-tip{position:absolute; right:60px; top:50%; transform:translateY(-50%);
+  background:rgba(20,16,10,.86); color:#fffaf0; font-size:10px; font-weight:700;
+  padding:3px 8px; border-radius:8px; white-space:nowrap}
+.fab-tip::after{content:""; position:absolute; left:100%; top:50%; margin-top:-5px;
+  border:5px solid transparent; border-left-color:rgba(20,16,10,.86)}
+
+.codex{width:344px; max-width:94vw; border-radius:16px; overflow:hidden; background:var(--parchment);
+  border:1px solid var(--parchment-border); box-shadow:var(--elev-2)}
+.codex-head{display:flex; align-items:center; justify-content:space-between; padding:11px 14px;
+  background:var(--wood-bar); box-shadow:var(--wood-bar-edge); color:var(--cream)}
+.codex-head b{font-size:14px; font-weight:800; letter-spacing:.3px; display:flex; align-items:center; gap:7px}
+.codex-head .x{font-size:15px; color:#e7dcc1; cursor:pointer; line-height:1}
+.codex-howto{padding:11px 14px; border-bottom:1px dashed var(--parchment-border)}
+.codex-howto b{display:block; font-size:12px; font-weight:800; color:#205233; margin-bottom:3px}
+.codex-howto p{margin:0; font-size:11px; line-height:1.5; color:var(--ink)}
+.codex-body{padding:6px 12px 12px; max-height:720px; overflow:auto}
+.codex-gh{display:flex; align-items:center; gap:8px; margin:12px 2px 7px; font-size:10.5px;
+  font-weight:800; letter-spacing:1px; color:var(--ink-soft)}
+.codex-sw{width:15px; height:15px; border-radius:5px; flex:0 0 auto; box-shadow:0 1px 2px rgba(0,0,0,.28)}
+.codex-sw.w{background:var(--parchment); border:1px solid var(--parchment-border)}
+.codex-sw.b{background:var(--blue-frame); border:1px solid var(--blue-edge)}
+.codex-sw.g{background:var(--brass-foil); border:1px solid #f0d894}
+.codex-row{display:flex; gap:10px; align-items:center; padding:7px 8px; border-radius:10px;
+  background:rgba(255,253,246,.72); border:1px solid rgba(120,90,40,.16); margin-bottom:6px}
+.codex-row.r-b{background:rgba(19,71,143,.08); border-color:rgba(19,71,143,.22)}
+.codex-row.r-g{background:rgba(205,162,75,.15); border-color:rgba(205,162,75,.36)}
+.codex-ic{flex:0 0 auto; width:34px; height:34px; border-radius:9px; display:flex; align-items:center;
+  justify-content:center; font-size:18px; background:radial-gradient(closest-side,#fff,rgba(255,255,255,.4));
+  box-shadow:inset 0 0 0 1px rgba(120,90,40,.2)}
+.codex-tx{flex:1; min-width:0}
+.codex-tx b{display:block; font-size:12.5px; color:var(--ink)}
+.codex-tx span{display:block; font-size:10.5px; color:var(--ink-soft); line-height:1.35}
+
+/* coach bullets (Chaos lobby intro) */
+.coach ul{margin:7px 0 0; padding-left:17px}
+.coach li{font-size:11.5px; line-height:1.5; color:var(--ink); margin:3px 0}
+.coach li b{color:#205233}
+
+
+/* honor reduce-motion: nothing here carries essential meaning via motion */
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{animation:none !important; transition:none !important}
+}
+
+/* small screens: let panels breathe */
+@media (max-width:680px){
+  .stage{gap:18px}
+  .match{max-width:100%}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="mark">Rummy<b>Cube</b></div>
+  <span class="tag">Chaos DLC</span>
+  <span class="tag" style="background:#fff;border-color:#cbae7e">SP1 · Ability-Card Backbone</span>
+  <div class="spacer" style="flex:1"></div>
+  <div class="note">Static mockup · respects <code style="background:rgba(0,0,0,.3);color:#ffe7ad;padding:1px 5px;border-radius:4px">prefers-reduced-motion</code> · rarity is never color-only</div>
+</header>
+
+<div class="wrap">
+
+  <!-- ===================== PANEL 0 — intro + rarity legend ===================== -->
+  <section class="panel">
+    <div class="panel-head">
+      <span class="panel-num">★</span>
+      <h2 class="panel-title">Card system &amp; rarity language</h2>
+      <span class="panel-sub">how every ability card is coded — read this first</span>
+    </div>
+    <p class="annot">
+      Chaos adds <b>ability cards</b> on top of classic Rummikub (rules unchanged — first to empty their tile <i>rack</i> still wins).
+      Cards are <b>one-time use</b> and there is <b>no hand limit</b>. Each card has a <b>clean face — icon, name, one-line effect, and rarity, nothing else.</b>
+      Rarity reads two ways so it never leans on color alone: a <b>distinct frame / foil</b> per tier, backed by a single <b>rarity word</b> (Common / Uncommon / Rare). No letters, no pips.
+    </p>
+    <div class="stage">
+      <div class="legend">
+        <div class="item">
+          <div class="sw w"></div>
+          <div class="tx"><b>White — Common</b><br>Parchment / ivory frame + the word COMMON. The bread-and-butter cards (Peek, Shield, Junk +2).</div>
+        </div>
+        <div class="item">
+          <div class="sw b"></div>
+          <div class="tx"><b>Blue — Uncommon</b><br>Deep table-blue tied to <code style="background:rgba(0,0,0,.3);color:#cfe1ff;padding:1px 5px;border-radius:4px">#13478f</code> + the word UNCOMMON. Spicier effects (Junk +3, Wheel, Big-Wind).</div>
+        </div>
+        <div class="item">
+          <div class="sw g"></div>
+          <div class="tx"><b>Gold — Rare</b><br>Brass foil + the word RARE — the “wow” pull. Strongest cards (Junk +4, Skip, Lock).</div>
+        </div>
+      </div>
+    </div>
+    <p class="annot" style="border-bottom:none">
+      <b>Privacy rule baked in:</b> you see your own card faces &amp; count; opponents show only a subtle “has cards” aura near their avatar — <b>never a number, never contents.</b>
+    </p>
+  </section>
+
+  <!-- ===================== PANEL A — card anatomy showcase ===================== -->
+  <section class="panel">
+    <div class="panel-head">
+      <span class="panel-num">A</span>
+      <h2 class="panel-title">Card anatomy — sample faces, all three rarities, &amp; the back</h2>
+    </div>
+    <p class="annot">
+      SP1 ships two card types first: <b>Peek</b> (white) and <b>Shield</b> (white, a held/equipped card). Blue &amp; gold sample faces are shown so all three rarity frames are visible. Each card = <b>name · icon · one-line effect · rarity frame</b>.
+    </p>
+    <div class="stage">
+      <!-- White: Peek -->
+      <div class="substage">
+        <div class="acard acard--white">
+          <div class="acard-head">
+            <div class="acard-name"><b>Peek</b><span class="acard-rar">Common</span></div>
+          </div>
+          <div class="acard-icon">👁️</div>
+          <div class="acard-effect">See a rival’s tile rack for the rest of the round.</div>
+        </div>
+        <span class="sublabel">White · Peek</span>
+      </div>
+
+      <!-- White: Shield (equipped) -->
+      <div class="substage">
+        <div class="acard acard--white equipped">
+          <div class="equip-sash">EQUIPPED</div>
+          <div class="acard-head">
+            <div class="acard-name"><b>Shield</b><span class="acard-rar">Common</span></div>
+          </div>
+          <div class="acard-icon">🛡️</div>
+          <div class="acard-effect">Held — auto-blocks the next ability aimed at you.</div>
+        </div>
+        <span class="sublabel">White · Shield (held)</span>
+      </div>
+
+      <!-- Blue sample -->
+      <div class="substage">
+        <div class="acard acard--blue">
+          <div class="acard-head">
+            <div class="acard-name"><b>Junk +3</b><span class="acard-rar">Uncommon</span></div>
+          </div>
+          <div class="acard-icon">🧱</div>
+          <div class="acard-effect">Force a player to draw 3 (chainable).</div>
+        </div>
+        <span class="sublabel">Blue · Junk +3</span>
+      </div>
+
+      <!-- Gold sample -->
+      <div class="substage">
+        <div class="acard acard--gold">
+          <div class="acard-foil" aria-hidden="true"></div>
+          <div class="acard-head">
+            <div class="acard-name"><b>Skip</b><span class="acard-rar">Rare</span></div>
+          </div>
+          <div class="acard-icon">⏭️</div>
+          <div class="acard-effect">Target skips their next turn.</div>
+        </div>
+        <span class="sublabel">Gold · Skip</span>
+      </div>
+
+      <!-- Card back -->
+      <div class="substage">
+        <div class="acard acard--back">
+          <span class="frame"></span>
+          <div class="emblem">✦</div>
+          <span class="sub">CHAOS · ABILITY</span>
+        </div>
+        <span class="sublabel">Card back (face-down / opponents)</span>
+      </div>
+
+      <div class="callout">
+        <b>Clean face, two-channel rarity:</b> the face carries only <b>icon · name · one-line effect</b>, with rarity read from the <b>frame / foil</b> plus a single <b>rarity word</b> — the old letter gem and ◆ pips were dropped as redundant (they encoded the same one thing). The word is the non-color channel, so rarity never relies on color alone, and the effect always sits on a light plaque to stay high-contrast on the blue and gold frames. The gold foil shimmer is decorative and is disabled under <b>reduce-motion</b>.
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PANEL 1 — match view + hand coexistence ===================== -->
+  <section class="panel">
+    <div class="panel-head">
+      <span class="panel-num">1</span>
+      <h2 class="panel-title">Match view — tile rack &amp; ability hand, side by side</h2>
+      <span class="panel-sub">the key layout question</span>
+    </div>
+    <p class="annot">
+      Your <b>two holdings live on the wooden table-edge together but never blend</b>: ivory tiles on the rack (left, the primary thing you act on), ability cards on their own <b>brass-trimmed ledge</b> (right). Different material + different shape = no crowding, no “is this a tile or a card?” confusion. Opponents around the felt show only a soft, <b>always-on “has cards” aura</b> — <b>no count, no faces.</b> The instant one of them <b>gains a card</b> the aura gives a single brief <b>pulse</b> (see Mara, “just drew”) and then settles back to its constant state.
+    </p>
+    <div class="stage">
+      <div class="match">
+        <div class="felt">
+          <!-- opponents with presence cue, NO count -->
+          <div class="pos seat-top seat">
+            <div class="avatar p2">M
+              <div class="cue gained" title="has ability cards"><i></i><i></i><i></i><b>✦</b></div>
+            </div>
+            <span class="nm">Mara · <em style="color:#f0d28a; font-style:normal">just drew</em></span>
+          </div>
+          <div class="pos seat-left seat">
+            <div class="avatar p3 active">L
+              <svg class="timer-ring" width="76" height="76" viewBox="0 0 76 76">
+                <circle cx="38" cy="38" r="33" fill="none" stroke="rgba(0,0,0,.25)" stroke-width="5"/>
+                <circle cx="38" cy="38" r="33" fill="none" stroke="#ffd07a" stroke-width="5" stroke-linecap="round" stroke-dasharray="207" stroke-dashoffset="70"/>
+              </svg>
+              <div class="cue" title="has ability cards"><i></i><i></i><i></i><b>✦</b></div>
+            </div>
+            <span class="nm">Lin · playing</span>
+          </div>
+          <div class="pos seat-right seat">
+            <div class="avatar p4">C
+              <div class="cue" title="has ability cards"><i></i><i></i><i></i><b>✦</b></div>
+            </div>
+            <span class="nm">Cheng</span>
+          </div>
+          <!-- board melds -->
+          <div class="board-melds">
+            <div class="meld glow">
+              <div class="tile tile-red">7</div><div class="tile tile-blue">7</div><div class="tile tile-orange">7</div>
+            </div>
+            <div class="meld glow">
+              <div class="tile tile-black">9</div><div class="tile tile-black">10</div><div class="tile tile-black">11</div><div class="tile tile-black">12</div>
+            </div>
+          </div>
+        </div>
+        <!-- dock: rack (tiles) + ability ledge (cards) -->
+        <div class="dock">
+          <div class="self-name"><div class="avatar self">You</div><b>You</b></div>
+          <span class="turn-banner"><span class="turn-dot"></span> Your turn</span>
+
+          <div class="dock-rack">
+            <span class="dock-tag ivory">🁢 Tile rack (14)</span>
+            <div class="rack">
+              <div class="tile tile-red">3</div><div class="tile tile-red">4</div><div class="tile tile-red">5</div>
+              <div class="tile tile-blue">8</div><div class="tile tile-orange">8</div><div class="tile tile-black">8</div>
+              <div class="tile tile-blue">11</div><div class="tile tile-blue">12</div><div class="tile tile-blue">13</div>
+            </div>
+          </div>
+
+          <div class="dock-rack">
+            <span class="dock-tag">🂠 Your cards</span>
+            <div class="ledge">
+              <span class="ledge-label">Abilities</span>
+              <div class="fan">
+                <div class="acard acard--white">
+                  <div class="acard-head"><div class="acard-name"><b>Peek</b><span class="acard-rar">Common</span></div></div>
+                  <div class="acard-icon">👁️</div>
+                  <div class="acard-effect">Peek a rack</div>
+                </div>
+                <div class="acard acard--white">
+                  <div class="acard-head"><div class="acard-name"><b>Shield</b><span class="acard-rar">Common</span></div></div>
+                  <div class="acard-icon">🛡️</div>
+                  <div class="acard-effect">Auto-block</div>
+                </div>
+                <div class="acard acard--blue">
+                  <div class="acard-head"><div class="acard-name"><b>Junk +3</b><span class="acard-rar">Uncommon</span></div></div>
+                  <div class="acard-icon">🧱</div>
+                  <div class="acard-effect">Draw 3</div>
+                </div>
+                <div class="acard acard--gold">
+                  <div class="acard-foil" aria-hidden="true"></div>
+                  <div class="acard-head"><div class="acard-name"><b>Skip</b><span class="acard-rar">Rare</span></div></div>
+                  <div class="acard-icon">⏭️</div>
+                  <div class="acard-effect">Skip a turn</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout">
+        <b>Why a separate ledge?</b> The tile rack is sacred — it’s the win condition and already crowded on a 4-player board. Bolting cards onto the rack would fight the tiles for width and muddle “what empties to win.” A distinct ledge keeps the two mental models clean and lets the card hand grow (no limit) without ever stealing tile space.         <b>Fan tidy-up:</b> at rest only the front card shows its full face; the rest tuck into clean rarity-colored tabs (rarity still glanceable by color), and hovering fans them out — no label bleed.
+      </div>
+    </div>
+
+    <!-- mobile treatment -->
+    <p class="annot" style="border-top:1px dashed rgba(205,162,75,.25)">
+      <b>Mobile-first treatment.</b> A phone can’t fit two shelves. Cards become a <b>pull-up drawer that overlays the rack</b>. A thin <b>peek-strip</b> of card-tops pokes above the rack as the affordance (you can see your rarities at a glance); tapping the brass handle slides up a <b>swipeable card row</b> over the tiles. Tiles never lose space; cards are one tap away.
+    </p>
+    <div class="stage center">
+      <div class="substage">
+        <div class="phone">
+          <div class="scr">
+            <div class="notch"></div>
+            <div class="nav">CHAOS · ROOM 4F2C</div>
+            <div class="felt-m">
+              <div class="pos seat-top seat"><div class="avatar p2">M<div class="cue"><i></i><i></i><i></i><b>✦</b></div></div></div>
+              <div class="pos seat-left seat"><div class="avatar p3 active">L<div class="cue"><i></i><i></i><i></i><b>✦</b></div></div></div>
+              <div class="pos seat-right seat"><div class="avatar p4">C<div class="cue"><i></i><i></i><i></i><b>✦</b></div></div></div>
+              <div class="board-melds">
+                <div class="meld glow"><div class="tile sm tile-red">7</div><div class="tile sm tile-blue">7</div><div class="tile sm tile-orange">7</div></div>
+              </div>
+              <!-- peek-strip + handle -->
+              <div class="peek-strip">
+                <div class="top w"></div><div class="top b"></div><div class="top g"></div><div class="top w"></div>
+              </div>
+              <div class="drawer-handle"><span class="grip"></span>Abilities ▲</div>
+              <div class="rack-m">
+                <div class="row">
+                  <div class="tile sm tile-red">3</div><div class="tile sm tile-red">4</div><div class="tile sm tile-red">5</div>
+                  <div class="tile sm tile-blue">8</div><div class="tile sm tile-orange">8</div><div class="tile sm tile-black">8</div>
+                  <div class="tile sm tile-blue">12</div><div class="tile sm tile-blue">13</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <span class="sublabel">Collapsed — peek-strip above rack</span>
+      </div>
+
+      <div class="substage">
+        <div class="phone">
+          <div class="scr">
+            <div class="notch"></div>
+            <div class="nav">CHAOS · ROOM 4F2C</div>
+            <div class="felt-m">
+              <div class="pos seat-top seat"><div class="avatar p2">M<div class="cue"><i></i><i></i><i></i><b>✦</b></div></div></div>
+              <div class="pos seat-left seat"><div class="avatar p3">L<div class="cue"><i></i><i></i><i></i><b>✦</b></div></div></div>
+              <div class="pos seat-right seat"><div class="avatar p4">C<div class="cue"><i></i><i></i><i></i><b>✦</b></div></div></div>
+              <!-- expanded drawer over rack -->
+              <div class="drawer">
+                <div class="dh"><span class="grip"></span></div>
+                <div class="dtitle"><span>Your abilities</span><span class="x">▼ Close</span></div>
+                <div class="swipe">
+                  <div class="acard acard--white">
+                    <div class="acard-head"><div class="acard-name"><b>Peek</b><span class="acard-rar">Common</span></div></div>
+                    <div class="acard-icon">👁️</div>
+                    <div class="acard-effect">Peek a rack</div>
+                  </div>
+                  <div class="acard acard--blue">
+                    <div class="acard-head"><div class="acard-name"><b>Junk +3</b><span class="acard-rar">Uncommon</span></div></div>
+                    <div class="acard-icon">🧱</div>
+                    <div class="acard-effect">Draw 3</div>
+                  </div>
+                  <div class="acard acard--gold">
+                    <div class="acard-foil" aria-hidden="true"></div>
+                    <div class="acard-head"><div class="acard-name"><b>Skip</b><span class="acard-rar">Rare</span></div></div>
+                    <div class="acard-icon">⏭️</div>
+                    <div class="acard-effect">Skip a turn</div>
+                  </div>
+                </div>
+                <div class="swipe-dots"><i class="on"></i><i></i><i></i><i></i></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <span class="sublabel">Expanded — swipeable drawer overlays rack</span>
+      </div>
+
+      <div class="callout">
+        <b>No hand limit, handled:</b> the drawer scrolls horizontally, so a big hand just becomes a longer swipe (dots show position). On desktop the ledge fan overlaps cards and spreads on hover. Both keep the tile rack untouched.
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PANEL 2 — play-card flow ===================== -->
+  <section class="panel">
+    <div class="panel-head">
+      <span class="panel-num">2</span>
+      <h2 class="panel-title">Play-card flow</h2>
+      <span class="panel-sub">tap → play / face-down + declare → target → confirm</span>
+    </div>
+    <p class="annot">
+      Tap a card and it <b>lifts</b>; an action sheet (reuses the parchment coach-card look) offers <b>Play (face-up)</b> or <b>Play face-down</b>. Face-down reveals a <b>Declare</b> picker (“claim this card is …”) for bluffing. Then pick a target (for targeted cards) and confirm.
+    </p>
+
+    <div class="stage">
+      <!-- 2a -->
+      <div class="substage" id="flow2a">
+        <span class="sublabel">2a · Action sheet (toggle me)</span>
+        <div style="display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap">
+          <div class="acard acard--white lifted">
+            <div class="acard-head"><div class="acard-name"><b>Peek</b><span class="acard-rar">Common</span></div></div>
+            <div class="acard-icon">👁️</div>
+            <div class="acard-effect">See a rival’s rack for the rest of the round.</div>
+          </div>
+          <div class="sheet">
+            <h4>Play a card</h4>
+            <p class="lead">Peek — choose how to play it.</p>
+            <div class="seg">
+              <button class="on" data-mode="normal" onclick="setMode(this,'normal')"><span class="zh">Play</span><span class="en">face-up / open</span></button>
+              <button data-mode="fd" onclick="setMode(this,'fd')"><span class="zh">Face-down</span><span class="en">hidden + declare</span></button>
+            </div>
+            <div class="declare hide" id="declareBox">
+              <div class="lbl">Declare this card is… <span style="font-weight:600;text-transform:none;letter-spacing:0;color:#6f5b3e">(every card type is selectable)</span></div>
+              <div class="claim">
+                <button>Junk +2</button>
+                <button>Junk +3</button>
+                <button class="pick">Junk +4</button>
+                <button>Shield</button>
+                <button>Peek</button>
+                <button>Force</button>
+                <button>Wheel</button>
+                <button>Big-Wind</button>
+                <button>Skip</button>
+                <button>Lock</button>
+              </div>
+            </div>
+            <button class="btn btn-primary" id="flowNext">Choose target →</button>
+          </div>
+        </div>
+        <div class="callout" style="max-width:480px">
+          <b>Bluff hook (Coup-style):</b> any card can be played face-down and declared as <b>any of the ten card types</b> (the picker lists them all). Only the targeted player (targeted cards) or the whole table (non-targeted) may later challenge — handled by SP5, but the <b>declare picker lives here in SP1’s play flow</b>. Open faces skip the picker entirely.
+        </div>
+      </div>
+    </div>
+
+    <div class="stage" style="border-top:1px dashed rgba(205,162,75,.25); padding-top:22px">
+      <!-- 2b targeted -->
+      <div class="substage">
+        <span class="sublabel">2b · Target selection (targeted card)</span>
+        <div class="match" style="max-width:420px">
+          <div class="felt" style="height:250px">
+            <div class="pos seat-top seat">
+              <div class="avatar p2 selectable">M<div class="cue"><i></i><i></i><i></i><b>✦</b></div></div>
+              <span class="nm">Mara · tap to aim</span>
+            </div>
+            <div class="pos seat-left seat">
+              <div class="avatar p3 targeted">L<div class="cue"><i></i><i></i><i></i><b>✦</b></div></div>
+              <span class="nm">Lin ✓ selected</span>
+            </div>
+            <div class="pos seat-right seat">
+              <div class="avatar p4 selectable">C<div class="cue"><i></i><i></i><i></i><b>✦</b></div></div>
+              <span class="nm">Cheng · tap to aim</span>
+            </div>
+            <div class="board-melds" style="top:auto; bottom:18px">
+              <span class="toast"><span class="dot"></span> Peek → choose an opponent</span>
+            </div>
+          </div>
+        </div>
+        <div class="callout">Selectable opponents get a <b>brass pulse ring</b>; the chosen one gets a <b>bold pulsing red target ring</b> + a ✓ label (shape + text, never color alone). See <b>2d</b> for how the resolve beam lands on them.</div>
+      </div>
+
+      <!-- 2b non-targeted -->
+      <div class="substage">
+        <span class="sublabel">2b · Non-targeted card</span>
+        <div class="match" style="max-width:420px">
+          <div class="felt" style="height:250px; box-shadow:var(--felt-vignette), inset 0 0 0 3px rgba(127,224,163,.4)">
+            <div class="pos seat-top seat"><div class="avatar p2">M<div class="cue"><i></i><i></i><i></i><b>✦</b></div></div></div>
+            <div class="pos seat-left seat"><div class="avatar p3">L<div class="cue"><i></i><i></i><i></i><b>✦</b></div></div></div>
+            <div class="pos seat-right seat"><div class="avatar p4">C<div class="cue"><i></i><i></i><i></i><b>✦</b></div></div></div>
+            <div class="board-melds" style="top:50%">
+              <span class="toast"><span class="dot"></span> Affects all / table</span>
+            </div>
+          </div>
+        </div>
+        <div class="callout">Cards like <b>Big-Wind</b> or <b>Wheel</b> don’t pick a player — the whole felt gets a green glow and an “affects all / table” banner; no avatar selection step.</div>
+      </div>
+
+      <!-- 2c confirm -->
+      <div class="substage">
+        <span class="sublabel">2c · Confirm</span>
+        <div class="sheet" style="width:280px">
+          <h4>Confirm play</h4>
+          <p class="lead" style="margin-bottom:12px">You’re about to play:</p>
+          <div style="display:flex; gap:11px; align-items:center; margin-bottom:13px">
+            <div class="acard acard--white" style="width:78px; min-height:108px">
+              <div class="acard-head"><div class="acard-name"><b style="font-size:11px">Peek</b></div></div>
+              <div class="acard-icon" style="width:34px;height:34px;font-size:17px">👁️</div>
+              <div class="acard-effect" style="font-size:9px">Peek a rack</div>
+            </div>
+            <div style="font-size:12px; line-height:1.5; color:var(--ink)">
+              <b>Peek</b><br>
+              Target → <b>Lin</b><br>
+              <span style="color:var(--ink-soft)">Play face-up (open)</span>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-ghost">Cancel</button>
+            <button class="btn btn-primary">Confirm ✓</button>
+          </div>
+        </div>
+        <div class="callout">One last parchment confirm shows the card, the resolved target, and open/face-down — the only commit point. (Effects apply at turn-commit, so there’s no peek-then-undo exploit.)</div>
+      </div>
+    </div>
+
+    <div class="stage" style="border-top:1px dashed rgba(205,162,75,.25); padding-top:22px">
+      <!-- 2d resolve beam — two outcomes side by side -->
+      <div class="substage">
+        <span class="sublabel">2d · Resolved — HIT (unblocked)</span>
+        <div class="beam-stage">
+          <svg class="beam-svg" viewBox="0 0 470 250" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+            <defs>
+              <linearGradient id="beamGrad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stop-color="#ffe9b0"/>
+                <stop offset="0.5" stop-color="#ffb24d"/>
+                <stop offset="1" stop-color="#ff5a3c"/>
+              </linearGradient>
+              <marker id="beamHead" markerWidth="14" markerHeight="14" refX="6" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+                <path d="M0,0 L9,4 L0,8 Z" fill="#ff5a3c"/>
+              </marker>
+            </defs>
+            <line class="beam-core" x1="98" y1="172" x2="346" y2="90" marker-end="url(#beamHead)"/>
+            <line class="beam-flow" x1="98" y1="172" x2="346" y2="90"/>
+            <circle cx="98" cy="172" r="8" fill="#ffe9b0" stroke="#cda24b" stroke-width="2.5"/>
+          </svg>
+          <div class="avatar self caster" style="position:absolute; left:68px; top:142px">You</div>
+          <div class="tagpill is-caster" style="left:40px; top:210px">CASTER · You</div>
+          <div class="avatar p3 targeted" style="position:absolute; left:350px; top:48px">L<div class="cue"><i></i><i></i><i></i><b>✦</b></div></div>
+          <div class="tagpill is-target" style="left:330px; top:116px">Lin · HIT ✓</div>
+          <span class="toast" style="position:absolute; left:50%; bottom:14px; transform:translateX(-50%)"><span class="dot"></span> Skip → Lin · resolving</span>
+        </div>
+      </div>
+
+      <div class="substage">
+        <span class="sublabel">2d · Resolved — BLOCKED by Shield</span>
+        <div class="beam-stage">
+          <svg class="beam-svg" viewBox="0 0 470 250" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+            <line class="beam-core broken" x1="98" y1="172" x2="252" y2="121"/>
+            <line class="beam-flow" x1="98" y1="172" x2="252" y2="121"/>
+            <g class="beam-snap">
+              <line x1="252" y1="121" x2="237" y2="105"/>
+              <line x1="252" y1="121" x2="271" y2="107"/>
+              <line x1="252" y1="121" x2="241" y2="137"/>
+              <line x1="252" y1="121" x2="273" y2="133"/>
+            </g>
+            <circle cx="252" cy="121" r="5" fill="#fff7e6"/>
+            <circle cx="98" cy="172" r="8" fill="#ffe9b0" stroke="#cda24b" stroke-width="2.5"/>
+          </svg>
+          <div class="avatar self caster" style="position:absolute; left:68px; top:142px">You</div>
+          <div class="tagpill is-caster" style="left:40px; top:210px">CASTER · You</div>
+          <div class="avatar p3 shielded" style="position:absolute; left:350px; top:48px">L<div class="cue"><i></i><i></i><i></i><b>✦</b></div></div>
+          <div class="shield-pop" style="left:347px; top:45px">🛡️</div>
+          <div class="tagpill is-blocked" style="left:316px; top:116px">Lin · BLOCKED ✓</div>
+          <span class="toast" style="position:absolute; left:50%; bottom:14px; transform:translateX(-50%)"><span class="dot"></span> Skip → Lin · Shield absorbed it</span>
+        </div>
+      </div>
+
+      <div class="callout" style="max-width:520px">
+        When an ability resolves, a <b>gradient beam</b> runs from the <b>caster</b> (gold node + “CASTER” pill) to the <b>target</b>. <b>Left — HIT:</b> the beam lands and the target lights up with a <b>bold pulsing ring</b> + “HIT ✓.” <b>Right — BLOCKED:</b> if the target is holding a <b>Shield</b>, a green <b>shield disc pops over them</b> and the <b>beam snaps</b> short of its mark (“BLOCKED ✓”), spending the Shield. Everything that carries meaning — beam, break-shards, disc, rings, labels — is <b>static</b>; only the dash-flow animates, and it stops under <b>reduce-motion</b>.
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PANEL 3 — peek result ===================== -->
+  <section class="panel">
+    <div class="panel-head">
+      <span class="panel-num">3</span>
+      <h2 class="panel-title">Peek — round-long private reveal (foldable)</h2>
+    </div>
+    <p class="annot">
+      Peek is <b>round-long</b>, not a quick flash. Once you use it, the target’s <b>tile rack stays revealed to you until the end of the round</b>, shown as a <b>foldable side panel</b> you can collapse out of the way and re-open anytime. Nothing about it is shared with the table.
+    </p>
+    <div class="stage center">
+      <div class="peek-stagewrap">
+
+        <!-- OPEN state -->
+        <div class="peek-statecol">
+          <span class="sublabel">Open — pinned for the round</span>
+          <div class="peek-board">
+            <div class="board-melds"><div class="meld"><div class="tile tile-red">7</div><div class="tile tile-blue">7</div></div></div>
+            <div class="peek-panel">
+              <div class="peek-phead">
+                <span class="eye">👁️</span>
+                <span class="ttl">Mara’s rack — Peeked<small>visible to you only</small></span>
+                <button class="peek-fold" aria-label="Fold this panel away">▾</button>
+              </div>
+              <div class="peek-pbody">
+                <div class="peek-rack">
+                  <div class="tile tile-orange">2</div><div class="tile tile-orange">3</div><div class="tile tile-black">3</div>
+                  <div class="tile tile-red">10</div><div class="tile tile-blue">10</div><div class="tile tile-blue">11</div>
+                  <div class="tile tile-black">13</div><div class="tile"><span class="joker">😄</span></div>
+                </div>
+                <div class="peek-note"><span class="lk">🔒</span> Only you can see this · stays until the round ends</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FOLDED state -->
+        <div class="peek-statecol">
+          <span class="sublabel">Folded — tap the tab to re-open</span>
+          <div class="peek-board">
+            <div class="board-melds"><div class="meld"><div class="tile tile-red">7</div><div class="tile tile-blue">7</div><div class="tile tile-black">7</div></div></div>
+            <button class="peek-tab">👁️ Mara’s rack <span class="chev">▸</span></button>
+          </div>
+        </div>
+
+      </div>
+      <div class="callout" style="max-width:560px">
+        The reveal is <b>persistent for the whole round</b> and <b>collapsible</b> — fold it to a slim tab when it’s in the way, tap to re-open. It’s <b>private &amp; client-side</b> (never broadcast), labeled <b>“only you can see this.”</b> There’s no countdown, so nothing here depends on motion — it reads identically under <b>reduce-motion</b>.
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PANEL 4 — shield ===================== -->
+  <section class="panel">
+    <div class="panel-head">
+      <span class="panel-num">4</span>
+      <h2 class="panel-title">Shield — held badge &amp; the block moment</h2>
+    </div>
+    <p class="annot">
+      Shield is a <b>passive held card</b>: instead of being “played,” it docks as an <b>equipped badge</b> near your rack. When the next ability targets you, it auto-spends and the attack fizzles — shown with a green block burst + toast (no timing/skill window; the server resolves it at commit).
+    </p>
+    <div class="stage">
+      <div class="substage">
+        <span class="sublabel">Equipped (held)</span>
+        <div class="shield-chip">
+          <span class="orb">🛡️</span>
+          <span><b>Shield ready</b><span>Auto-blocks the next ability aimed at you</span></span>
+        </div>
+        <div class="acard acard--white equipped" style="margin-top:6px">
+          <div class="equip-sash">EQUIPPED</div>
+          <div class="acard-head"><div class="acard-name"><b>Shield</b><span class="acard-rar">Common</span></div></div>
+          <div class="acard-icon">🛡️</div>
+          <div class="acard-effect">Held — blocks one incoming ability.</div>
+        </div>
+        <div class="callout">A held card reads differently from a playable one: green outline + “EQUIPPED” sash, and a compact chip docked by the rack so you always know you’re protected.</div>
+      </div>
+
+      <div class="substage">
+        <span class="sublabel">Trigger — incoming ability blocked</span>
+        <div class="attack-line">
+          <div class="acard acard--gold" style="width:90px; min-height:122px">
+            <div class="acard-foil" aria-hidden="true"></div>
+            <div class="acard-head"><div class="acard-name"><b style="font-size:12px">Junk +4</b><span class="acard-rar">Rare</span></div></div>
+            <div class="acard-icon" style="width:36px;height:36px;font-size:18px">🧱</div>
+            <div class="acard-effect" style="font-size:9px">Mara hits you</div>
+          </div>
+          <span class="arrow">➜</span>
+          <div class="block-burst"><span class="ring"></span><span class="ico">🛡️</span></div>
+        </div>
+        <span class="toast bad" style="margin-top:6px"><span class="dot"></span> Mara’s Junk +4 blocked by Shield</span>
+        <div class="callout">The shield consumes itself (one-time) and a toast names the attacker + the blocked card. Under reduce-motion the burst is a static ring — the meaning lives in the icon &amp; text, not the animation.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PANEL 5 — mode entry ===================== -->
+  <section class="panel">
+    <div class="panel-head">
+      <span class="panel-num">5</span>
+      <h2 class="panel-title">Mode entry — Classic / Chaos</h2>
+    </div>
+    <p class="annot">
+      Chaos is an <b>opt-in at room creation</b>. The choice reuses the lobby parchment card; picking <b>Chaos</b> reveals a short coach intro (reuses the in-match coach card) so first-timers know what’s new — and that the win condition is unchanged.
+    </p>
+    <div class="stage center">
+      <div class="lobby-card">
+        <h3>Create room</h3>
+        <p class="hint">Choose a game mode</p>
+        <div class="mode-row">
+          <div class="mode-opt">
+            <div class="ic">♟️</div><b>Classic</b><span class="en">Original rules</span>
+          </div>
+          <div class="mode-opt on">
+            <span class="badge">NEW</span>
+            <div class="ic">🌀</div><b>Chaos</b><span class="en">Ability cards</span>
+          </div>
+        </div>
+        <div class="coach">
+          <p class="obj">🌀 Chaos mode — what’s new</p>
+          <ul>
+            <li><b>Ability cards</b> in three rarities (White / Blue / Gold) — one-time use, hidden from rivals.</li>
+            <li>A <b>public random Wheel</b> that fires on big plays — a little luck for the whole table.</li>
+            <li><b>Joker “bombs”</b>: disturb a joker set and it may scatter across the board.</li>
+            <li><b>Bluff &amp; challenge</b>: play any card face-down and claim it’s something else.</li>
+            <li>Everything else is <b>classic Rummikub</b> — first to empty their rack still wins.</li>
+          </ul>
+        </div>
+        <button class="btn btn-primary" style="margin-top:14px">Create room</button>
+      </div>
+      <div class="callout">
+        Two modes only (Classic / Chaos), matching the locked spec. The NEW badge + swirl icon flag the DLC; the coach intro defuses the “did the rules change?” worry while previewing what Chaos adds. Classic stays byte-for-byte the default path.
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PANEL 6 — joker danger meter (SP4 preview) ===================== -->
+  <section class="panel">
+    <div class="panel-head">
+      <span class="panel-num">6</span>
+      <h2 class="panel-title">Joker danger — ambient tile heat</h2>
+      <span class="panel-sub">bonus · SP4 preview sketch</span>
+    </div>
+    <p class="annot">
+      Any board set holding a <b>joker</b> is a “live bomb.” The danger lives in the <b>joker tile’s own background color</b> — cool ivory when safe, warming through amber, then hot red as it climbs (<b>20% → 80%</b>) — and the joker’s <b>face morphs right along with it: calm → wary → annoyed → furious</b>. The <b>precise odds appear only on hover</b>, so the felt stays calm until you’re actually deciding whether to touch it.
+    </p>
+    <div class="stage">
+      <div class="danger-set">
+        <div class="joker-meld">
+          <div class="tile tile-red">5</div>
+          <span class="jwrap">
+            <div class="tile jtile heat-low"><span class="joker">😄</span></div>
+            <div class="jheat-pop">
+              <div class="ph"><span>DANGER</span><span class="pct">20%</span></div>
+              <div class="pbar"><i style="width:20%"></i></div>
+              <div class="pnote">Freshly seeded · safe to build on.</div>
+            </div>
+          </span>
+          <div class="tile tile-red">7</div>
+        </div>
+        <span class="sublabel">Low — calm 😄 · cool ivory (hover for %)</span>
+      </div>
+
+      <div class="danger-set">
+        <div class="joker-meld">
+          <div class="tile tile-blue">8</div>
+          <span class="jwrap">
+            <div class="tile jtile heat-med"><span class="joker">😠</span></div>
+            <div class="jheat-pop">
+              <div class="ph"><span>DANGER</span><span class="pct">45%</span></div>
+              <div class="pbar"><i style="width:45%"></i></div>
+              <div class="pnote">Poked a few times · getting risky.</div>
+            </div>
+          </span>
+          <div class="tile tile-blue">10</div><div class="tile tile-blue">11</div>
+        </div>
+        <span class="sublabel">Medium — annoyed 😠 · amber (hover for %)</span>
+      </div>
+
+      <div class="danger-set">
+        <div class="joker-meld">
+          <div class="tile tile-orange">2</div>
+          <span class="jwrap">
+            <div class="tile jtile heat-high"><span class="joker">😡</span></div>
+            <div class="jheat-pop">
+              <div class="ph"><span>DANGER</span><span class="pct">80%</span></div>
+              <div class="pbar"><i style="width:80%"></i></div>
+              <div class="pnote">Hot — likely to scatter if disturbed.</div>
+            </div>
+          </span>
+          <div class="tile tile-orange">4</div>
+        </div>
+        <span class="sublabel">High — furious 😡 · hot red (hover for %)</span>
+      </div>
+
+      <div class="danger-set">
+        <div class="joker-meld" style="margin-bottom:74px">
+          <div class="tile tile-black">11</div>
+          <span class="jwrap">
+            <div class="tile jtile heat-high"><span class="joker">😡</span></div>
+            <div class="jheat-pop below show">
+              <div class="ph"><span>DANGER</span><span class="pct">80%</span></div>
+              <div class="pbar"><i style="width:80%"></i></div>
+              <div class="pnote">Precise readout shows only on hover.</div>
+            </div>
+          </span>
+          <div class="tile tile-black">13</div>
+        </div>
+        <span class="sublabel">Hover popover open (precise %)</span>
+      </div>
+
+      <div class="callout" style="display:flex; flex-direction:column; gap:10px">
+        <div class="heat-scale">
+          <span><span class="sw" style="background:#f3ead0"></span>Safe</span>
+          <span><span class="sw" style="background:#eaa53c"></span>Warm</span>
+          <span><span class="sw" style="background:#d23a2b"></span>Hot</span>
+          <span style="color:#bcae8d">— color = temperature; hover = exact %</span>
+        </div>
+        <div class="face-ramp">
+          <span class="rl">Mood climbs:</span>
+          <span class="frx"><span class="fc" style="background:#f3ead0">😄</span><i>calm · 20%</i></span>
+          <span class="arr">→</span>
+          <span class="frx"><span class="fc" style="background:#f0cf7a">😐</span><i>wary</i></span>
+          <span class="arr">→</span>
+          <span class="frx"><span class="fc" style="background:#eaa53c">😠</span><i>annoyed</i></span>
+          <span class="arr">→</span>
+          <span class="frx"><span class="fc" style="background:#d23a2b">😡</span><i>furious · 80%</i></span>
+        </div>
+        <div><b>Ambient, not loud:</b> the joker set telegraphs “dare I touch it?” as <i>tile temperature</i> plus the clown’s <b>changing expression</b>, so no permanent gauge clutters the felt. The face doubles as a <b>non-color cue</b> — the mood reads even color-blind — and the exact number is a <b>hover popover</b> only. The popover spells out the % plus a one-line note, and nothing depends on animation under reduce-motion. It climbs but never auto-detonates; only a player’s action rolls the fuse. (Final tuning is SP4.)</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PANEL 7 — Ability Codex / Help (FAB + panel) ===================== -->
+  <section class="panel">
+    <div class="panel-head">
+      <span class="panel-num">7</span>
+      <h2 class="panel-title">Ability Codex &amp; Help — floating button + reference panel</h2>
+      <span class="panel-sub">new surface</span>
+    </div>
+    <p class="annot">
+      A new floating button reuses the <b>chat speech-bubble FAB</b>’s visual language and corner, <b>stacked just above chat</b> so the two never collide. Tapping it opens a <b>Codex of every ability card</b> (illustrated, grouped by rarity) plus a brief <b>how Chaos works</b> primer — the place new players go to learn the deck without leaving the table.
+    </p>
+    <div class="stage">
+      <!-- FAB demo -->
+      <div class="substage">
+        <span class="sublabel">Floating buttons (bottom-right, stacked)</span>
+        <div class="fab-demo">
+          <div class="fab-stack">
+            <button class="fab" type="button" title="Ability Codex &amp; Help">
+              <span class="fab-tip">Ability Codex</span>📖<span class="dot"></span>
+            </button>
+            <button class="fab" type="button" title="Chat &amp; emotes">💬</button>
+          </div>
+        </div>
+        <div class="callout" style="max-width:300px">Codex (📖) sits <b>above</b> the existing chat FAB (💬) — identical 52px brass-ringed wood disc, same corner. A small dot flags it as new.</div>
+      </div>
+
+      <!-- opened Codex -->
+      <div class="substage">
+        <span class="sublabel">Opened — Codex + how-to</span>
+        <div class="codex">
+          <div class="codex-head"><b>📖 Ability Codex</b><span class="x">✕</span></div>
+          <div class="codex-howto">
+            <b>How Chaos works</b>
+            <p>Classic Rummikub still applies — empty your tile rack to win. On your turn you may also play <b>ability cards</b> (one-time, hidden from rivals). Some aim at one player; some hit everyone or the table. Any card can be played <b>face-down with a bluff</b>, and the target (or table) may challenge.</p>
+          </div>
+          <div class="codex-body">
+            <div class="codex-gh"><span class="codex-sw w"></span> COMMON</div>
+            <div class="codex-row">
+              <div class="codex-ic">🧱</div>
+              <div class="codex-tx"><b>Junk +2</b><span>Force a player to draw 2 (chainable).</span></div>
+            </div>
+            <div class="codex-row">
+              <div class="codex-ic">🛡️</div>
+              <div class="codex-tx"><b>Shield</b><span>Held — auto-blocks the next ability aimed at you.</span></div>
+            </div>
+            <div class="codex-row">
+              <div class="codex-ic">👁️</div>
+              <div class="codex-tx"><b>Peek</b><span>See a rival’s tile rack for the rest of the round.</span></div>
+            </div>
+
+            <div class="codex-gh"><span class="codex-sw b"></span> UNCOMMON</div>
+            <div class="codex-row r-b">
+              <div class="codex-ic">🧱</div>
+              <div class="codex-tx"><b>Junk +3</b><span>Force a player to draw 3 (chainable).</span></div>
+            </div>
+            <div class="codex-row r-b">
+              <div class="codex-ic">📥</div>
+              <div class="codex-tx"><b>Force</b><span>Target must meld next turn or draw 3.</span></div>
+            </div>
+            <div class="codex-row r-b">
+              <div class="codex-ic">🎡</div>
+              <div class="codex-tx"><b>Wheel</b><span>Spin the public Chaos Wheel right now.</span></div>
+            </div>
+            <div class="codex-row r-b">
+              <div class="codex-ic">🌬️</div>
+              <div class="codex-tx"><b>Big-Wind</b><span>Everyone passes one tile to the left.</span></div>
+            </div>
+
+            <div class="codex-gh"><span class="codex-sw g"></span> RARE</div>
+            <div class="codex-row r-g">
+              <div class="codex-ic">🧱</div>
+              <div class="codex-tx"><b>Junk +4</b><span>Force a player to draw 4 (chainable).</span></div>
+            </div>
+            <div class="codex-row r-g">
+              <div class="codex-ic">⏭️</div>
+              <div class="codex-tx"><b>Skip</b><span>Skip the target’s next turn.</span></div>
+            </div>
+            <div class="codex-row r-g">
+              <div class="codex-ic">🔒</div>
+              <div class="codex-tx"><b>Lock</b><span>Freeze a melded set for 2 turns.</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="callout" style="max-width:300px">Cards are grouped under <b>Common / Uncommon / Rare</b> headers (color swatch + word), each row showing icon + name + one-line effect — the same clean, two-channel rarity (frame/foil + word) as the cards themselves.</div>
+      </div>
+    </div>
+  </section>
+
+  <p class="footer">
+    RummyCube · Chaos DLC — SP1 ability-card backbone · visual mockup only (representative, on-brand, not production code).<br>
+    Built from the app’s real tokens (theme/classic.css + board.css). One small vanilla-JS toggle drives the 2a Play / face-down demo; everything else is static CSS.
+  </p>
+</div>
+
+<script>
+/* Tiny toggle for the 2a action sheet: switch Play / Play-face-down and reveal the
+   Declare picker only on face-down. Purely demonstrative — no framework, and it
+   carries no meaning that motion is required for. */
+function setMode(btn, mode){
+  try{
+    var seg = btn.parentNode;
+    var buttons = seg.querySelectorAll('button');
+    for (var i=0;i<buttons.length;i++){ buttons[i].classList.remove('on','fd'); }
+    btn.classList.add('on');
+    if (mode === 'fd') btn.classList.add('fd');
+    var box = document.getElementById('declareBox');
+    var next = document.getElementById('flowNext');
+    if (mode === 'fd'){
+      box.classList.remove('hide');
+      next.textContent = 'Choose target · face-down →';
+    } else {
+      box.classList.add('hide');
+      next.textContent = 'Choose target →';
+    }
+  }catch(e){/* mockup: fail silently */}
+}
+</script>
+</body>
+</html>
