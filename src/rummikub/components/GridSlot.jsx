@@ -18,6 +18,7 @@ const GridSlot = React.memo(({
                                  isValid,
                                  isPlayable,
                                  isNewlyAdded,
+                                 jokerHeat,
                                  handleTileSelection,
                                  onLongPress
                              }) => {
@@ -33,6 +34,7 @@ const GridSlot = React.memo(({
                     isSelected={isSelected}
                     isPlayable={isPlayable}
                     isNewlyAdded={isNewlyAdded}
+                    jokerHeat={jokerHeat}
                     handleTileSelection={handleTileSelection}
                     onLongPress={onLongPress}
                 />

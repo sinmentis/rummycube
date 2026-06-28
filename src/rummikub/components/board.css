@@ -461,6 +461,66 @@ svg.fa-smile-beam {
     font-size: clamp(14px, 1.5vw, 22px);
 }
 
+/* SP4b-T2: board jokers show ambient boom danger. The .jtile overlay tints the
+   joker cell ivory->amber->red by heat and floats a clown face; a .jheat-pop
+   popover with the exact next-poke % appears on hover. Tokens mirror the mockup:
+   heat-low #f3ead0, heat-med #eaa53c, heat-high #d23a2b + glow. Board-only: hand
+   and classic jokers get no jokerHeat, so .jtile never renders there. */
+.jtile {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--r-sm);
+    pointer-events: none;
+}
+.jface {
+    font-size: clamp(13px, 1.5vw, 20px);
+    line-height: 1;
+}
+.heat-low  { background: #f3ead0; }
+.heat-med  { background: #eaa53c; }
+.heat-high { background: #d23a2b; box-shadow: 0 0 8px 2px rgba(210, 58, 43, .65); }
+.jheat-pop {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 130px;
+    padding: 6px 8px;
+    background: rgba(20, 16, 12, .94);
+    color: #f3ead0;
+    border-radius: var(--r-sm);
+    box-shadow: var(--elev-2);
+    font-size: 11px;
+    line-height: 1.3;
+    text-align: center;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 30;
+}
+.jtile:hover .jheat-pop {
+    opacity: 1;
+}
+.jheat-pop .jbar {
+    display: block;
+    height: 4px;
+    margin: 4px 0;
+    background: rgba(255, 255, 255, .18);
+    border-radius: 999px;
+}
+.jheat-pop .jbar i {
+    display: block;
+    height: 100%;
+    background: #d23a2b;
+    border-radius: 999px;
+}
+.jheat-pop .jnote {
+    display: block;
+    opacity: .85;
+}
+
 
 .tile-clickable, .tile-set-clickable {
     cursor: pointer;

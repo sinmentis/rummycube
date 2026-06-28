@@ -469,6 +469,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             onLongPress={onLongPressCb}
             hoverPosition={hoverPosition}
             setHoverPosition={setHoverPosition}
+            jokerHeat={G.jokerHeat}
             newlyAdded={[]}
         /></div>)
 

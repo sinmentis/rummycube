@@ -2,6 +2,7 @@ import React, {useCallback, useEffect, useRef} from 'react';
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {faSmileBeam} from "@fortawesome/free-solid-svg-icons";
 import {getTileValue, isJoker, getTileColor} from "../util";
+import {jokerDanger} from "../abilities/jokerDanger";
 import {useDraggable} from '@dnd-kit/core';
 import {COLORS, TILE_WIDTH} from "../constants";
 
@@ -101,7 +102,7 @@ function getTileStyle(selected, isDragging, isValid, position, index, newlyAdded
     return result
 }
 
-const Tile = React.memo(function Tile({tile, canDnD, isSelected, isValid, isPlayable, handleTileSelection, isNewlyAdded, onLongPress}) {
+const Tile = React.memo(function Tile({tile, canDnD, isSelected, isValid, isPlayable, handleTileSelection, isNewlyAdded, onLongPress, jokerHeat}) {
     const {attributes, listeners, setNodeRef, isDragging} = useDraggable({id: tile, disabled: !canDnD});
 
     const pressTimer = useRef(null);
@@ -156,7 +157,12 @@ const Tile = React.memo(function Tile({tile, canDnD, isSelected, isValid, isPlay
 
     const jokerLabel = isJoker(tile) ? 'Joker (wildcard)' : undefined
     const playableLabel = isPlayable === true ? 'Playable: can extend a board group' : undefined
-    const ariaLabel = [jokerLabel, playableLabel].filter(Boolean).join('. ') || undefined
+    // Chaos: a board joker carries live boom heat. jokerHeat is the cell's heat
+    // (undefined classic / hand) so the ambient danger meter is board-joker-only.
+    const danger = isJoker(tile) && jokerHeat != null ? jokerDanger(jokerHeat) : null
+    const pct = danger ? Math.round(danger.prob * 100) : 0
+    const dangerLabel = danger ? `Danger: ${pct}% to scatter next poke` : undefined
+    const ariaLabel = [jokerLabel, playableLabel, dangerLabel].filter(Boolean).join('. ') || undefined
 
     return (
         <div ref={setNodeRef} {...listeners} {...attributes} onClick={onClick}
@@ -164,7 +170,7 @@ const Tile = React.memo(function Tile({tile, canDnD, isSelected, isValid, isPlay
              onPointerUp={clearPressTimer} onPointerCancel={clearPressTimer}
              onPointerLeave={clearPressTimer} id={tile}
              aria-label={ariaLabel} title={ariaLabel}
-             style={{touchAction: 'none', opacity: isDragging ? 0.4 : 1, cursor: canDnD ? 'grab' : 'default'}}>
+             style={{position: 'relative', touchAction: 'none', opacity: isDragging ? 0.4 : 1, cursor: canDnD ? 'grab' : 'default'}}>
             <TilePreview
                 tile={tile}
                 canDnD={canDnD}
@@ -174,6 +180,15 @@ const Tile = React.memo(function Tile({tile, canDnD, isSelected, isValid, isPlay
                 isPlayable={isPlayable}
                 newlyAdded={isNewlyAdded}
             />
+            {danger &&
+                <div className={`jtile heat-${danger.level}`}>
+                    <span className="jface" aria-hidden="true">{danger.face}</span>
+                    <div className="jheat-pop" role="status">
+                        <strong>DANGER</strong> {pct}%
+                        <span className="jbar"><i style={{width: `${pct}%`}}/></span>
+                        <span className="jnote">{danger.note}</span>
+                    </div>
+                </div>}
         </div>
     )
 })

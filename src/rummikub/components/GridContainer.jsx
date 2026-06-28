@@ -35,6 +35,7 @@ const GridContainer = function ({
                                     handleTileSelection,
                                     onLongPress,
                                     newlyAdded,
+                                    jokerHeat,
                                     className
                                 }) {
 
@@ -56,6 +57,9 @@ const GridContainer = function ({
             let isNewlyAdded = Array.isArray(newlyAdded)
                 ? newlyAdded.includes(parseInt(tile))
                 : !!newlyAdded
+            // Chaos: only the board grid is passed jokerHeat, and only joker cells
+            // have an entry — heat is per-cell so the danger meter is board-only.
+            let tileHeat = tile ? jokerHeat?.[tile]?.heat : undefined
             let gridTile = <GridSlot
                 canDnD={canDnD}
                 isDragActive={isDragActive}
@@ -72,6 +76,7 @@ const GridContainer = function ({
                 isValid={isValid}
                 isPlayable={isPlayable}
                 isNewlyAdded={isNewlyAdded}
+                jokerHeat={tileHeat}
             />
             gridItems.push(gridTile)
             key++
