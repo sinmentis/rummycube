@@ -1,0 +1,163 @@
+/* ===== Chaos ability cards: the card face (.acard) — SP1b ===== */
+/* Started here in Task 1 (single card face). Later SP1b tasks append the codex,
+   hand/fan, drawer and play-flow styles to this file. Colours mirror the
+   approved mockup; tokens resolve against the global theme (classic.css) with
+   the mockup's literal values as fallbacks so the face is self-contained. */
+
+.acard {
+    position: relative;
+    width: 138px;
+    min-height: 190px;
+    border-radius: 13px;
+    padding: 9px 9px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border: 2px solid var(--parchment-border, #cbae7e);
+    background: var(--parchment, linear-gradient(180deg, #fbf6e8 0%, #f1e6cb 100%));
+    box-shadow: var(--elev-2, 0 14px 26px rgba(0, 0, 0, .42));
+    color: var(--ink, #3b2c1a);
+    overflow: hidden;
+    flex: 0 0 auto;
+    font-family: 'Poppins', system-ui, sans-serif;
+}
+
+/* White (Common) is the base parchment look above; blue/gold reframe it. */
+.acard--blue {
+    background: var(--blue-frame, linear-gradient(180deg, #1a3f74 0%, #13478f 55%, #0e2f5e 100%));
+    border-color: var(--blue-edge, #4f82c8);
+    color: var(--cream, #f5edd8);
+}
+
+.acard--gold {
+    background: var(--brass-foil, linear-gradient(150deg, #7a5c1e 0%, #b8893a 34%, #f0d894 52%, #b8893a 70%, #7a5c1e 100%));
+    border-color: #f0d894;
+    color: #2b1708;
+}
+
+.acard--gold .acard-foil {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, .55) 47%, transparent 64%);
+    background-size: 250% 250%;
+    mix-blend-mode: screen;
+    animation: foil 4.5s linear infinite;
+}
+
+@keyframes foil {
+    0% { background-position: 120% 0; }
+    100% { background-position: -120% 0; }
+}
+
+.acard-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    z-index: 2;
+}
+
+.acard-name {
+    line-height: 1.1;
+    min-width: 0;
+}
+
+.acard-name b {
+    display: block;
+    font-size: 15.5px;
+    font-weight: 800;
+}
+
+/* The single non-colour rarity cue: one small word on its own line.
+   No letter gem, no pips — frame/foil colour carries rarity, the word backs it up. */
+.acard-rar {
+    display: inline-flex;
+    align-items: center;
+    margin-top: 5px;
+    vertical-align: middle;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    padding: 2.5px 8px;
+    border-radius: 999px;
+    background: rgba(120, 90, 40, .12);
+    color: #8a6a2f;
+    border: 1px solid rgba(120, 90, 40, .30);
+}
+
+.acard--blue .acard-rar {
+    background: rgba(255, 255, 255, .14);
+    color: #eaf2ff;
+    border-color: rgba(207, 225, 255, .5);
+}
+
+.acard--gold .acard-rar {
+    background: rgba(43, 23, 8, .13);
+    color: #3f2a0c;
+    border-color: rgba(90, 61, 18, .5);
+}
+
+.acard-icon {
+    align-self: center;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    margin: 2px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    z-index: 2;
+    background: radial-gradient(closest-side, rgba(255, 255, 255, .9), rgba(255, 255, 255, .35));
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .5), 0 3px 8px rgba(0, 0, 0, .3);
+}
+
+.acard--blue .acard-icon {
+    background: radial-gradient(closest-side, rgba(207, 225, 255, .95), rgba(120, 160, 220, .4));
+}
+
+.acard--gold .acard-icon {
+    background: radial-gradient(closest-side, #fff6df, #e7c879);
+}
+
+/* Effect plaque — always light for contrast even on the blue/gold frames. */
+.acard-effect {
+    z-index: 2;
+    margin-top: auto;
+    background: rgba(255, 253, 246, .94);
+    color: var(--ink, #3b2c1a);
+    border: 1px solid rgba(120, 90, 40, .25);
+    border-radius: 8px;
+    padding: 6px 7px;
+    font-size: 11px;
+    line-height: 1.32;
+    font-weight: 600;
+}
+
+/* Selected / lifted card. */
+.acard.lifted {
+    transform: translateY(-14px) rotate(-1deg);
+    box-shadow: 0 26px 34px rgba(0, 0, 0, .55);
+    outline: 3px solid #ffe09a;
+    outline-offset: 2px;
+}
+
+/* Interactivity: clickable cards expose a pointer; disabled ones grey out. */
+.acard[role="button"] {
+    cursor: pointer;
+}
+
+.acard.is-disabled {
+    opacity: .55;
+    cursor: not-allowed;
+    filter: grayscale(.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .acard--gold .acard-foil {
+        animation: none;
+    }
+}
