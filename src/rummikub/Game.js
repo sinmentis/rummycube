@@ -5,6 +5,7 @@ import {drawTile, endTurn, extendTurn, forceEndTurn, forfeitTurn, insertTilesWit
 import {onPlayPhaseBegin, onTurnBegin, onTurnEnd} from "./turn.js";
 import {GAME_NAME, HAND_COLS, HAND_GRID_ID, HAND_ROWS, TILES_TO_DRAW} from "./constants.js";
 import {orderByColorVal, orderByValColor} from "./orderTiles.js";
+import {buildAbilityDeck} from "./abilities/cards.js";
 
 
 const Rummikub = {
@@ -34,7 +35,19 @@ const Rummikub = {
             }
             firstMoveDone.push(false)
         }
+        // Chaos DLC: opt-in mode plumbing + ability-card backbone.
+        const mode = (setupData && setupData.chaos) ? 'chaos' : 'classic';
+        let abilityFields = {mode};
+        if (mode === 'chaos') {
+            const deck = random.Shuffle(buildAbilityDeck());
+            const abilityHands = {};
+            for (let p = 0; p < ctx.numPlayers; p++) {
+                abilityHands[p.toString()] = [deck.pop(), deck.pop()];
+            }
+            abilityFields = {mode, abilityDeck: deck, abilityHands, abilityDiscard: []};
+        }
         return {
+            ...abilityFields,
             timePerTurn: (setupData ? setupData.timePerTurn : 10) * 1000,
             timerExpireAt: null,
             tilesPool: pool,
