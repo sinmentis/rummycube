@@ -24,7 +24,7 @@ test('defaults to Classic and creates with chaos=false', () => {
 test('selecting Chaos reveals the intro and creates with chaos=true', () => {
   fill();
   fireEvent.click(screen.getByRole('button', {name: /chaos/i}));
-  expect(screen.getByText(/what.?s new|ability cards/i)).toBeInTheDocument();
+  expect(screen.getByText(/what.?s new/i)).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', {name: /^create/i}));
   expect(mockCreateGame).toHaveBeenCalledWith(expect.anything(), expect.anything(), true);
 });

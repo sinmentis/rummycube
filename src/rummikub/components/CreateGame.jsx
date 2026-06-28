@@ -96,17 +96,17 @@ const CreateGameForm = function () {
                         className={mode === 'chaos' ? 'mode-opt on' : 'mode-opt'}
                         aria-pressed={mode === 'chaos'}
                         onClick={() => setMode('chaos')}>
-                        <span className="badge">NEW</span>
+                        <span className="badge" aria-hidden="true">NEW</span>
                         <span className="ic" aria-hidden="true">🌀</span>
                         <b>Chaos</b>
-                        <span className="en">Ability deck</span>
+                        <span className="en">Ability cards</span>
                     </button>
                 </div>
                 {mode === 'chaos' &&
                     <div className="coach">
                         <p className="obj">🌀 Chaos mode — what’s new</p>
                         <ul>
-                            <li><b>Ability</b> cards in three rarities (White / Blue / Gold) — one-time use, hidden from rivals.</li>
+                            <li><b>Ability cards</b> in three rarities (White / Blue / Gold) — one-time use, hidden from rivals.</li>
                             <li>A <b>public random Wheel</b> that fires on big plays — a little luck for the whole table.</li>
                             <li><b>Joker “bombs”</b>: disturb a joker set and it may scatter across the board.</li>
                             <li><b>Bluff &amp; challenge</b>: play any card face-down and claim it’s something else.</li>
