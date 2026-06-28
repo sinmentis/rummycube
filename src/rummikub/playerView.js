@@ -86,7 +86,7 @@ function playerView({G, ctx, playerID}) {
             }
         }
         view.abilityHands = viewerID != null && G.abilityHands[viewerID]
-            ? {[viewerID]: G.abilityHands[viewerID]}
+            ? {[viewerID]: view.abilityHands[viewerID]}
             : {};
         view.abilityPresence = presence;
         view.abilityDeck = [];
