@@ -23,6 +23,7 @@ const CreateGameForm = function () {
     const [matchID, setMatchID] = useState('')
     const [timePerTurn, setTimePerTurn] = useState(IS_DEV ? '30' : '30')
     const [copied, setCopied] = useState(false)
+    const [mode, setMode] = useState('classic')
 
     function buildMatchLink(id) {
         return `${LOBBY_SERVER_PROTO}://${FRONTEND_ADDR}/join-match/${id}`
@@ -35,7 +36,7 @@ const CreateGameForm = function () {
         // "0" players = solo test mode -> a real single-player game (no second
         // browser needed); any other value is a normal multiplayer match.
         const actualNumPlayers = numPlayers === '0' ? '1' : numPlayers;
-        client.createGame(actualNumPlayers, timePerTurn).then(
+        client.createGame(actualNumPlayers, timePerTurn, mode === 'chaos').then(
             (id) => {
                 let matchLink = buildMatchLink(id)
                 copyToClipboard(matchLink)
@@ -76,6 +77,42 @@ const CreateGameForm = function () {
                     autoFocus
                     placeholder="Enter username"/>
                 {savedName && <p className="lobby-welcome">Welcome back, {savedName} 👋</p>}
+            </div>
+
+            <div className="lobby-field">
+                <span className="mode-label">Game mode</span>
+                <div className="mode-row" role="group" aria-label="Game mode">
+                    <button
+                        type="button"
+                        className={mode === 'classic' ? 'mode-opt on' : 'mode-opt'}
+                        aria-pressed={mode === 'classic'}
+                        onClick={() => setMode('classic')}>
+                        <span className="ic" aria-hidden="true">♟️</span>
+                        <b>Classic</b>
+                        <span className="en">Original rules</span>
+                    </button>
+                    <button
+                        type="button"
+                        className={mode === 'chaos' ? 'mode-opt on' : 'mode-opt'}
+                        aria-pressed={mode === 'chaos'}
+                        onClick={() => setMode('chaos')}>
+                        <span className="badge">NEW</span>
+                        <span className="ic" aria-hidden="true">🌀</span>
+                        <b>Chaos</b>
+                        <span className="en">Ability deck</span>
+                    </button>
+                </div>
+                {mode === 'chaos' &&
+                    <div className="coach">
+                        <p className="obj">🌀 Chaos mode — what’s new</p>
+                        <ul>
+                            <li><b>Ability</b> cards in three rarities (White / Blue / Gold) — one-time use, hidden from rivals.</li>
+                            <li>A <b>public random Wheel</b> that fires on big plays — a little luck for the whole table.</li>
+                            <li><b>Joker “bombs”</b>: disturb a joker set and it may scatter across the board.</li>
+                            <li><b>Bluff &amp; challenge</b>: play any card face-down and claim it’s something else.</li>
+                            <li>Everything else is <b>classic Rummikub</b> — first to empty their rack still wins.</li>
+                        </ul>
+                    </div>}
             </div>
 
             <div className="lobby-field">

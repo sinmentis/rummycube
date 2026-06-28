@@ -372,3 +372,118 @@
     color: var(--cream, #f3e7cf);
     opacity: .85;
 }
+
+/* ============================================================
+   Mode selector (Classic / Chaos) on the Create form. Two
+   parchment cards; picking Chaos reveals the coach intro that
+   reuses the in-match coach card look. Tokens from the SP1
+   mockup, grounded in the existing lobby parchment palette.
+   ============================================================ */
+.mode-label {
+    margin-bottom: 6px;
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-size: .9rem;
+    font-weight: 600;
+    color: var(--ink, #3b2c1a);
+}
+
+.mode-row {
+    display: flex;
+    gap: 12px;
+}
+
+.mode-opt {
+    flex: 1;
+    position: relative;
+    box-sizing: border-box;
+    padding: 14px 12px;
+    border: 2px solid var(--parchment-border, #cbae7e);
+    border-radius: 14px;
+    background: #fffdf6;
+    text-align: center;
+    cursor: pointer;
+    font-family: 'Poppins', system-ui, sans-serif;
+    transition: border-color .15s ease, box-shadow .15s ease, background .15s ease, transform .12s ease;
+}
+
+.mode-opt:hover {
+    transform: translateY(-1px);
+}
+
+.mode-opt:focus-visible {
+    outline: none;
+    border-color: var(--brass, #cda24b);
+    box-shadow: 0 0 0 3px rgba(205, 162, 75, .28);
+}
+
+.mode-opt .ic {
+    display: block;
+    font-size: 26px;
+    line-height: 1;
+}
+
+.mode-opt b {
+    display: block;
+    margin-top: 4px;
+    font-size: 14px;
+    color: var(--ink, #3b2c1a);
+}
+
+.mode-opt .en {
+    display: block;
+    font-size: 10px;
+    color: var(--ink-soft, #6f5b3e);
+}
+
+.mode-opt.on {
+    border-color: var(--brass, #cda24b);
+    background: linear-gradient(180deg, #fff6df, #f3e3b6);
+    box-shadow: 0 0 0 3px rgba(205, 162, 75, .28);
+}
+
+.mode-opt .badge {
+    position: absolute;
+    top: -9px;
+    right: -7px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    border: 1px solid #f0d894;
+    background: var(--brass-foil, linear-gradient(150deg, #7a5c1e 0%, #b8893a 34%, #f0d894 52%, #b8893a 70%, #7a5c1e 100%));
+    color: #2b1708;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .04em;
+}
+
+.coach {
+    margin-top: 12px;
+    padding: 11px 13px;
+    background: linear-gradient(180deg, #fbf6e8, #f1e6cb);
+    border: 2px solid var(--parchment-border, #cbae7e);
+    border-radius: 14px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .25), inset 0 1px 0 rgba(255, 255, 255, .6);
+}
+
+.coach .obj {
+    margin: 0 0 3px;
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-weight: 800;
+    font-size: 12.5px;
+    color: #205233;
+}
+
+.coach ul {
+    margin: 7px 0 0;
+    padding-left: 17px;
+}
+
+.coach li {
+    margin: 3px 0;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--ink, #3b2c1a);
+}
+
+.coach li b {
+    color: #205233;
+}
