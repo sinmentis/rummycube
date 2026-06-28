@@ -29,6 +29,7 @@ import ChatPanel from "./ChatPanel";
 import AbilityCodex from "./AbilityCodex";
 import AbilityHand from "./AbilityHand";
 import PeekPanel from "./PeekPanel";
+import CastBeam from "./CastBeam";
 import CoachCard from "./CoachCard";
 import HintsToggle from "./HintsToggle";
 import IconButton from "./IconButton";
@@ -339,6 +340,28 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     // (targeting mode below), then dispatches playAbilityCard(cardId, pid). Kept in
     // a standalone, unit-tested hook so the targeting flow doesn't depend on Board.
     const {pendingPeek, playCard, pickTarget, cancelTarget} = useAbilityPlay(moves);
+    // SP1b T6 (juice): when a peek is cast, briefly draw a beam from your avatar to
+    // the picked opponent. We anchor it off the live DOM rects (in board-pixel
+    // space) at the click, then auto-clear it after a beat — purely cosmetic, so a
+    // missing ref just skips the beam. Reduced-motion is handled in CSS.
+    const boardRef = useRef(null);
+    const [castBeam, setCastBeam] = useState(null);
+    const beamTimerRef = useRef(null);
+    useEffect(() => () => clearTimeout(beamTimerRef.current), []);
+    const handlePickTarget = useCallback((pid, e) => {
+        const board = boardRef.current;
+        const targetEl = e?.currentTarget;
+        if (board && targetEl) {
+            const b = board.getBoundingClientRect();
+            const center = (r) => ({x: r.left - b.left + r.width / 2, y: r.top - b.top + r.height / 2});
+            const selfEl = board.querySelector('.rack-self .avatar');
+            const from = selfEl ? center(selfEl.getBoundingClientRect()) : {x: b.width / 2, y: b.height};
+            setCastBeam({from, to: center(targetEl.getBoundingClientRect())});
+            clearTimeout(beamTimerRef.current);
+            beamTimerRef.current = setTimeout(() => setCastBeam(null), 1100);
+        }
+        pickTarget(pid);
+    }, [pickTarget]);
     useUndoRedoHotkeys({canUndo, canRedo, onUndo: onUndoKey, onRedo: onRedoKey});
 
     // Pass button, used only when there's nothing to submit and no tile to draw.
@@ -497,7 +520,8 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             showTurnTimer={showTurnTimer}
             bubbles={chatBubbles}
             targetable={peekTargeting}
-            onPickTarget={pickTarget}
+            onPickTarget={handlePickTarget}
+            abilityPresence={isChaos ? G.abilityPresence : undefined}
         />
     )
 
@@ -601,7 +625,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                 </Suspense>}
 
             {sidebar}
-            <div className="board" onClick={onBoardClick}>
+            <div className="board" ref={boardRef} onClick={onBoardClick}>
                 <div className="board-kick-layer">
                 <div className="top-cue-stack">
                     {connectionCue}
@@ -637,6 +661,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                     timerExpireAt={showTurnTimer ? G.timerExpireAt : null}
                     onTimeout={onTurnTimeout}/>
                 {tableSeats}
+                {isChaos && castBeam && <CastBeam from={castBeam.from} to={castBeam.to}/>}
                 {peekPanel}
                 {peekTargetingBanner}
                 {boardGrid}

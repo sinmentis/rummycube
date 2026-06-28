@@ -622,3 +622,92 @@
 }
 .shield-chip b { font-size: 12.5px; display: block; }
 .shield-chip span { font-size: 10.5px; opacity: .82; }
+
+/* ============================================================================
+   SP1b T6 (juice) — opponent "has-a-card" presence dot + the peek cast beam.
+   Both are decorative; meaning never depends on motion. Values mirror the
+   approved mockup (.cue ~207-240, .beam-stage / .beam-core / .beam-flow
+   ~662-690); theme tokens resolve against classic.css with the mockup's
+   literals as fallbacks. A trailing prefers-reduced-motion block degrades the
+   beam flow + the gain pulse to a still result.
+   ========================================================================== */
+
+/* Presence dot — corner badge on an OPPONENT avatar meaning "holds at least one
+   ability card". Presence ONLY: it carries no number and no card face. Self is
+   never rendered in .table-seats, so it can never wear one. */
+.ability-presence {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    z-index: 4;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    pointer-events: none;
+    background: radial-gradient(closest-side, #c79be6, #7a3fb0 78%, #4b2370);
+    border: 1.5px solid var(--brass-soft, #cda24b);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(255, 255, 255, .25);
+}
+
+/* Soft aura, and a one-shot gain pulse that fires the moment the dot mounts
+   (i.e. when an opponent newly gains a card). Both are pure decoration. */
+.ability-presence::before {
+    content: "";
+    position: absolute;
+    inset: -5px;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(177, 120, 224, .5), rgba(177, 120, 224, 0));
+}
+.ability-presence::after {
+    content: "";
+    position: absolute;
+    inset: -5px;
+    border-radius: 50%;
+    pointer-events: none;
+    border: 2px solid rgba(177, 120, 224, .9);
+    opacity: 0;
+    animation: presence-gain 1.05s ease-out 2;
+}
+@keyframes presence-gain {
+    0% { opacity: .9; transform: scale(.6); }
+    70%, 100% { opacity: 0; transform: scale(2.1); }
+}
+
+/* Peek cast beam — a transient SVG overlay over the felt; CastBeam draws its
+   lines in board-pixel space. pointer-events:none so it never blocks the table. */
+.cast-beam {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 7;
+    pointer-events: none;
+    overflow: visible;
+}
+.beam-core {
+    stroke: url(#castBeamGrad);
+    stroke-width: 6;
+    stroke-linecap: round;
+    fill: none;
+    filter: drop-shadow(0 0 7px rgba(255, 180, 90, .85));
+}
+.beam-flow {
+    stroke: #fff7e6;
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    fill: none;
+    stroke-dasharray: 3 13;
+    animation: beam-flow 1.1s linear infinite;
+}
+@keyframes beam-flow { to { stroke-dashoffset: -32; } }
+.beam-origin {
+    fill: #ffe9b0;
+    stroke: var(--brass-soft, #cda24b);
+    stroke-width: 2.5;
+}
+
+/* Accessibility: degrade to a still result — no travelling spark, no gain pulse. */
+@media (prefers-reduced-motion: reduce) {
+    .beam-flow { animation: none; }
+    .ability-presence::after { animation: none; }
+}

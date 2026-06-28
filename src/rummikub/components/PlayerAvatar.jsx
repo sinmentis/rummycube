@@ -11,7 +11,7 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 // 5 seconds with a motion-gated pulse — a second cue beyond the ring colour.
 const LOW_TIME_MS = 5000;
 
-const PlayerAvatarWithTimer = ({name, matchId, seatId, tiles, isActive, isConnected, timerExpireAt, totalTime, showTurnTimer, bubble, bubbleSide = "up", targetable = false, onPickTarget}) => {
+const PlayerAvatarWithTimer = ({name, matchId, seatId, tiles, isActive, isConnected, timerExpireAt, totalTime, showTurnTimer, bubble, bubbleSide = "up", targetable = false, onPickTarget, hasAbility = false}) => {
     const [dashOffset, setDashOffset] = useState(CIRCUMFERENCE);
     const [strokeColor, setStrokeColor] = useState("#cda24b");
 
@@ -21,7 +21,7 @@ const PlayerAvatarWithTimer = ({name, matchId, seatId, tiles, isActive, isConnec
     // from reaching the board's deselect handler.
     const pickTarget = (e) => {
         e.stopPropagation();
-        onPickTarget?.(String(seatId));
+        onPickTarget?.(String(seatId), e);
     };
     const targetProps = targetable
         ? {
@@ -63,6 +63,12 @@ const PlayerAvatarWithTimer = ({name, matchId, seatId, tiles, isActive, isConnec
                  }}>
                  {isConnected === false &&
                      <span className="avatar-offline" title="Disconnected" aria-label="Disconnected">🔌</span>}
+                {/* Chaos presence cue (SP1b T6): a dot meaning "this opponent holds at
+                    least one ability card" — presence ONLY, never the count. Self is
+                    never rendered here, so it can never carry a dot. */}
+                {hasAbility &&
+                    <span className="ability-presence" role="img"
+                          aria-label="Holds an ability card" title="Holds an ability card"/>}
                 {isActive && showTurnTimer ? <svg className={`timer-ring ${timeLeft <= LOW_TIME_MS ? "timer-low" : ""}`} width="100" height="100" viewBox="0 0 100 100">
                     <circle
                         className="timer-bg"
