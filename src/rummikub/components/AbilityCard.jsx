@@ -15,12 +15,32 @@ export default function AbilityCard({card, lifted, onClick, disabled}) {
         .filter(Boolean)
         .join(' ');
 
+    // Standard accessible-button wiring. A live card is a focusable button that
+    // also fires on Enter/Space (Space preventDefault'd so it doesn't scroll the
+    // page). A disabled card stays a button for screen readers (role +
+    // aria-disabled) but is inert: focusable out of the tab order, no handlers.
+    // A card with no onClick is purely presentational and gets neither.
+    let interactiveProps = {};
+    if (clickable) {
+        interactiveProps = {
+            role: 'button',
+            tabIndex: 0,
+            onClick: () => onClick(card),
+            onKeyDown: (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    if (e.key === ' ') e.preventDefault();
+                    onClick(card);
+                }
+            },
+        };
+    } else if (disabled) {
+        interactiveProps = {role: 'button', tabIndex: -1, 'aria-disabled': true};
+    }
+
     return (
         <div
             className={className}
-            role={clickable ? 'button' : undefined}
-            aria-disabled={disabled ? true : undefined}
-            onClick={clickable ? () => onClick(card) : undefined}
+            {...interactiveProps}
         >
             {rarity === 'gold' && <div className="acard-foil" aria-hidden="true" />}
             <div className="acard-head">

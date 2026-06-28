@@ -30,6 +30,30 @@ test('click fires onClick with the card; disabled suppresses it', () => {
   expect(onClick).not.toHaveBeenCalled();
 });
 
+test('a clickable card is keyboard-operable: Enter and Space fire onClick(card)', () => {
+  const onClick = jest.fn();
+  const card = {id: 'peek-0', type: 'peek', rarity: 'white'};
+  render(<AbilityCard card={card} onClick={onClick} />);
+  const el = screen.getByRole('button');
+  expect(el).toHaveAttribute('tabindex', '0');
+  fireEvent.keyDown(el, {key: 'Enter'});
+  expect(onClick).toHaveBeenCalledWith(card);
+  onClick.mockClear();
+  fireEvent.keyDown(el, {key: ' '});
+  expect(onClick).toHaveBeenCalledWith(card);
+});
+
+test('a disabled card is announced as a disabled button but is inert', () => {
+  const onClick = jest.fn();
+  const card = {id: 'peek-0', type: 'peek', rarity: 'white'};
+  render(<AbilityCard card={card} onClick={onClick} disabled />);
+  const el = screen.getByRole('button');
+  expect(el).toHaveAttribute('aria-disabled', 'true');
+  expect(el).toHaveClass('is-disabled');
+  fireEvent.keyDown(el, {key: 'Enter'});
+  expect(onClick).not.toHaveBeenCalled();
+});
+
 test('CARD_META covers all 10 chaos card types', () => {
   for (const t of ['peek','shield','junk2','junk3','force','wheel','bigwind','junk4','skip','lock']) {
     expect(CARD_META[t]).toEqual(expect.objectContaining({name: expect.any(String), icon: expect.any(String), effect: expect.any(String)}));
