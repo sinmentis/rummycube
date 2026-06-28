@@ -1,5 +1,5 @@
 // src/rummikub/abilities/moves.js
-import {INVALID_MOVE} from 'boardgame.io/core';
+import {INVALID_MOVE} from 'boardgame.io/dist/cjs/core.js';
 
 const SP1_TYPES = new Set(['peek', 'shield']);
 

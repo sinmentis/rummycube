@@ -6,10 +6,10 @@ class GameLobbyClient {
         this.client = new LobbyClient({server: `${LOBBY_SERVER_PROTO}://${LOBBY_SERVER_HOST}:${LOBBY_SERVER_PORT}`});
     }
 
-    async createGame(playersCount, timePerTurn) {
+    async createGame(playersCount, timePerTurn, chaos = false) {
         const result = await this.client.createMatch(GAME_NAME, {
             numPlayers: parseInt(playersCount),
-            setupData: {timePerTurn: parseInt(timePerTurn)},
+            setupData: {timePerTurn: parseInt(timePerTurn), chaos: !!chaos},
             unlisted: true,
         });
         return result.matchID
