@@ -27,6 +27,7 @@ import {countPlacedThisTurn} from "../juice/comboMath";
 const ComboOverlay = lazy(() => import("./ComboOverlay"));
 import ChatPanel from "./ChatPanel";
 import AbilityCodex from "./AbilityCodex";
+import AbilityHand from "./AbilityHand";
 import CoachCard from "./CoachCard";
 import HintsToggle from "./HintsToggle";
 import IconButton from "./IconButton";
@@ -331,6 +332,11 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     const canRedo = !!G.redoMoveStack.length && !ctx.gameover && ctx.currentPlayer === playerID && !waiting;
     const onUndoKey = useCallback(() => moves.undo(), [moves]);
     const onRedoKey = useCallback(() => moves.redo(), [moves]);
+    // SP1b T4: the chaos ability hand renders here; the play controller
+    // (shield/peek routing, bluff/challenge) lands in Task 5's useAbilityPlay.
+    // Until then onPlay is a stable no-op so the wiring is in place and T5 only
+    // swaps this handler.
+    const onPlayAbility = useCallback(() => {}, []);
     useUndoRedoHotkeys({canUndo, canRedo, onUndo: onUndoKey, onRedo: onRedoKey});
 
     // Pass button, used only when there's nothing to submit and no tile to draw.
@@ -662,6 +668,8 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                    matchID={matchID}
                    playerID={playerID}/>
         {G.mode === 'chaos' && <AbilityCodex/>}
+        {G.mode === 'chaos' &&
+            <AbilityHand cards={G.abilityHands?.[playerID] ?? []} onPlay={onPlayAbility}/>}
     </DndContext>
 }
 
