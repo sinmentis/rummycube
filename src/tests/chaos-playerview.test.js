@@ -24,3 +24,15 @@ test('peek grant lets the viewer see the target hand tiles', () => {
   const v = playerView({G, ctx: {currentPlayer: '0'}, playerID: '0'});
   expect(v.tilePositions['6']).toBeDefined();      // player 1's hand tile now visible
 });
+
+test('peek widens only the granted target: own visible, non-granted hidden, prev peek-free', () => {
+  const G = baseG();
+  G.tilePositions['7'] = {id: 7, gridId: HAND_GRID_ID, playerID: '2', col: 0, row: 0};
+  G.prevTilePositions = {6: {id: 6, gridId: HAND_GRID_ID, playerID: '1', col: 0, row: 0}};
+  G.peekGrants = {'0': '1'};
+  const v = playerView({G, ctx: {currentPlayer: '0'}, playerID: '0'});
+  expect(v.tilePositions['5']).toBeDefined();      // own tile still visible (peek widens, never narrows)
+  expect(v.tilePositions['6']).toBeDefined();      // granted opponent revealed
+  expect(v.tilePositions['7']).toBeUndefined();    // non-granted opponent stays hidden
+  expect(v.prevTilePositions['6']).toBeUndefined(); // prior snapshot stays peek-free while grant active
+});
