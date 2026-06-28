@@ -12,11 +12,14 @@ function deriveHandCounts(tilePositions) {
     return counts;
 }
 
-function stripHandTilePositions(tilePositions, viewerID) {
+function stripHandTilePositions(tilePositions, viewerID, seeIDs = null) {
     const result = {};
     for (const [tileId, pos] of Object.entries(tilePositions)) {
         if (pos.gridId === HAND_GRID_ID) {
-            if (viewerID != null && pos.playerID != null && pos.playerID.toString() === viewerID) {
+            const owner = pos.playerID == null ? null : pos.playerID.toString();
+            const allow = viewerID != null && owner === viewerID
+                || (seeIDs && owner != null && seeIDs.has(owner));
+            if (allow) {
                 result[tileId] = pos;
             }
         } else {
@@ -48,7 +51,12 @@ function playerView({G, ctx, playerID}) {
     const view = cloneDeep(G);
     view.handCounts = handCounts;
 
-    view.tilePositions = stripHandTilePositions(view.tilePositions, viewerID);
+    // Chaos: peek grants let the viewer see specific opponents' hand tiles.
+    const seeIDs = new Set();
+    if (G.peekGrants && viewerID != null && G.peekGrants[viewerID] != null) {
+        seeIDs.add(G.peekGrants[viewerID].toString());
+    }
+    view.tilePositions = stripHandTilePositions(view.tilePositions, viewerID, seeIDs);
     if (view.prevTilePositions) {
         view.prevTilePositions = stripHandTilePositions(view.prevTilePositions, viewerID);
     }
@@ -67,6 +75,21 @@ function playerView({G, ctx, playerID}) {
     const isCurrentPlayer = viewerID != null && ctx != null && viewerID === ctx.currentPlayer;
     if (!isCurrentPlayer) {
         view.recentlyDrawnTiles = [];
+    }
+
+    // Chaos: hide opponents' ability-card content and count; expose presence only.
+    if (G.abilityHands) {
+        const presence = {};
+        for (const pid of Object.keys(G.abilityHands)) {
+            if (pid !== viewerID) {
+                presence[pid] = G.abilityHands[pid].length > 0;
+            }
+        }
+        view.abilityHands = viewerID != null && G.abilityHands[viewerID]
+            ? {[viewerID]: G.abilityHands[viewerID]}
+            : {};
+        view.abilityPresence = presence;
+        view.abilityDeck = [];
     }
 
     return view;
