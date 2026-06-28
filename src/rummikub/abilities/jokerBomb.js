@@ -89,12 +89,21 @@ function settleJokerBombs({G, ctx, random, events}) {
 
     let boomCount = 0;
     const scattered = [];
+    // Two jokers can share one run; once it scatters its tiles are gone, so a
+    // second joker keyed to the same run must not boom again (double draw 6).
+    const boomedRuns = new Set();
     for (const jid of Object.keys(groups)) {
         const group = groups[jid];
         const entry = G.jokerHeat[jid];
         if (!entry) {
             // Freshly planted this turn: arm without rolling.
             G.jokerHeat[jid] = {heat: 0, members: group.members};
+            continue;
+        }
+        const runKey = group.seqIds.join(',');
+        if (boomedRuns.has(runKey)) {
+            // This joker's run already boomed this settle: drop the stale entry.
+            delete G.jokerHeat[jid];
             continue;
         }
         if (sameMembers(entry.members, group.members)) {
@@ -109,6 +118,7 @@ function settleJokerBombs({G, ctx, random, events}) {
                 scattered.push(Number(id));
             }
             delete G.jokerHeat[jid];
+            boomedRuns.add(runKey);
             boomCount += 1;
         } else {
             entry.members = group.members;

@@ -73,6 +73,19 @@ test('retrieve to hand: joker gone from board -> heat reset', () => {
   expect(G.jokerHeat[String(J)]).toBeUndefined();
 });
 
+test('two jokers in one run boom once (dedupe)', () => {
+  // run [5,J,7,J,9] holds two jokers (14=red, 30=black). Both share one run;
+  // baseline [5,7] differs from current members [5,7,9] so each is "modified".
+  // Without dedupe both jokers boom: scatter twice + draw 6. With dedupe: draw 3.
+  const G = {mode: 'chaos',
+    tilePositions: (() => {const tp = {}; [5, 14, 7, 30, 9].forEach((id, i) => tp[id] = {id, gridId: 'b', row: 0, col: i}); return tp;})(),
+    tilesPool: [101, 102, 103, 104, 105, 106],
+    jokerHeat: {'14': {heat: 4, members: [5, 7]}, '30': {heat: 4, members: [5, 7]}}};
+  settleJokerBombs({G, ctx, random: {Number: () => 0}, events: {}});
+  const hand = Object.values(G.tilePositions).filter(p => p.gridId === 'h' && p.playerID === '0');
+  expect(hand).toHaveLength(3); // not 6
+});
+
 test('classic: no-op', () => {
   const G = {mode: 'classic', tilePositions: boardRow([5, J, 7]), tilesPool: [], jokerHeat: {}};
   settleJokerBombs({G, ctx, random: alwaysBoom, events});
