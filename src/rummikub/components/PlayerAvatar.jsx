@@ -11,9 +11,32 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 // 5 seconds with a motion-gated pulse — a second cue beyond the ring colour.
 const LOW_TIME_MS = 5000;
 
-const PlayerAvatarWithTimer = ({name, matchId, seatId, tiles, isActive, isConnected, timerExpireAt, totalTime, showTurnTimer, bubble, bubbleSide = "up"}) => {
+const PlayerAvatarWithTimer = ({name, matchId, seatId, tiles, isActive, isConnected, timerExpireAt, totalTime, showTurnTimer, bubble, bubbleSide = "up", targetable = false, onPickTarget}) => {
     const [dashOffset, setDashOffset] = useState(CIRCUMFERENCE);
     const [strokeColor, setStrokeColor] = useState("#cda24b");
+
+    // Chaos peek targeting (SP1b T5): while the viewer holds a pending peek, Board
+    // flags opponent avatars targetable so a click picks the victim. Self is never
+    // rendered here, so it can never be targeted. stopPropagation keeps the click
+    // from reaching the board's deselect handler.
+    const pickTarget = (e) => {
+        e.stopPropagation();
+        onPickTarget?.(String(seatId));
+    };
+    const targetProps = targetable
+        ? {
+            role: "button",
+            tabIndex: 0,
+            "aria-label": `Peek ${name}'s rack`,
+            onClick: pickTarget,
+            onKeyDown: (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    pickTarget(e);
+                }
+            },
+        }
+        : {};
 
     // Only the active avatar runs its own countdown, so a 400ms tick re-renders
     // just this subtree — never Board. Non-active avatars pass null and idle.
@@ -32,7 +55,8 @@ const PlayerAvatarWithTimer = ({name, matchId, seatId, tiles, isActive, isConnec
 
     return (
         <div className="player">
-            <div className={`avatar ${isActive ? "active" : ""} ${isConnected === false ? "offline" : ""}`}
+            <div className={`avatar ${isActive ? "active" : ""} ${isConnected === false ? "offline" : ""} ${targetable ? "targetable" : ""}`}
+                 {...targetProps}
                  style={{
                      backgroundColor: stringToColor(name),
                      backgroundImage: `url(${catAvatarUrl(matchId, seatId)})`,

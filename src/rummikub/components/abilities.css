@@ -455,3 +455,170 @@
         opacity: 1;
     }
 }
+
+/* ============================================================================
+   SP1b T5 — peek reveal panel (round-long, foldable), peek targeting, and the
+   shield held chip. Docked over the felt .board; values mirror the approved
+   mockup (peek-panel / peek-tab / shield-chip ~1243-1300), with theme tokens
+   resolving against classic.css and the mockup's literals as fallbacks.
+   ========================================================================== */
+
+/* The docked panel (open) — pinned top-right for the whole round. */
+.peek-panel {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 276px;
+    max-width: calc(100% - 28px);
+    border-radius: 13px;
+    overflow: hidden;
+    z-index: 7;
+    background: var(--parchment, linear-gradient(180deg, #fbf6e8 0%, #f1e6cb 100%));
+    border: 2px solid var(--parchment-border, #cbae7e);
+    box-shadow: 0 18px 38px rgba(0, 0, 0, .52);
+}
+.peek-phead {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 11px;
+    background: linear-gradient(180deg, #2a59b0, #13478f);
+    color: #eef4ff;
+}
+.peek-phead .eye { font-size: 15px; }
+.peek-phead .ttl { font-size: 11.5px; font-weight: 800; line-height: 1.25; }
+.peek-phead .ttl small { display: block; font-weight: 600; font-size: 9px; opacity: .85; letter-spacing: .3px; }
+.peek-fold {
+    margin-left: auto;
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+    flex: none;
+    border: 1px solid rgba(255, 255, 255, .34);
+    background: rgba(255, 255, 255, .14);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    cursor: pointer;
+}
+.peek-pbody { padding: 11px 12px 12px; }
+.peek-rack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 10px 11px;
+    border-radius: 11px;
+    background: var(--rack, linear-gradient(180deg, #8a5a2b, #5e3a18));
+    box-shadow: var(--rack-highlight, inset 0 3px 6px rgba(255, 220, 170, .28), inset 0 -6px 14px rgba(0, 0, 0, .30));
+}
+.peek-note {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 9px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--ink-soft, #6f5b3e);
+}
+.peek-note .lk { color: #13478f; }
+
+/* The folded handle (closed) — same corner, re-openable tab. */
+.peek-tab {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 13px;
+    border-radius: 12px;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, .2);
+    background: linear-gradient(180deg, #2a59b0, #13478f);
+    color: #eef4ff;
+    font-size: 11.5px;
+    font-weight: 800;
+    box-shadow: 0 10px 22px rgba(0, 0, 0, .45);
+}
+.peek-tab .chev { opacity: .85; font-size: 12px; }
+.peek-panel.folded {
+    width: auto;
+    background: none;
+    border: none;
+    box-shadow: none;
+    overflow: visible;
+}
+.peek-panel.folded .peek-phead,
+.peek-panel.folded .peek-pbody { display: none; }
+.peek-panel.folded .peek-tab { display: inline-flex; }
+
+/* Peek targeting — while a peek is pending, opponent avatars become click
+   targets. .table-seats is pointer-events:none, so the targetable avatar opts
+   back in; a centred banner carries the instruction + cancel. */
+.avatar.targetable {
+    pointer-events: auto;
+    cursor: pointer;
+    outline: 3px solid var(--gold-edge, #e7c66b);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 6px rgba(231, 198, 107, .28);
+    animation: peek-target-pulse 1.4s ease-in-out infinite;
+}
+@keyframes peek-target-pulse {
+    0%, 100% { box-shadow: 0 0 0 6px rgba(231, 198, 107, .28); }
+    50% { box-shadow: 0 0 0 10px rgba(231, 198, 107, .14); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .avatar.targetable { animation: none; }
+}
+.peek-targeting {
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 8;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #2a59b0, #13478f);
+    color: #eef4ff;
+    font-size: 12px;
+    font-weight: 800;
+    box-shadow: 0 10px 22px rgba(0, 0, 0, .45);
+}
+.peek-targeting__cancel {
+    border: 1px solid rgba(255, 255, 255, .34);
+    background: rgba(255, 255, 255, .14);
+    color: #fff;
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+/* Shield — passive held badge docked by the rack. */
+.shield-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 13px 8px 9px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #244b35, #16321f);
+    border: 1px solid rgba(127, 224, 163, .5);
+    box-shadow: var(--elev-1, 0 2px 6px rgba(0, 0, 0, .3));
+    color: var(--cream, #f5edd8);
+}
+.shield-chip .orb {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    background: radial-gradient(closest-side, #7fe0a3, #1f7a47);
+    box-shadow: 0 0 12px rgba(127, 224, 163, .6);
+}
+.shield-chip b { font-size: 12.5px; display: block; }
+.shield-chip span { font-size: 10.5px; opacity: .82; }

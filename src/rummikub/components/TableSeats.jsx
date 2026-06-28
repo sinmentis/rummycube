@@ -11,7 +11,7 @@ import {seatConnected} from "../seats/seatConnection";
 // left-edge seat -> bubble to the right (inward), right-edge -> to the left.
 const SIDE_BY_POS = {top: 'down', left: 'right', right: 'left', bottom: 'up'};
 
-const TableSeats = function ({currentPlayer, playerID, matchData, matchID, hands, handCounts, connected, timerExpireAt, timePerTurn, showTurnTimer, bubbles}) {
+const TableSeats = function ({currentPlayer, playerID, matchData, matchID, hands, handCounts, connected, timerExpireAt, timePerTurn, showTurnTimer, bubbles, targetable = false, onPickTarget}) {
     const positions = tablePositions(matchData.length, Number(playerID));
 
     return (
@@ -35,7 +35,9 @@ const TableSeats = function ({currentPlayer, playerID, matchData, matchID, hands
                                                      totalTime={timePerTurn}
                                                      showTurnTimer={showTurnTimer}
                                                      bubble={(bubbles && bubbles[String(data.id)]) || null}
-                                                     bubbleSide={SIDE_BY_POS[pos] || 'down'}/>
+                                                     bubbleSide={SIDE_BY_POS[pos] || 'down'}
+                                                     targetable={targetable}
+                                                     onPickTarget={onPickTarget}/>
                             : <div className="player-pending">Seat {data.id + 1}<br/>waiting…</div>}
                     </div>
                 );

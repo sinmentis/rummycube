@@ -28,6 +28,7 @@ const ComboOverlay = lazy(() => import("./ComboOverlay"));
 import ChatPanel from "./ChatPanel";
 import AbilityCodex from "./AbilityCodex";
 import AbilityHand from "./AbilityHand";
+import PeekPanel from "./PeekPanel";
 import CoachCard from "./CoachCard";
 import HintsToggle from "./HintsToggle";
 import IconButton from "./IconButton";
@@ -39,6 +40,7 @@ import {useGiveUpConfirm} from "./hooks/useGiveUpConfirm";
 import {useSyncingCue} from "./hooks/useSyncingCue";
 import {useComboCelebration} from "./hooks/useComboCelebration";
 import {useDropDispatch} from "./hooks/useDropDispatch";
+import useAbilityPlay from "./hooks/useAbilityPlay";
 import {seatConnected} from "../seats/seatConnection";
 import {useChatBubbles} from "../hooks/useChatBubbles";
 import every from "lodash/every.js";
@@ -332,11 +334,11 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     const canRedo = !!G.redoMoveStack.length && !ctx.gameover && ctx.currentPlayer === playerID && !waiting;
     const onUndoKey = useCallback(() => moves.undo(), [moves]);
     const onRedoKey = useCallback(() => moves.redo(), [moves]);
-    // SP1b T4: the chaos ability hand renders here; the play controller
-    // (shield/peek routing, bluff/challenge) lands in Task 5's useAbilityPlay.
-    // Until then onPlay is a stable no-op so the wiring is in place and T5 only
-    // swaps this handler.
-    const onPlayAbility = useCallback(() => {}, []);
+    // SP1b T5: the chaos ability play controller. shield fires immediately; peek
+    // parks in `pendingPeek` and waits for the player to click an opponent avatar
+    // (targeting mode below), then dispatches playAbilityCard(cardId, pid). Kept in
+    // a standalone, unit-tested hook so the targeting flow doesn't depend on Board.
+    const {pendingPeek, playCard, pickTarget, cancelTarget} = useAbilityPlay(moves);
     useUndoRedoHotkeys({canUndo, canRedo, onUndo: onUndoKey, onRedo: onRedoKey});
 
     // Pass button, used only when there's nothing to submit and no tile to draw.
@@ -479,6 +481,8 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         />
     )
 
+    const isChaos = G.mode === 'chaos';
+    const peekTargeting = isChaos && !!pendingPeek;
     const tableSeats = (
         <TableSeats
             currentPlayer={ctx.currentPlayer}
@@ -492,8 +496,34 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             timePerTurn={G.timePerTurn}
             showTurnTimer={showTurnTimer}
             bubbles={chatBubbles}
+            targetable={peekTargeting}
+            onPickTarget={pickTarget}
         />
     )
+
+    const peekTarget = isChaos ? G.peekGrants?.[playerID] : null;
+    const peekPanel = peekTarget != null
+        ? <PeekPanel viewerID={playerID} targetID={peekTarget} tilePositions={G.tilePositions}/>
+        : null;
+    // While a peek is pending, the felt invites the player to pick a victim; the
+    // opponent avatars are the click targets, this banner just carries the
+    // instruction and an escape hatch.
+    const peekTargetingBanner = peekTargeting
+        ? (
+            <div className="peek-targeting" role="status" aria-live="polite">
+                <span className="peek-targeting__msg">👁️ Pick an opponent to peek</span>
+                <button type="button" className="peek-targeting__cancel" onClick={cancelTarget}>Cancel</button>
+            </div>
+        )
+        : null;
+    const shieldChip = isChaos && G.shields?.[playerID]
+        ? (
+            <span className="shield-chip" role="status">
+                <span className="orb" aria-hidden="true">🛡️</span>
+                <span><b>Shield ready</b><span>Auto-blocks the next ability aimed at you</span></span>
+            </span>
+        )
+        : null;
 
     const selfData = (matchData || [])[Number(playerID)]
     const bannerLabel = showTurnTimer ? turnBannerLabel(ctx.currentPlayer, playerID, matchData) : null
@@ -607,9 +637,12 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                     timerExpireAt={showTurnTimer ? G.timerExpireAt : null}
                     onTimeout={onTurnTimeout}/>
                 {tableSeats}
+                {peekPanel}
+                {peekTargetingBanner}
                 {boardGrid}
                 <div className={'hand-buttons'}>
                     {selfAvatar}
+                    {shieldChip}
                     <div className="rack-tools">
                         <IconButton glyph="↶" label="Undo" disabled={!canUndo} onClick={() => moves.undo()}/>
                         <IconButton glyph="↷" label="Redo" disabled={!canRedo} onClick={() => moves.redo()}/>
@@ -669,7 +702,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                    playerID={playerID}/>
         {G.mode === 'chaos' && <AbilityCodex/>}
         {G.mode === 'chaos' &&
-            <AbilityHand cards={G.abilityHands?.[playerID] ?? []} onPlay={onPlayAbility}/>}
+            <AbilityHand cards={G.abilityHands?.[playerID] ?? []} onPlay={playCard}/>}
     </DndContext>
 }
 
