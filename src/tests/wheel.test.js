@@ -59,6 +59,17 @@ test('table add-set: ~3 pool -> board row', () => {
   expect(G.tilesPool).toHaveLength(1);
 });
 
+test('add-set conserves tiles: skipped jokers stay in pool, none vanish', () => {
+  // pool has 2 jokers (14,30); they must be skipped onto board yet returned to pool.
+  const G = {mode: 'chaos', tilePositions: {}, tilesPool: [101, 14, 102, 30, 103]};
+  const before = G.tilesPool.length;
+  spinWheel({G, ctx, random: seq(0.6, 0.1)}); // table, add
+  expect(board(G)).toHaveLength(3);            // 3 normal tiles on board
+  const total = board(G).length + G.tilesPool.length;
+  expect(total).toBe(before);                  // 2 jokers preserved -> nothing leaked
+  expect(G.tilesPool.filter(t => t === 14 || t === 30).sort()).toEqual([14, 30]);
+});
+
 test('table remove-set: a board run -> pool', () => {
   const G = {mode: 'chaos', tilePositions: {5: boardTile(5, 0), 6: boardTile(6, 1), 7: boardTile(7, 2)}, tilesPool: []};
   spinWheel({G, ctx, random: seq(0.6, 0.9, 0.0)}); // table, remove, run0

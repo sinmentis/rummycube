@@ -96,12 +96,15 @@ function playerAction(G, ctx, seat, random) {
 // are skipped on the way out so the Wheel never plants a joker set.
 function addSet(G, ctx) {
     const tiles = [];
+    const skipped = [];
     while (tiles.length < ADD_SET_SIZE && G.tilesPool.length) {
         const tile = G.tilesPool.pop();
         if (tile == null) break;
-        if (isJoker(Number(tile))) continue;
+        if (isJoker(Number(tile))) { skipped.push(tile); continue; }
         tiles.push(tile);
     }
+    // Return skipped jokers to the bottom of the pool — popped tiles must never vanish.
+    for (const joker of skipped) G.tilesPool.unshift(joker);
     pushTilesToGrid(tiles, BOARD_ROWS, BOARD_COLS, G, {gridId: BOARD_GRID_ID, playerID: null}, ctx);
     return {count: tiles.length, tiles: tiles.map(Number)};
 }
