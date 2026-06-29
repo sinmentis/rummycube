@@ -101,6 +101,31 @@ test('never scatters a joker set: remove-set skips joker run -> no-op', () => {
   expect(G.tilesPool).toHaveLength(0);
 });
 
+test('remove-set never scatters an active locked group; an unlocked run is fair game', () => {
+  const G = {mode: 'chaos', lockedSets: [{row: 0, tiles: [5, 6, 7], until: 6}],
+    tilePositions: {5: boardTile(5, 0), 6: boardTile(6, 1), 7: boardTile(7, 2),
+      8: boardTile(8, 4), 9: boardTile(9, 5), 10: boardTile(10, 6)}, tilesPool: []};
+  spinWheel({G, ctx: {currentPlayer: '0', numPlayers: 2, turn: 4}, random: seq(0.6, 0.9, 0.0)});
+  expect([5, 6, 7].every(id => G.tilePositions[id])).toBe(true); // frozen group intact
+  expect(G.tilesPool.slice().sort((a, b) => a - b)).toEqual([8, 9, 10]); // only the unlocked run scattered
+});
+
+test('remove-set is a no-op when the only board run is locked', () => {
+  const G = {mode: 'chaos', lockedSets: [{row: 0, tiles: [5, 6, 7], until: 6}],
+    tilePositions: {5: boardTile(5, 0), 6: boardTile(6, 1), 7: boardTile(7, 2)}, tilesPool: []};
+  const r = spinWheel({G, ctx: {currentPlayer: '0', numPlayers: 2, turn: 4}, random: seq(0.6, 0.9, 0.0)});
+  expect(r.detail.count).toBe(0);
+  expect(board(G)).toHaveLength(3);
+});
+
+test('remove-set CAN scatter a group once its lock has expired', () => {
+  const G = {mode: 'chaos', lockedSets: [{row: 0, tiles: [5, 6, 7], until: 6}],
+    tilePositions: {5: boardTile(5, 0), 6: boardTile(6, 1), 7: boardTile(7, 2)}, tilesPool: []};
+  spinWheel({G, ctx: {currentPlayer: '0', numPlayers: 2, turn: 6}, random: seq(0.6, 0.9, 0.0)}); // turn 6 >= until
+  expect(board(G)).toHaveLength(0);
+  expect(G.tilesPool).toHaveLength(3);
+});
+
 test('all: every seat draws', () => {
   const G = {mode: 'chaos', tilePositions: {}, tilesPool: [101, 102, 103, 104]};
   const r = spinWheel({G, ctx, random: seq(0.95, 0.1, 0.1, 0.1)}); // all, draw, count1 x2

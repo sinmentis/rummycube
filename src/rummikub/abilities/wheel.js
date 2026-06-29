@@ -37,6 +37,19 @@ function handTiles(G, seat) {
     });
 }
 
+// Tiles frozen by an active LOCK (chaos). Mirrors the lockedTileIds guard the board
+// moves use so the Wheel's remove-set honours the same freeze; expired entries
+// (turn >= until) free up. Returns null when nothing is frozen (cheap no-op).
+function activeLockedIds(G, ctx) {
+    if (!Array.isArray(G.lockedSets) || !G.lockedSets.length) return null;
+    const turn = ctx && ctx.turn != null ? ctx.turn : 0;
+    const ids = new Set();
+    for (const l of G.lockedSets) {
+        if (turn < l.until) for (const t of (l.tiles || [])) ids.add(Number(t));
+    }
+    return ids.size ? ids : null;
+}
+
 function drawCount(random) {
     const r = random.Number();
     if (r < DRAW_ONE) return 1;
@@ -114,9 +127,14 @@ function addSet(G, ctx) {
 }
 
 // Remove-set: scatter one board run back to the pool. Joker runs are skipped —
-// jokers are SP4's bomb, the Wheel never touches a joker set. No-op if none.
-function removeSet(G, random) {
-    const runs = extractSeqs(G).filter(run => !run.some(id => isJoker(Number(id))));
+// jokers are SP4's bomb, the Wheel never touches a joker set. Fix4: an active LOCK
+// also shields its group — the Wheel can't scatter what the spec freezes for two
+// turns. No-op if no eligible run remains.
+function removeSet(G, ctx, random) {
+    const locked = activeLockedIds(G, ctx);
+    const runs = extractSeqs(G).filter(run =>
+        !run.some(id => isJoker(Number(id))) &&
+        !(locked && run.some(id => locked.has(Number(id)))));
     if (runs.length === 0) return {count: 0, tiles: []};
     const run = runs[Math.floor(random.Number() * runs.length)];
     for (const id of run) {
@@ -126,9 +144,9 @@ function removeSet(G, random) {
     return {count: run.length, tiles: run.map(Number)};
 }
 
-function tableAction(G, random) {
+function tableAction(G, ctx, random) {
     if (random.Number() < TABLE_ADD) return ['add-set', addSet(G, {})];
-    return ['remove-set', removeSet(G, random)];
+    return ['remove-set', removeSet(G, ctx, random)];
 }
 
 // One Wheel spin. Pure: mutates G, returns + stores result. Classic = no-op/null.
@@ -143,7 +161,7 @@ function spinWheel({G, ctx, random}) {
         const [action, detail] = playerAction(G, ctx, seat, random);
         result = {object: 'player', action, detail};
     } else if (objRoll < OBJECT_TABLE) {
-        const [action, detail] = tableAction(G, random);
+        const [action, detail] = tableAction(G, ctx, random);
         result = {object: 'table', action, detail};
     } else {
         const r = random.Number();

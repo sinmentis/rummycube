@@ -3,7 +3,7 @@ import {INVALID_MOVE, Stage} from 'boardgame.io/dist/cjs/core.js';
 import {pushTilesToGrid} from '../orderTiles.js';
 import {spinWheel} from './wheel.js';
 import {extractSeqs} from '../moveValidation.js';
-import {isJoker} from '../util.js';
+import {isJoker, isSequenceValid} from '../util.js';
 import {HAND_ROWS, HAND_COLS, HAND_GRID_ID, BOARD_GRID_ID} from '../constants.js';
 
 const PLAYABLE_TYPES = new Set(['peek', 'shield', 'junk2', 'junk3', 'junk4', 'wheel', 'skip', 'lock', 'force', 'bigwind']);
@@ -58,6 +58,17 @@ function lockedGroupTiles(G, row) {
         if (onRow.length > best.length) best = onRow;
     }
     return best.map(Number);
+}
+
+// Fix4: resolve a board row to the tile-id set that LOCK may freeze — but only when
+// it is a real formed group (non-empty AND isSequenceValid). Returns null for an
+// empty or structurally invalid row, so a lock play on it is rejected before the
+// card is consumed (and a bluffed lock simply fizzles).
+function lockableGroup(G, row) {
+    if (row == null) return null;
+    const tiles = lockedGroupTiles(G, row);
+    if (!tiles.length || !isSequenceValid(tiles)) return null;
+    return tiles;
 }
 
 function handIds(G, seat) {
@@ -161,8 +172,9 @@ function applyEffect(G, ctx, actor, type, target, events, random) {
         G.forced[target.toString()] = true;
     } else if (type === 'lock') {
         if (target == null) return;
+        const tiles = lockableGroup(G, target);
+        if (!tiles) return; // empty/invalid row: nothing to freeze (face-up play is pre-rejected)
         if (!Array.isArray(G.lockedSets)) G.lockedSets = [];
-        const tiles = lockedGroupTiles(G, target);
         G.lockedSets.push({row: Number(target), tiles, until: (ctx && ctx.turn != null ? ctx.turn : 0) + LOCK_TURNS});
     } else if (type === 'bigwind') {
         bigWind(G, ctx, random);
@@ -216,6 +228,9 @@ export function playAbilityCard({G, ctx, playerID, events, random}, cardId, targ
     if (card.type === 'peek' && target == null) return INVALID_MOVE;
     // SP6: skip/force aim at a player, lock at a board row — all need a target.
     if ((card.type === 'skip' || card.type === 'force' || card.type === 'lock') && target == null) return INVALID_MOVE;
+    // Fix4: a face-up lock must freeze a real formed group; reject (without consuming
+    // the card) when the targeted row is empty or not a valid run/set.
+    if (card.type === 'lock' && !lockableGroup(G, target)) return INVALID_MOVE;
     if (JUNK_AMOUNT[card.type]) {
         if (target == null) return INVALID_MOVE;
         if (G.pendingJunk) return INVALID_MOVE; // one junk chain at a time

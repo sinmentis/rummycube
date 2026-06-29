@@ -66,19 +66,26 @@ function isOverlap(G, ctx, col, row, destGridId, playerID) {
     return false;
 }
 
-// SP6 LOCK (fix2): a played lock freezes a formed GROUP for two turns. The entry
-// {tiles, row, until} stores the locked group's tile-id signature; a drop is
-// rejected if it moves any locked tile, until ctx.turn reaches `until`. Chaos-only
-// — classic has no lockedSets, so this is a no-op there.
-function touchesLockedSet(G, ctx, ids) {
-    if (G.mode !== 'chaos' || !Array.isArray(G.lockedSets) || !G.lockedSets.length) return false;
+// SP6 LOCK (fix4): a played lock freezes a formed GROUP for two turns. The entry
+// {tiles, row, until} stores the locked group's tile-id signature; every board-
+// mutating move is rejected if it would move any of those ids, until ctx.turn
+// reaches `until`. Chaos-only — classic has no lockedSets, so this is a no-op there.
+function lockedTileIds(G, ctx) {
+    if (G.mode !== 'chaos' || !Array.isArray(G.lockedSets) || !G.lockedSets.length) return null;
     const turn = ctx && ctx.turn != null ? ctx.turn : 0;
-    const lockedIds = new Set();
+    const ids = new Set();
     for (const l of G.lockedSets) {
-        if (turn < l.until) for (const t of (l.tiles || [])) lockedIds.add(Number(t));
+        if (turn < l.until) for (const t of (l.tiles || [])) ids.add(Number(t));
     }
-    if (!lockedIds.size) return false;
-    for (const id of ids) if (lockedIds.has(Number(id))) return true;
+    return ids.size ? ids : null;
+}
+
+// True if any of `ids` is currently frozen. Pre-check for the moves that pick tiles
+// up directly (moveTiles, an insertTilesWithPush drag, retrieveJoker).
+function touchesLockedSet(G, ctx, ids) {
+    const locked = lockedTileIds(G, ctx);
+    if (!locked) return false;
+    for (const id of ids) if (locked.has(Number(id))) return true;
     return false;
 }
 
@@ -160,7 +167,7 @@ function insertTilesWithPush({G, ctx, playerID}, col, row, destGridId, tileIdObj
     const selection = (selectedTiles.length && selectedTiles.indexOf(tileId) !== -1)
         ? orderTilesBySource(selectedTiles, G.tilePositions)
         : [tileId];
-    if (touchesLockedSet(G, ctx, selection, destGridId, row)) return INVALID_MOVE;
+    if (touchesLockedSet(G, ctx, selection)) return INVALID_MOVE;
 
     // 1) write the dropped tiles to the landing columns (col, col+1, ...) as tmp.
     for (let i = 0; i < selection.length; i++) {
@@ -183,6 +190,19 @@ function insertTilesWithPush({G, ctx, playerID}, col, row, destGridId, tileIdObj
     // 2) reflow the cluster the drop landed in (pure, server-authoritative).
     const result = arrangeBoard(G.tilePositions, {droppedIds: selection, row, col});
     if (!result.ok) return INVALID_MOVE;   // immer discards the draft -> non-destructive snap-back
+
+    // Fix4 LOCK: the reflow can shift tiles that weren't dragged. Reject the whole
+    // move if it would relocate any frozen tile (placement differs from where it
+    // currently sits). Chaos-only — lockedTileIds is null in classic, so this skips.
+    const locked = lockedTileIds(G, ctx);
+    if (locked) {
+        for (const id in result.placements) {
+            if (!locked.has(Number(id))) continue;
+            const cur = G.tilePositions[id];
+            const {row: nr, col: nc} = result.placements[id];
+            if (!cur || cur.row !== nr || cur.col !== nc) return INVALID_MOVE;
+        }
+    }
 
     // 3) one snapshot so a single undo restores the whole arrangement.
     if (ctx.currentPlayer === playerID) G.gameStateStack.push(getGameState(G));
@@ -369,6 +389,9 @@ function retrieveJoker({G, ctx, playerID}, jokerTileId, tileId) {
     const jokerRow = jokerPos.row
     const jokerCol = jokerPos.col
 
+    // Fix4 LOCK: a frozen board joker inside a locked group can't be reclaimed —
+    // the swap would split the frozen set. Chaos-only (classic has no lockedSets).
+    if (touchesLockedSet(G, ctx, [jokerId])) return INVALID_MOVE
     // The joker must live in a currently-valid run/group; its represented value
     // comes from freezing that sequence.
     const seq = extractSeqs(G).find(s => s.some(t => Number(t) === jokerId))
