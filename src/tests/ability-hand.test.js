@@ -16,11 +16,11 @@ test('empty hand renders an empty container, no crash', () => {
   expect(container.querySelectorAll('.acard')).toHaveLength(0);
 });
 
-test('non-playable card types are disabled (no onPlay in SP1b)', () => {
+test('every dealt card type is now playable (SP6)', () => {
   const onPlay = jest.fn();
   render(<AbilityHand cards={[{id: 'skip-0', type: 'skip', rarity: 'gold'}]} onPlay={onPlay} />);
   fireEvent.click(screen.getByText(CARD_META.skip.name).closest('.acard'));
-  expect(onPlay).not.toHaveBeenCalled();
+  expect(onPlay).toHaveBeenCalledWith({id: 'skip-0', type: 'skip', rarity: 'gold'});
 });
 
 test('playable card calls onPlay(card)', () => {

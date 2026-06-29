@@ -54,11 +54,11 @@ describe('AbilityHand declare UI', () => {
     expect(onPlay).toHaveBeenCalledTimes(1);   // gold card playable when bluffing
   });
 
-  test('toggle off: non-playable card stays disabled', () => {
+  test('toggle off: gold card is playable face-up (SP6)', () => {
     const onPlay = jest.fn();
     render(<AbilityHand cards={[{id: 'lock-0', type: 'lock', rarity: 'gold'}]} onPlay={onPlay}/>);
     fireEvent.click(screen.getByText(CARD_META.lock.name).closest('.acard'));
-    expect(onPlay).not.toHaveBeenCalled();
+    expect(onPlay).toHaveBeenCalledTimes(1);
   });
 });
 

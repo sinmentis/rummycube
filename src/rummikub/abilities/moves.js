@@ -5,8 +5,10 @@ import {spinWheel} from './wheel.js';
 import {isJoker} from '../util.js';
 import {HAND_ROWS, HAND_COLS, HAND_GRID_ID} from '../constants.js';
 
-const PLAYABLE_TYPES = new Set(['peek', 'shield', 'junk2', 'junk3', 'junk4', 'wheel']);
+const PLAYABLE_TYPES = new Set(['peek', 'shield', 'junk2', 'junk3', 'junk4', 'wheel', 'skip', 'lock', 'force', 'bigwind']);
 const JUNK_AMOUNT = {junk2: 2, junk3: 3, junk4: 4};
+const LOCK_TURNS = 2;
+export const FORCE_DRAW = 3;
 // SP5: single-target declares route the challenge to the named target; everything
 // else (wheel/bigwind) is table-wide, so every opponent gets challenge rights.
 const SINGLE_TARGET = new Set(['peek', 'shield', 'junk2', 'junk3', 'junk4', 'skip', 'lock', 'force']);
@@ -32,6 +34,27 @@ function handIds(G, seat) {
         const pos = G.tilePositions[id];
         return pos.gridId === HAND_GRID_ID && pos.playerID === seat;
     });
+}
+
+// BIGWIND: every seat simultaneously passes one random normal (non-joker) hand
+// tile to the seat on its left (seat i -> i+1). Server-seeded random; jokers are
+// never passed (a joker-only hand sends nothing). One synchronous rotation: pick
+// all donors first, then re-home them so a tile never double-hops in one spin.
+function bigWind(G, ctx, random) {
+    const n = (ctx && ctx.numPlayers) || Object.keys(G.abilityHands || {}).length;
+    if (n < 2) return;
+    const moving = [];
+    for (let i = 0; i < n; i++) {
+        const seat = i.toString();
+        const ids = handIds(G, seat).filter(id => !isJoker(Number(id)));
+        if (!ids.length) continue;
+        const id = ids[Math.floor((random ? random.Number() : 0) * ids.length)];
+        delete G.tilePositions[id];
+        moving.push({id: Number(id), to: ((i + 1) % n).toString()});
+    }
+    for (const {id, to} of moving) {
+        pushTilesToGrid([id], HAND_ROWS, HAND_COLS, G, {gridId: HAND_GRID_ID, playerID: to}, ctx);
+    }
 }
 
 // Pour `amount` tiles from the pool into target's hand. Shared by acceptJunk (the
@@ -97,6 +120,20 @@ function applyEffect(G, ctx, actor, type, target, events, random) {
         G.shields[actor] = true;
     } else if (type === 'wheel') {
         spinWheel({G, ctx, random});
+    } else if (type === 'skip') {
+        if (target == null) return;
+        if (!G.skipNext) G.skipNext = {};
+        G.skipNext[target.toString()] = true;
+    } else if (type === 'force') {
+        if (target == null) return;
+        if (!G.forced) G.forced = {};
+        G.forced[target.toString()] = true;
+    } else if (type === 'lock') {
+        if (target == null) return;
+        if (!Array.isArray(G.lockedSets)) G.lockedSets = [];
+        G.lockedSets.push({row: Number(target), until: (ctx && ctx.turn != null ? ctx.turn : 0) + LOCK_TURNS});
+    } else if (type === 'bigwind') {
+        bigWind(G, ctx, random);
     } else if (JUNK_AMOUNT[type]) {
         if (target == null || G.pendingJunk) return;
         const tgt = target.toString();
@@ -141,6 +178,8 @@ export function playAbilityCard({G, ctx, playerID, events, random}, cardId, targ
 
     if (!PLAYABLE_TYPES.has(card.type)) return INVALID_MOVE;
     if (card.type === 'peek' && target == null) return INVALID_MOVE;
+    // SP6: skip/force aim at a player, lock at a board row — all need a target.
+    if ((card.type === 'skip' || card.type === 'force' || card.type === 'lock') && target == null) return INVALID_MOVE;
     if (JUNK_AMOUNT[card.type]) {
         if (target == null) return INVALID_MOVE;
         if (G.pendingJunk) return INVALID_MOVE; // one junk chain at a time

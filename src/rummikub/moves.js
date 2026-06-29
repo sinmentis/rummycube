@@ -66,8 +66,27 @@ function isOverlap(G, ctx, col, row, destGridId, playerID) {
     return false;
 }
 
+// SP6 LOCK: a played lock freezes a board row for two turns (G.lockedSets entry
+// {row, until}). A drop is rejected if it lands on a locked row, or moves any tile
+// currently sitting on one, until ctx.turn reaches `until`. Chaos-only — classic
+// has no lockedSets, so this is a no-op there.
+function touchesLockedSet(G, ctx, ids, destGridId, destRow) {
+    if (G.mode !== 'chaos' || !Array.isArray(G.lockedSets) || !G.lockedSets.length) return false;
+    const turn = ctx && ctx.turn != null ? ctx.turn : 0;
+    const lockedRows = new Set(G.lockedSets.filter(l => turn < l.until).map(l => l.row));
+    if (!lockedRows.size) return false;
+    if (destGridId === BOARD_GRID_ID && lockedRows.has(destRow)) return true;
+    for (const id of ids) {
+        const p = G.tilePositions[id];
+        if (p && p.gridId === BOARD_GRID_ID && lockedRows.has(p.row)) return true;
+    }
+    return false;
+}
+
 
 function moveTiles({G, ctx, playerID}, col, row, destGridId, tileIdObj, selectedTiles) {
+    const movingIds = (selectedTiles.length && selectedTiles.indexOf(tileIdObj.id) !== -1) ? selectedTiles : [tileIdObj.id];
+    if (touchesLockedSet(G, ctx, movingIds, destGridId, row)) return INVALID_MOVE;
     if (ctx.currentPlayer === playerID) {
         G.gameStateStack.push(getGameState(G))
     }
@@ -142,6 +161,7 @@ function insertTilesWithPush({G, ctx, playerID}, col, row, destGridId, tileIdObj
     const selection = (selectedTiles.length && selectedTiles.indexOf(tileId) !== -1)
         ? orderTilesBySource(selectedTiles, G.tilePositions)
         : [tileId];
+    if (touchesLockedSet(G, ctx, selection, destGridId, row)) return INVALID_MOVE;
 
     // 1) write the dropped tiles to the landing columns (col, col+1, ...) as tmp.
     for (let i = 0; i < selection.length; i++) {

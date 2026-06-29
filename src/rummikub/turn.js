@@ -10,7 +10,7 @@ import {
 import {original} from "immer"
 import {logger} from './logger.js';
 import {settleJokerBombs} from "./abilities/jokerBomb.js";
-import {resolveJunk, resolveBluffPass} from "./abilities/moves.js";
+import {resolveJunk, resolveBluffPass, drawNormal, FORCE_DRAW} from "./abilities/moves.js";
 import {spinWheel} from "./abilities/wheel.js";
 import {BOARD_GRID_ID} from "./constants.js";
 
@@ -137,6 +137,14 @@ function onTurnBegin({G, ctx, events, random}) {
 
     applyChaosTurnStart({G, seat, random})
 
+    // SP6: a SKIP card forfeits this seat's whole turn. Consume the flag BEFORE
+    // endTurn so the very next onTurnBegin doesn't see it again (no skip loop),
+    // and only auto-end once the per-turn bookkeeping above has run.
+    if (G.mode === 'chaos' && G.skipNext && G.skipNext[seat]) {
+        delete G.skipNext[seat]
+        if (events) events.endTurn()
+    }
+
     return G
 }
 
@@ -144,8 +152,15 @@ function onTurnEnd({G, ctx, events, random}) {
     logger.debug('ON TURN END', new Date())
     G.timerExpireAt = null
     // Measure the board contribution against the turn-start snapshot before settle
-    // effects mutate the board, so the wheel is gated on what the player played.
-    const bigTurn = boardContribution(G) > BIG_TURN_TILES
+    // effects mutate the board, so the wheel + force-penalty gate on what was played.
+    const contribution = boardContribution(G)
+    const bigTurn = contribution > BIG_TURN_TILES
+    // SP6: a FORCE card makes its target play >= 1 tile or draw 3. Checked at the
+    // forced seat's own turn end; the flag is cleared either way (one shot).
+    if (G.mode === 'chaos' && G.forced && G.forced[ctx.currentPlayer]) {
+        if (contribution === 0) drawNormal(G, ctx, ctx.currentPlayer, FORCE_DRAW)
+        delete G.forced[ctx.currentPlayer]
+    }
     // SP2a-T2: timeout default = accept. An unanswered junk resolves when the turn
     // ends so the interrupt never stalls turn flow (mirrors forceEndTurn's soft-timer).
     if (G.pendingJunk) resolveJunk(G, ctx, G.pendingJunk.target, G.pendingJunk.amount)
