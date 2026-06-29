@@ -50,3 +50,13 @@ test('pendingJunk passes through unstripped to both target and a third party', (
     expect(v.abilityHands[opponent]).toBeUndefined();   // opponent hands still hidden
   }
 });
+
+// SP6: the public wheel result (object/action/count) is broadcast, but its exact
+// detail.tiles[] would leak tile identities to all seats. Strip them; counts stay.
+test('wheel detail.tiles is redacted from the shared view', () => {
+  const G = baseG();
+  G.lastWheel = {object: 'player', action: 'discard', detail: {seat: '0', count: 1, tiles: [42]}};
+  const v = playerView({G, ctx: {currentPlayer: '0'}, playerID: '1'});
+  expect(v.lastWheel.detail.tiles).toBeUndefined();
+  expect(v.lastWheel.detail.count).toBe(1);            // count survives for the toast
+});

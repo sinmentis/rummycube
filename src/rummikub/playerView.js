@@ -102,6 +102,14 @@ function playerView({G, ctx, playerID}) {
         view.pendingBluff = shown;
     }
 
+    // Chaos: the public wheel result counts/seats are fine to broadcast, but its
+    // detail.tiles[] would leak exact tile identities (a discarded/added tile) to
+    // everyone. The toast never uses them, so strip them from the shared view.
+    if (view.lastWheel && view.lastWheel.detail && view.lastWheel.detail.tiles) {
+        view.lastWheel = {...view.lastWheel, detail: {...view.lastWheel.detail}};
+        delete view.lastWheel.detail.tiles;
+    }
+
     return view;
 }
 

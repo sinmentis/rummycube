@@ -36,12 +36,14 @@ const GridContainer = function ({
                                     onLongPress,
                                     newlyAdded,
                                     jokerHeat,
+                                    lockedRows,
                                     className
                                 }) {
 
     let colWidth = 2.2
     const selectedSet = new Set(selectedTiles)
     const playableSet = new Set(playableTiles)
+    const lockedRowSet = new Set(lockedRows)
     const hasSelection = selectedSet.size > 0
     let gridItems = []
     let key = 0
@@ -77,6 +79,7 @@ const GridContainer = function ({
                 isPlayable={isPlayable}
                 isNewlyAdded={isNewlyAdded}
                 jokerHeat={tileHeat}
+                isLockedRow={lockedRowSet.has(y)}
             />
             gridItems.push(gridTile)
             key++

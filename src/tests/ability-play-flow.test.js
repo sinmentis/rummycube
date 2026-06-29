@@ -34,10 +34,10 @@ test.each(['junk2', 'junk3', 'junk4'])('%s waits for a target, then dispatches p
   expect(result.current.pendingPeek).toBeFalsy();
 });
 
-test('non-playable types are ignored by the controller', () => {
+test('a non-target white type stays inert without face-down', () => {
   const moves = {playAbilityCard: jest.fn()};
   const {result} = renderHook(() => useAbilityPlay(moves));
-  act(() => result.current.playCard({id: 'skip-0', type: 'skip'}));
+  act(() => result.current.playCard({id: 'mystery-0', type: 'mystery'}));
   expect(moves.playAbilityCard).not.toHaveBeenCalled();
   expect(result.current.pendingPeek).toBeFalsy();
 });

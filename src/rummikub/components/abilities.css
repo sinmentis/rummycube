@@ -835,3 +835,42 @@
 @media (prefers-reduced-motion: reduce) {
     .bluff-prompt { animation: none; }
 }
+
+/* ============================================================================
+   SP6 — status chips (skip/force/lock) + lock row picker + board lock marker.
+   Chips sit with the shield chip by the rack; tokens mirror shield-chip. The
+   lock marker tints frozen board rows; reduced-motion is a no-op (static). */
+.status-badges {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+.status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--cream, #f5edd8);
+    box-shadow: var(--elev-1, 0 2px 6px rgba(0, 0, 0, .3));
+}
+.status-chip--skip  { background: linear-gradient(180deg, #7a5c1e, #4d3a12); border: 1px solid rgba(240, 216, 148, .5); }
+.status-chip--force { background: linear-gradient(180deg, #244b35, #16321f); border: 1px solid rgba(127, 224, 163, .5); }
+.status-chip--lock  { background: linear-gradient(180deg, #3a3050, #211a33); border: 1px solid rgba(190, 140, 224, .5); }
+
+.lock-row-pick { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.lock-row-btn {
+    border: 1px solid rgba(255, 255, 255, .34);
+    background: rgba(255, 255, 255, .14);
+    color: #fff;
+    border-radius: 8px;
+    padding: 4px 9px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.grid-item.locked-row { background: rgba(190, 140, 224, .14); position: relative; }
+.lock-mark { position: absolute; left: -14px; top: 50%; transform: translateY(-50%); font-size: 13px; z-index: 5; }

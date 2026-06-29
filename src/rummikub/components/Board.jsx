@@ -30,6 +30,7 @@ import AbilityCodex from "./AbilityCodex";
 import AbilityHand from "./AbilityHand";
 import PeekPanel from "./PeekPanel";
 import JunkAlert from "./JunkAlert";
+import StatusBadges from "./StatusBadges";
 import BluffPrompt from "./BluffPrompt";
 import CastBeam from "./CastBeam";
 import CoachCard from "./CoachCard";
@@ -348,7 +349,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     // parks in `pendingPeek` and waits for the player to click an opponent avatar
     // (targeting mode below), then dispatches playAbilityCard(cardId, pid). Kept in
     // a standalone, unit-tested hook so the targeting flow doesn't depend on Board.
-    const {pendingPeek, playCard, pickTarget, cancelTarget, faceDown, setFaceDown, declared, setDeclared} = useAbilityPlay(moves);
+    const {pendingPeek, pendingLock, playCard, pickTarget, pickRow, cancelTarget, faceDown, setFaceDown, declared, setDeclared} = useAbilityPlay(moves);
     // SP1b T6 (juice): when a peek is cast, briefly draw a beam from your avatar to
     // the picked opponent. We anchor it off the live DOM rects (in board-pixel
     // space) at the click, then auto-clear it after a beat — purely cosmetic, so a
@@ -460,6 +461,12 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         : [];
     const playableCount = playableTileList.length;
 
+    // Chaos lock state lifted above boardGrid so the board can mark frozen rows.
+    const isChaos = G.mode === 'chaos';
+    const activeLocks = isChaos && Array.isArray(G.lockedSets)
+        ? G.lockedSets.filter((l) => l.until > ctx.turn) : [];
+    const lockedRows = activeLocks.map((l) => l.row);
+
     const boardGrid = (<div className="ref">
         <GridContainer
             rows={BOARD_ROWS}
@@ -479,6 +486,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             hoverPosition={hoverPosition}
             setHoverPosition={setHoverPosition}
             jokerHeat={G.jokerHeat}
+            lockedRows={isChaos ? lockedRows : undefined}
             newlyAdded={[]}
         /></div>)
 
@@ -514,8 +522,8 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         />
     )
 
-    const isChaos = G.mode === 'chaos';
     const peekTargeting = isChaos && !!pendingPeek;
+    const lockTargeting = isChaos && !!pendingLock;
     const tableSeats = (
         <TableSeats
             currentPlayer={ctx.currentPlayer}
@@ -539,16 +547,43 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     const peekPanel = peekTarget != null
         ? <PeekPanel viewerID={playerID} targetID={peekTarget} tilePositions={G.tilePositions}/>
         : null;
-    // While a peek is pending, the felt invites the player to pick a victim; the
-    // opponent avatars are the click targets, this banner just carries the
-    // instruction and an escape hatch.
+    // While a peek/skip/force is pending, the felt invites the player to pick a
+    // victim; opponent avatars are the click targets, this banner carries the
+    // instruction and an escape hatch. A lock parks for a board row instead.
     const peekTargetingBanner = peekTargeting
         ? (
             <div className="peek-targeting" role="status" aria-live="polite">
-                <span className="peek-targeting__msg">👁️ Pick an opponent to peek</span>
+                <span className="peek-targeting__msg">
+                    {pendingPeek?.type === 'skip' ? '⏭️ Pick an opponent to skip'
+                        : pendingPeek?.type === 'force' ? '📥 Pick an opponent to force'
+                            : '👁️ Pick an opponent to peek'}
+                </span>
                 <button type="button" className="peek-targeting__cancel" onClick={cancelTarget}>Cancel</button>
             </div>
         )
+        : null;
+    // Lock targets a board set: pick one of the rows that currently holds tiles.
+    const occupiedRows = (board || []).reduce((acc, cells, r) => {
+        if (Array.isArray(cells) && cells.some((c) => c)) acc.push(r);
+        return acc;
+    }, []);
+    const lockTargetingBanner = lockTargeting
+        ? (
+            <div className="peek-targeting" role="status" aria-live="polite">
+                <span className="peek-targeting__msg">🔒 Pick a board set to lock</span>
+                <span className="lock-row-pick">
+                    {occupiedRows.map((r) => (
+                        <button key={r} type="button" className="lock-row-btn" onClick={() => pickRow(r)}>Row {r + 1}</button>
+                    ))}
+                </span>
+                <button type="button" className="peek-targeting__cancel" onClick={cancelTarget}>Cancel</button>
+            </div>
+        )
+        : null;
+    // SP6: chaos status chips — your turn is skipped, you must meld or draw 3, or
+    // board sets are frozen. Pure flags from playerView; null when nothing applies.
+    const statusBadges = isChaos
+        ? <StatusBadges skipNext={!!G.skipNext?.[playerID]} forced={!!G.forced?.[playerID]} lockedRows={lockedRows}/>
         : null;
     const shieldChip = isChaos && G.shields?.[playerID]
         ? (
@@ -703,10 +738,12 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                 {junkAlert}
                 {bluffPrompt}
                 {peekTargetingBanner}
+                {lockTargetingBanner}
                 {boardGrid}
                 <div className={'hand-buttons'}>
                     {selfAvatar}
                     {shieldChip}
+                    {statusBadges}
                     <div className="rack-tools">
                         <IconButton glyph="↶" label="Undo" disabled={!canUndo} onClick={() => moves.undo()}/>
                         <IconButton glyph="↷" label="Redo" disabled={!canRedo} onClick={() => moves.redo()}/>

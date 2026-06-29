@@ -5,20 +5,24 @@ import {SINGLE_TARGET_DECLARES} from '../../abilities/cardMeta';
 // standalone hook (not Board-local state) so the peek targeting flow is
 // deterministically unit-testable without mounting the whole Board.
 //
-// Routing mirrors the playable target-needing types:
-//   - shield: no target, fire-and-forget -> moves.playAbilityCard(card.id).
-//   - peek/junk2/junk3/junk4: need a victim, so they park in `pendingPeek` and
-//             wait for the player to click an opponent avatar; pickTarget(pid)
-//             then dispatches moves.playAbilityCard(card.id, pid) and clears it.
-// Any other type is ignored here — the hand already greys those out, this is the
-// belt-and-braces guard so a stray dispatch can never reach the server.
+// Routing mirrors the playable target kinds:
+//   - shield/bigwind/wheel: no target -> moves.playAbilityCard(card.id) now.
+//   - peek/junk2/junk3/junk4/skip/force: need an opponent, so they park in
+//             `pendingPeek` and wait for an avatar click; pickTarget(pid) then
+//             dispatches moves.playAbilityCard(card.id, pid).
+//   - lock: needs a board row, so it parks in `pendingLock` and waits for a row
+//             pick; pickRow(row) dispatches moves.playAbilityCard(card.id, row).
+// Any other type is inert — belt-and-braces so a stray dispatch never reaches
+// the server.
 //
 // Effects are server-authoritative: this only dispatches the registered move and
 // never mutates G. The reveal/shield state comes back through playerView.
-const NEEDS_TARGET = new Set(['peek', 'junk2', 'junk3', 'junk4']);
+const NEEDS_TARGET = new Set(['peek', 'junk2', 'junk3', 'junk4', 'skip', 'force']);
+const NO_TARGET = new Set(['shield', 'bigwind', 'wheel']);
 
 export default function useAbilityPlay(moves) {
     const [pendingPeek, setPendingPeek] = useState(null);
+    const [pendingLock, setPendingLock] = useState(null);
     const [faceDown, setFaceDown] = useState(false);
     const [declared, setDeclared] = useState('peek');
 
@@ -33,8 +37,10 @@ export default function useAbilityPlay(moves) {
             }
             return;
         }
-        if (card.type === 'shield') {
+        if (NO_TARGET.has(card.type)) {
             moves.playAbilityCard(card.id);
+        } else if (card.type === 'lock') {
+            setPendingLock(card);
         } else if (NEEDS_TARGET.has(card.type)) {
             setPendingPeek(card);
         }
@@ -51,7 +57,13 @@ export default function useAbilityPlay(moves) {
         setPendingPeek(null);
     }, [moves, pendingPeek]);
 
-    const cancelTarget = useCallback(() => setPendingPeek(null), []);
+    const pickRow = useCallback((row) => {
+        if (!pendingLock) return;
+        moves.playAbilityCard(pendingLock.id, row);
+        setPendingLock(null);
+    }, [moves, pendingLock]);
 
-    return {pendingPeek, playCard, pickTarget, cancelTarget, faceDown, setFaceDown, declared, setDeclared};
+    const cancelTarget = useCallback(() => { setPendingPeek(null); setPendingLock(null); }, []);
+
+    return {pendingPeek, pendingLock, playCard, pickTarget, pickRow, cancelTarget, faceDown, setFaceDown, declared, setDeclared};
 }

@@ -19,6 +19,7 @@ const GridSlot = React.memo(({
                                  isPlayable,
                                  isNewlyAdded,
                                  jokerHeat,
+                                 isLockedRow,
                                  handleTileSelection,
                                  onLongPress
                              }) => {
@@ -26,7 +27,8 @@ const GridSlot = React.memo(({
 
     if (tile) {
         return (
-            <div ref={setNodeRef} className='grid-item'>
+            <div ref={setNodeRef} className={'grid-item' + (isLockedRow ? ' locked-row' : '')}>
+                {isLockedRow && col === 0 && <span className="lock-mark" aria-hidden="true">🔒</span>}
                 <Tile
                     tile={tile}
                     canDnD={canDnD}
@@ -57,7 +59,10 @@ const GridSlot = React.memo(({
         onClick={onClick}
         className={'grid-item'
             + (isTapTarget ? ' slot-valid' : '')
-            + (isBoard && canDnD && isOver ? ' slot-over' : '')}/>
+            + (isLockedRow ? ' locked-row' : '')
+            + (isBoard && canDnD && isOver ? ' slot-over' : '')}>
+        {isLockedRow && col === 0 && <span className="lock-mark" aria-hidden="true">🔒</span>}
+    </div>
 })
 
 
