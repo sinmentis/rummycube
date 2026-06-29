@@ -35,6 +35,7 @@ import CoachCard from "./CoachCard";
 import HintsToggle from "./HintsToggle";
 import IconButton from "./IconButton";
 import TimeoutAnnouncement from "./TimeoutAnnouncement";
+import WheelToast from "./WheelToast";
 import {useUndoRedoHotkeys} from "./useUndoRedoHotkeys";
 import {useTilePlacementHotkeys} from "./useTilePlacementHotkeys";
 import {usePersistentFlag} from "./hooks/usePersistentFlag";
@@ -327,6 +328,12 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             durationMs={timeoutIsSelf ? 4500 : 3000}
         />
     ) : null;
+
+    // SP3b: the all-visible Public Wheel toast, fed by the public G.lastWheel
+    // transient (object x action x detail). Chaos only, hidden on gameover.
+    const wheelToast = G.mode === 'chaos' && !ctx.gameover
+        ? <WheelToast lastWheel={G.lastWheel} matchData={matchData}/>
+        : null;
 
     // S2-U6 / WS-D: canUndo/canRedo are the single source of truth shared by the
     // keyboard shortcuts (below) and the corner Undo/Redo icon buttons (.rack-tools),
@@ -646,6 +653,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                 <div className="top-cue-stack">
                     {connectionCue}
                     {timeoutAnnouncement}
+                    {wheelToast}
                 </div>
                 {waiting &&
                     <div className="waiting-overlay" role="status" aria-live="polite"

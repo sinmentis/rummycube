@@ -755,3 +755,42 @@
     background: rgba(58, 33, 19, .85);
     border: 1px solid rgba(224, 160, 108, .4);
 }
+
+/* ============================================================================
+   SP3b — Public Wheel toast. A center wheel-spin + a short result line flashes
+   when G.lastWheel changes, then auto-dismisses. Motion is decoration only: the
+   text always shows; reduced-motion drops the spin (meaning never needs motion).
+   ========================================================================== */
+.wheel-toast {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #ffe1a8;
+    background: rgba(36, 26, 10, .92);
+    border: 1px solid rgba(214, 160, 60, .6);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, .45);
+    pointer-events: none;
+    white-space: normal;
+    max-width: min(92vw, 360px);
+    text-align: center;
+}
+.wheel-toast .wheel-spin { font-size: 18px; }
+@media (prefers-reduced-motion: no-preference) {
+    .wheel-toast { animation: wheel-toast-in .22s ease both; }
+    .wheel-toast .wheel-spin { animation: wheel-spin 1.2s ease-out 1; }
+}
+@keyframes wheel-toast-in {
+    0%   { opacity: 0; transform: translateY(-6px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes wheel-spin {
+    0%   { transform: rotate(0); }
+    100% { transform: rotate(720deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .wheel-toast .wheel-spin { animation: none; }
+}
