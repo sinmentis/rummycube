@@ -771,6 +771,11 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                     {lockTargetingBanner}
                 </div>}
                 {boardGrid}
+                <div className="match-dock">
+                {isChaos &&
+                    <AbilityHand cards={G.abilityHands?.[playerID] ?? []} onPlay={playCard}
+                                 faceDown={faceDown} declared={declared}
+                                 onToggleFaceDown={setFaceDown} onDeclare={setDeclared}/>}
                 <div className={'hand-buttons'}>
                     {selfAvatar}
                     {shieldChip}
@@ -781,10 +786,6 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                     </div>
                     {turnBanner}
                     {playableHint}
-                    {isChaos &&
-                        <AbilityHand cards={G.abilityHands?.[playerID] ?? []} onPlay={playCard}
-                                     faceDown={faceDown} declared={declared}
-                                     onToggleFaceDown={setFaceDown} onDeclare={setDeclared}/>}
                     {handGrid}
                     {coachCard}
                     <div className="controls-wrapper">
@@ -818,6 +819,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                     </div>
                     {submitReason &&
                         <div className="submit-reason" role="alert">{submitReason}</div>}
+                </div>
                 </div>
                 </div>
             </div>

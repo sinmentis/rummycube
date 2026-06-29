@@ -139,6 +139,27 @@ body {
     box-shadow: var(--rack-highlight), var(--elev-2);
 }
 
+/* Chaos dock: rack + ability fan sit side-by-side, centred as a group, so the fan
+   shares the bottom band with the rack and never overlaps the action buttons. The
+   rack drops its auto side-margins here (the dock centres instead). Classic mounts
+   only the rack, so a single centred child reads identically. Phones stack it. */
+.match-dock {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 1vw;
+}
+.match-dock .hand-buttons {
+    margin-left: 0;
+    margin-right: 0;
+}
+@media (max-width: 820px) {
+    .match-dock {
+        flex-direction: column;
+        align-items: center;
+    }
+}
+
 /* R5b-T4: centre the hand grid within the rack so the wood reads symmetric
    instead of left-weighted with empty wood on the right. Scoped to the hand so
    the board tray grid (.ref .grid-container) is untouched, and gated to desktop
