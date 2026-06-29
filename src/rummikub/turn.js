@@ -11,6 +11,22 @@ import {original} from "immer"
 import {logger} from './logger.js';
 import {settleJokerBombs} from "./abilities/jokerBomb.js";
 import {resolveJunk} from "./abilities/moves.js";
+import {spinWheel} from "./abilities/wheel.js";
+import {BOARD_GRID_ID} from "./constants.js";
+
+// SP3a-T2: tiles the current player landed on the board this turn = ids on 'b' now
+// that weren't on 'b' at turn-start (prevTilePositions snapshot from onTurnBegin).
+const BIG_TURN_TILES = 7;
+function boardContribution(G) {
+    const prev = G.prevTilePositions || {};
+    let n = 0;
+    for (const id in G.tilePositions) {
+        if (G.tilePositions[id].gridId !== BOARD_GRID_ID) continue;
+        const before = prev[id];
+        if (!before || before.gridId !== BOARD_GRID_ID) n++;
+    }
+    return n;
+}
 
 
 // Disconnected-seat tuning. Both are [PLACEHOLDER] pending Game Design / Product:
@@ -127,10 +143,16 @@ function onTurnBegin({G, ctx, events, random}) {
 function onTurnEnd({G, ctx, events, random}) {
     logger.debug('ON TURN END', new Date())
     G.timerExpireAt = null
+    // Measure the board contribution against the turn-start snapshot before settle
+    // effects mutate the board, so the wheel is gated on what the player played.
+    const bigTurn = boardContribution(G) > BIG_TURN_TILES
     // SP2a-T2: timeout default = accept. An unanswered junk resolves when the turn
     // ends so the interrupt never stalls turn flow (mirrors forceEndTurn's soft-timer).
     if (G.pendingJunk) resolveJunk(G, ctx, G.pendingJunk.target, G.pendingJunk.amount)
     if (G.jokerHeat) settleJokerBombs({G, ctx, random, events})
+    // SP3a-T2: a big turn (chaos only) spins the public wheel once, after jokers
+    // settle (the wheel skips joker runs, so it never double-charges a bomb).
+    if (bigTurn) spinWheel({G, ctx, random})
     checkGameOver(G, ctx, events)
 }
 
