@@ -29,6 +29,24 @@ test('table remove-set: shows "Table: set removed"', () => {
   expect(screen.getByText(/Table:\s*set removed/i)).toBeInTheDocument();
 });
 
+test('all draw: reads sensibly (no undefined count)', () => {
+  render(el({lastWheel: {object: 'all', action: 'draw', detail: {seats: [{seat: '0', count: 2}, {seat: '1', count: 1}]}}}));
+  expect(screen.getByText(/Everyone draws/i)).toBeInTheDocument();
+  expect(screen.queryByText(/undefined/i)).not.toBeInTheDocument();
+});
+
+test('content dedupe: same spin via fresh ref does not re-pop on unrelated state change', () => {
+  jest.useFakeTimers();
+  const spin = {object: 'player', action: 'draw', detail: {seat: '0', count: 1}};
+  const {rerender} = render(el({lastWheel: spin}));
+  expect(screen.getByText(/Alice drew 1/i)).toBeInTheDocument();
+  act(() => { jest.advanceTimersByTime(4000); });
+  expect(screen.queryByText(/Alice drew 1/i)).not.toBeInTheDocument();
+  // cloneDeep new ref, identical content -> must NOT re-pop.
+  act(() => { rerender(el({lastWheel: {object: 'player', action: 'draw', detail: {seat: '0', count: 1}}})); });
+  expect(screen.queryByText(/Alice drew 1/i)).not.toBeInTheDocument();
+});
+
 test('auto-dismiss after durationMs, replaced by next spin', () => {
   jest.useFakeTimers();
   const {rerender} = render(el({lastWheel: {object: 'player', action: 'draw', detail: {seat: '0', count: 1}}}));

@@ -5,8 +5,9 @@ import './abilities.css';
 // G.lastWheel = {object, action, detail} after a spin (playerView passes it to
 // every client). When that value changes we flash a center wheel-spin + a short
 // result toast, then auto-dismiss (~4s) or replace on the next spin. Dedupe keys
-// on the object reference, so the same spin never re-pops; a value already on G
-// at mount still shows (the spin only fires on chaos turns). The text is captured
+// on the CONTENT (stringified object/action/detail), not identity — playerView
+// cloneDeep hands us a fresh lastWheel ref every turn, so a ref-based guard would
+// re-pop on any unrelated state change. Same spin never re-pops. The text is captured
 // at show time so the toast survives the server clearing the transient later.
 // Spin motion is purely CSS, gated by prefers-reduced-motion (text only, no spin).
 function seatName(matchData, seat) {
@@ -21,7 +22,13 @@ function wheelText(lastWheel, matchData) {
     if (object === 'table') {
         return action === 'add-set' ? 'Table: set added' : 'Table: set removed';
     }
-    const who = object === 'all' ? 'Everyone' : seatName(matchData, detail.seat);
+    // 'all' hits every seat (detail.seats[], no single count) — keep it generic.
+    if (object === 'all') {
+        if (action === 'draw') return 'Everyone draws';
+        if (action === 'discard') return 'Everyone discards';
+        return 'Everyone reshuffles';
+    }
+    const who = seatName(matchData, detail.seat);
     if (action === 'draw') return `${who} drew ${detail.count}`;
     if (action === 'discard') return `${who} discarded`;
     return `${who} reshuffled`;
@@ -33,8 +40,10 @@ export default function WheelToast({lastWheel, matchData, durationMs = 4000}) {
     const hideTimer = useRef(null);
 
     useEffect(() => {
-        if (!lastWheel || lastWheel === seenRef.current) return;
-        seenRef.current = lastWheel;
+        if (!lastWheel) return;
+        const sig = JSON.stringify([lastWheel.object, lastWheel.action, lastWheel.detail]);
+        if (sig === seenRef.current) return;
+        seenRef.current = sig;
         const next = wheelText(lastWheel, matchData);
         if (!next) return;
         setText(next);
