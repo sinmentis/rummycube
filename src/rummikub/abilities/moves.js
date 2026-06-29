@@ -196,9 +196,10 @@ export function playAbilityCard({G, ctx, playerID, events, random}, cardId, targ
     if (opts.faceDown) {
         if (G.mode !== 'chaos' || G.pendingBluff) return INVALID_MOVE;
         const declared = opts.declaredType;
-        if (!declared) return INVALID_MOVE;
+        if (!PLAYABLE_TYPES.has(declared)) return INVALID_MOVE; // whitelist: one of the 10 cards
         const tgt = target == null ? null : target.toString();
-        if (SINGLE_TARGET.has(declared) && tgt == null) return INVALID_MOVE;
+        if ((PLAYER_TARGET.has(declared) || declared === 'lock') && tgt == null) return INVALID_MOVE; // player/board claims need a target
+        if ((declared === 'shield' || declared === 'wheel' || declared === 'bigwind') && tgt != null) return INVALID_MOVE; // self/table claims force null
         hand.splice(idx, 1);
         G.pendingBluff = {actor: playerID, real: card.type, declared, target: tgt, cardId, card};
         const value = {};

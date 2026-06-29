@@ -51,6 +51,28 @@ test('canPlay=false: off-turn play refuses to dispatch or park a target', () => 
   expect(result.current.pendingPeek).toBeFalsy();
 });
 
+test('canPlay flips false: a parked target pick is cancelled, never dispatched', () => {
+  const moves = {playAbilityCard: jest.fn()};
+  const {result, rerender} = renderHook(({cp}) => useAbilityPlay(moves, cp), {initialProps: {cp: true}});
+  act(() => result.current.playCard({id: 'peek-0', type: 'peek'}));
+  expect(result.current.pendingPeek).toMatchObject({id: 'peek-0'}); // parked while on-turn
+  rerender({cp: false});                                            // turn ends before victim click
+  act(() => result.current.pickTarget('1'));
+  expect(moves.playAbilityCard).not.toHaveBeenCalled();             // stale pick blocked
+  expect(result.current.pendingPeek).toBeFalsy();                   // pending cancelled
+});
+
+test('canPlay flips false: a parked row pick is cancelled, never dispatched', () => {
+  const moves = {playAbilityCard: jest.fn()};
+  const {result, rerender} = renderHook(({cp}) => useAbilityPlay(moves, cp), {initialProps: {cp: true}});
+  act(() => result.current.playCard({id: 'lock-0', type: 'lock'}));
+  expect(result.current.pendingLock).toMatchObject({id: 'lock-0'});
+  rerender({cp: false});
+  act(() => result.current.pickRow(2));
+  expect(moves.playAbilityCard).not.toHaveBeenCalled();
+  expect(result.current.pendingLock).toBeFalsy();
+});
+
 test('PeekPanel renders the revealed target rack tiles + privacy note, foldable', () => {
   // peekGrants[0]='1' -> player 1's hand tiles are present in tilePositions (playerView reveal)
   const tilePositions = {

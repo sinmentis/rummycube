@@ -51,23 +51,25 @@ export default function useAbilityPlay(moves, canPlay = true) {
 
     const pickTarget = useCallback((pid) => {
         if (!pendingPeek) return;
+        if (!canPlay) { setPendingPeek(null); return; } // turn ended before the pick: drop stale target
         if (pendingPeek.opts) {
             moves.playAbilityCard(pendingPeek.id, pid, pendingPeek.opts);
         } else {
             moves.playAbilityCard(pendingPeek.id, pid);
         }
         setPendingPeek(null);
-    }, [moves, pendingPeek]);
+    }, [moves, pendingPeek, canPlay]);
 
     const pickRow = useCallback((row) => {
         if (!pendingLock) return;
+        if (!canPlay) { setPendingLock(null); return; } // turn ended before the pick: drop stale row
         if (pendingLock.opts) {
             moves.playAbilityCard(pendingLock.id, row, pendingLock.opts);
         } else {
             moves.playAbilityCard(pendingLock.id, row);
         }
         setPendingLock(null);
-    }, [moves, pendingLock]);
+    }, [moves, pendingLock, canPlay]);
 
     const cancelTarget = useCallback(() => { setPendingPeek(null); setPendingLock(null); }, []);
 

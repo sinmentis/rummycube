@@ -59,14 +59,15 @@ describe('face-down play defers into pendingBluff', () => {
   test('non-single-target declared (wheel) gives ALL opponents respondBluff', () => {
     const G = gWith([card('peek')]);
     const events = evStub();
-    playAbilityCard({G, ctx, playerID: '0', events}, 'peek-0', '1', {faceDown: true, declaredType: 'wheel'});
+    playAbilityCard({G, ctx, playerID: '0', events}, 'peek-0', null, {faceDown: true, declaredType: 'wheel'});
     expect(events.setActivePlayers).toHaveBeenCalledWith({currentPlayer: null, value: {'1': 'respondBluff', '2': 'respondBluff'}});
   });
 
   test.each(['shield', 'lock', 'bigwind'])('declared %s (self/board/all) is table-wide: every opponent may challenge', (declaredType) => {
     const G = gWith([card('peek')]);
     const events = evStub();
-    playAbilityCard({G, ctx, playerID: '0', events}, 'peek-0', '1', {faceDown: true, declaredType});
+    const tgt = declaredType === 'lock' ? 2 : null; // lock needs a board row; shield/bigwind force null
+    playAbilityCard({G, ctx, playerID: '0', events}, 'peek-0', tgt, {faceDown: true, declaredType});
     expect(events.setActivePlayers).toHaveBeenCalledWith({currentPlayer: null, value: {'1': 'respondBluff', '2': 'respondBluff'}});
   });
 
@@ -74,6 +75,42 @@ describe('face-down play defers into pendingBluff', () => {
     const G = gWith([card('peek')]); G.mode = 'classic';
     expect(playAbilityCard({G, ctx, playerID: '0', events: evStub()}, 'peek-0', '1', {faceDown: true, declaredType: 'shield'})).toBe(INVALID);
     expect(G.pendingBluff).toBeNull();
+  });
+});
+
+describe('server-authoritative declare validation (06 §3)', () => {
+  test('declared type outside the 10 legal cards -> INVALID, hand+bluff untouched', () => {
+    const G = gWith([card('peek')]);
+    expect(playAbilityCard({G, ctx, playerID: '0', events: evStub()}, 'peek-0', '1', {faceDown: true, declaredType: 'nuke'})).toBe(INVALID);
+    expect(G.pendingBluff).toBeNull();
+    expect(G.abilityHands['0']).toHaveLength(1); // card not spent
+  });
+
+  test.each(['shield', 'wheel', 'bigwind'])('declared %s with a player target -> INVALID (self/table claims force null)', (declaredType) => {
+    const G = gWith([card('peek')]);
+    expect(playAbilityCard({G, ctx, playerID: '0', events: evStub()}, 'peek-0', '1', {faceDown: true, declaredType})).toBe(INVALID);
+    expect(G.pendingBluff).toBeNull();
+    expect(G.abilityHands['0']).toHaveLength(1);
+  });
+
+  test('declared lock without a board target -> INVALID', () => {
+    const G = gWith([card('peek')]);
+    expect(playAbilityCard({G, ctx, playerID: '0', events: evStub()}, 'peek-0', null, {faceDown: true, declaredType: 'lock'})).toBe(INVALID);
+    expect(G.pendingBluff).toBeNull();
+    expect(G.abilityHands['0']).toHaveLength(1);
+  });
+
+  test.each(['peek', 'junk2', 'junk3', 'junk4', 'skip', 'force'])('declared %s without a player target -> INVALID', (declaredType) => {
+    const G = gWith([card('peek')]);
+    expect(playAbilityCard({G, ctx, playerID: '0', events: evStub()}, 'peek-0', null, {faceDown: true, declaredType})).toBe(INVALID);
+    expect(G.pendingBluff).toBeNull();
+    expect(G.abilityHands['0']).toHaveLength(1);
+  });
+
+  test('declared lock WITH a board target is accepted', () => {
+    const G = gWith([card('peek')]);
+    expect(playAbilityCard({G, ctx, playerID: '0', events: evStub()}, 'peek-0', 2, {faceDown: true, declaredType: 'lock'})).toBeUndefined();
+    expect(G.pendingBluff).toMatchObject({declared: 'lock', target: '2'});
   });
 });
 
@@ -108,7 +145,7 @@ describe('challengeBluff FAIL (declared == real)', () => {
 describe('passBluff / no challenge', () => {
   test('declared effect applies face-up, card discarded, no penalty', () => {
     const G = gWith([card('shield')]);
-    playAbilityCard({G, ctx, playerID: '0', events: evStub()}, 'shield-0', '1', {faceDown: true, declaredType: 'shield'});
+    playAbilityCard({G, ctx, playerID: '0', events: evStub()}, 'shield-0', null, {faceDown: true, declaredType: 'shield'});
     passBluff({G, ctx, playerID: '1', events: evStub()});
     expect(G.shields['0']).toBe(true);   // declared shield applied to actor
     expect(G.abilityDiscard.map(c => c.id)).toContain('shield-0');
@@ -126,7 +163,7 @@ describe('passBluff / no challenge', () => {
 describe('pass keeps the real type hidden (no-reveal leak)', () => {
   test('opponent view of abilityDiscard shows declared, never real, after passBluff', () => {
     const G = gWith([card('peek')]);
-    playAbilityCard({G, ctx, playerID: '0', events: evStub()}, 'peek-0', '1', {faceDown: true, declaredType: 'shield'});
+    playAbilityCard({G, ctx, playerID: '0', events: evStub()}, 'peek-0', null, {faceDown: true, declaredType: 'shield'});
     passBluff({G, ctx, playerID: '1', events: evStub()});
     const v = playerView({G: JSON.parse(JSON.stringify(G)), ctx, playerID: '1'});
     const types = v.abilityDiscard.map(c => c.type);
@@ -161,8 +198,8 @@ function startA(spec) {
 test('integration: face-down peek (declared shield) -> B in respondBluff; challenge SUCCESS', () => {
   const spec = {game: seedMatch(), numPlayers: 2, multiplayer: Local()};
   const {c0, c1} = startA(spec);
-  c0.moves.playAbilityCard('peek-0', '1', {faceDown: true, declaredType: 'shield'});
-  expect(c0.getState().G.pendingBluff).toMatchObject({actor: '0', declared: 'shield', target: '1'});
+  c0.moves.playAbilityCard('peek-0', null, {faceDown: true, declaredType: 'shield'});
+  expect(c0.getState().G.pendingBluff).toMatchObject({actor: '0', declared: 'shield', target: null});
   expect(c0.getState().ctx.activePlayers['1']).toBe('respondBluff');
   c1.moves.challengeBluff();
   const G = c0.getState().G;
@@ -174,7 +211,7 @@ test('integration: face-down peek (declared shield) -> B in respondBluff; challe
 test('integration: nobody challenges -> onTurnEnd pass-resolves declared effect', () => {
   const spec = {game: seedMatch(), numPlayers: 2, multiplayer: Local()};
   const {c0, c1} = startA(spec);
-  c0.moves.playAbilityCard('peek-0', '1', {faceDown: true, declaredType: 'shield'});
+  c0.moves.playAbilityCard('peek-0', null, {faceDown: true, declaredType: 'shield'});
   expect(c1.getState().G.pendingBluff).toBeTruthy();
   c0.events.endTurn();
   const G = c0.getState().G;

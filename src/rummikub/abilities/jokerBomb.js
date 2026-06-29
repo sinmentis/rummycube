@@ -15,8 +15,7 @@
 // sorted non-joker id arrays never mistakes a reshuffle for a modification.
 import {extractSeqs} from '../moveValidation.js';
 import {isJoker} from '../util.js';
-import {pushTilesToGrid} from '../orderTiles.js';
-import {HAND_ROWS, HAND_COLS, HAND_GRID_ID} from '../constants.js';
+import {drawNormal} from './moves.js';
 
 function fuseProb(heat) {
     return Math.min(0.80, 0.20 + 0.15 * (heat - 1));
@@ -58,19 +57,9 @@ function jokerGroups(tilePositions) {
 }
 
 // Pop up to `count` normal tiles off the pool and hand them to the current
-// player. Mirrors drawTile: collect popped ids (stop when the pool empties) then
-// place them into the hand grid in one pushTilesToGrid call.
+// player. Shared joker-skipping draw (boom penalty draws are normal-only, 06 §4).
 function drawNormalTiles(G, ctx, count) {
-    const tiles = [];
-    for (let i = 0; i < count; i++) {
-        const tile = G.tilesPool.pop();
-        if (!tile) {
-            break;
-        }
-        tiles.push(tile);
-    }
-    pushTilesToGrid(tiles, HAND_ROWS, HAND_COLS, G,
-        {gridId: HAND_GRID_ID, playerID: ctx.currentPlayer}, ctx);
+    drawNormal(G, ctx, ctx.currentPlayer, count);
 }
 
 function settleJokerBombs({G, ctx, random, events}) {

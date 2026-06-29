@@ -1,5 +1,5 @@
 import {settleJokerBombs, fuseProb, jokerGroups} from '../rummikub/abilities/jokerBomb';
-import {RedJoker} from '../rummikub/util';
+import {RedJoker, BlackJoker, isJoker} from '../rummikub/util';
 
 const J = RedJoker; // joker tile id (=14, verified); 5/7/8/90/91/101.. are non-joker
 // helper: place tiles on board row 0 starting col c
@@ -84,6 +84,19 @@ test('two jokers in one run boom once (dedupe)', () => {
   settleJokerBombs({G, ctx, random: {Number: () => 0}, events: {}});
   const hand = Object.values(G.tilePositions).filter(p => p.gridId === 'h' && p.playerID === '0');
   expect(hand).toHaveLength(3); // not 6
+});
+
+test('boom penalty draw is normal-only: never hands the toucher a joker', () => {
+  // 06 §3/§4 global rule: penalty draws (incl. joker-bomb draw-3) skip ability cards
+  // and jokers. A pool with jokers on top must hand 3 normal tiles, jokers stay put.
+  const G = {mode: 'chaos', tilePositions: boardRow([5, RedJoker, 7, 8]),
+             tilesPool: [101, BlackJoker, 102, BlackJoker, 103], // jokers seeded near the top
+             jokerHeat: {[String(RedJoker)]: {heat: 4, members: [5, 7]}}};
+  settleJokerBombs({G, ctx, random: alwaysBoom, events});
+  const handTiles = Object.values(G.tilePositions).filter(p => p.gridId === 'h' && p.playerID === '0');
+  expect(handTiles).toHaveLength(3);
+  expect(handTiles.every(p => !isJoker(Number(p.id)))).toBe(true); // toucher drew zero jokers
+  expect(G.tilesPool.filter(id => isJoker(Number(id)))).toHaveLength(3); // 2 seeded blacks + the boomed red, all back in pool
 });
 
 test('classic: no-op', () => {

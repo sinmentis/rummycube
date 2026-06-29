@@ -54,7 +54,7 @@ describe('bluff result transient', () => {
   });
   test('an unchallenged pass sets no result', () => {
     const G = gWith([card('shield')]);
-    playAbilityCard({G, ctx, playerID: '0', events: evStub()}, 'shield-0', '1', {faceDown: true, declaredType: 'shield'});
+    playAbilityCard({G, ctx, playerID: '0', events: evStub()}, 'shield-0', null, {faceDown: true, declaredType: 'shield'});
     passBluff({G, ctx, playerID: '1', events: evStub()});
     expect(G.lastBluffResult).toBeFalsy();
   });
