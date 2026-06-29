@@ -11,6 +11,9 @@
     --elev-2: 0 14px 26px rgba(0, 0, 0, .42);
     --ability-card-w: 92px;   /* rack-strip mini-card width */
     --ability-overlap: -34px; /* overlap so rarity edges always show */
+    /* Chaos board-tile floor: a placed tile never drops below the hand tile
+       (2.0vw, 40px touch floor), so >=~90% of a rack tile at any width. */
+    --board-tile-min: max(2.0vw, 40px);
 }
 
 body {
@@ -444,6 +447,19 @@ div.tile {
    now-smaller board cells instead of clipping. Hand .tile-text is untouched. */
 .ref .tile-text {
     font-size: clamp(9px, 1.4vw, 18px);
+}
+/* Chaos T2: board tiles keep a rack-size floor so placement never starves them.
+   Rows lift to the tile height and each tile floors to --board-tile-min, keeping
+   a placed tile >=~90% of a rack tile; on very short windows the 9 floored rows
+   exceed the cap and .ref's overflow:auto scrolls (minmax fallback). Classic is
+   untouched: it keeps minmax(34px,1fr) + 100%/100% fill + clamp(9..18px). */
+.board.chaos { --board-row-min: 5.4vh; }
+.board.chaos .ref div.tile {
+    min-width: var(--board-tile-min);
+    min-height: var(--board-tile-min);
+}
+.board.chaos .ref .tile-text {
+    font-size: clamp(13px, 1.5vw, 24px);
 }
 
 /* tactile lift on hover (visual only — transform doesn't affect layout/DnD) */

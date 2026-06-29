@@ -696,7 +696,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                 </Suspense>}
 
             {sidebar}
-            <div className="board" ref={boardRef} onClick={onBoardClick}>
+            <div className={isChaos ? 'board chaos' : 'board'} ref={boardRef} onClick={onBoardClick}>
                 <div className="board-kick-layer">
                 <div className="top-cue-stack">
                     {connectionCue}
