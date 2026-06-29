@@ -352,144 +352,74 @@
     }
 }
 
-/* ===== Ability hand: discoverable right-edge collapsible drawer (SP1b T4 → handside) ===== */
-/* The viewer's own cards no longer hide in a bottom strip. They live in a fixed
-   right-edge tab that mirrors the chat/codex FAB language: a labelled "Abilities"
-   disc with a count badge (so it's obvious you hold cards), collapsed by default.
-   Opening swaps the tab for a floating panel that lists every card vertically.
-   Sits left of the codex FAB so chat + codex + abilities stack without overlap. */
-.ability-root {
-    position: fixed;
-    top: calc(var(--nav-h, 54px) + 8px);
-    /* Beside the codex FAB: chat disc (8 + 52) + 12 gap + codex disc 52 + 12 gap. */
-    right: calc(8px + 52px + 12px + 52px + 12px);
-    z-index: 65;
+/* ===== Ability hand: side-by-side ledge next to the rack — always visible ===== */
+/* The viewer's cards no longer hide in a right-edge drawer. They sit on a ledge
+   beside the tile rack, overlap-stacked so every rarity edge stays glanceable;
+   hover/focus fans them out and lifts the front card. Click = play. Disabled
+   cards keep .is-disabled. The fixed drawer survives only as a ≤820px fallback. */
+.ability-handside {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    pointer-events: auto;
     font-family: 'Poppins', system-ui, sans-serif;
-    pointer-events: none; /* only the tab / panel are interactive */
 }
 
-/* The collapsed tab: a labelled disc-pill with the card count badge, anchored to
-   its right edge so it grows leftward and never crowds the codex/chat discs. */
-.ability-tab {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
+.ability-strip {
+    display: flex;
+    align-items: flex-end;
+    padding-right: 1vw;
     pointer-events: auto;
-    position: relative;
-    height: 52px;
-    padding: 0 16px 0 14px;
-    border: none;
-    border-radius: 26px;
-    background: rgba(123, 74, 36, .94);
-    color: var(--cream, #f7eed8);
-    font-size: 22px;
-    line-height: 1;
-    cursor: pointer;
-    box-shadow: 0 0 0 1.5px rgba(200, 162, 74, .8), 0 8px 20px rgba(0, 0, 0, .42);
 }
-.ability-tab:hover { background: rgba(123, 74, 36, 1); }
-.ability-tab-label { font-size: 13px; font-weight: 800; letter-spacing: .3px; }
-.ability-tab-count {
-    min-width: 22px;
-    height: 22px;
-    padding: 0 6px;
-    border-radius: 11px;
-    background: var(--brass, #c8a24a);
-    color: #2c2317;
-    font-size: 12px;
-    font-weight: 800;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 0 0 2px rgba(244, 234, 210, .92);
-}
-
-.ability-panel {
-    position: relative;
-    pointer-events: auto;
-    width: 308px;
-    max-width: 92vw;
-    max-height: 72vh;
-    display: none;
-    flex-direction: column;
-    background: var(--parchment, linear-gradient(180deg, #fbf6e8 0%, #f1e6cb 100%));
-    border: 1px solid var(--parchment-border, #cbae7e);
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: var(--elev-2, 0 14px 26px rgba(0, 0, 0, .42));
-}
-
-/* Collapsed by default at every width: the tab shows, the panel stays hidden until
-   opened. Opening swaps the tab out for the panel overlay. */
-.ability-root.open .ability-tab { display: none; }
-.ability-root.open .ability-panel { display: flex; }
-
-.ability-head {
+.ability-strip .acard {
+    width: var(--ability-card-w);
+    min-height: 128px;
     flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 11px 14px;
-    background: var(--wood-bar, #7b4a24);
-    color: var(--cream, #f7eed8);
+    margin-left: var(--ability-overlap);
+    transition: transform .14s ease, box-shadow .14s ease, margin .14s ease, opacity .14s ease;
+    --rb: var(--brass, #c9ab6e);
 }
-.ability-head b {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    font-size: 14px;
-    font-weight: 800;
-    letter-spacing: .3px;
+.ability-strip .acard:first-child { margin-left: 0; }
+.ability-strip .acard--blue { --rb: var(--blue-edge, #3b6fc0); }
+.ability-strip .acard--gold { --rb: #e7c879; }
+/* Rarity top-edge bar — stays visible even when a card is tucked behind the next. */
+.ability-strip .acard::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 7px; z-index: 6;
+    background: var(--rb); box-shadow: inset 0 -1px 0 rgba(0, 0, 0, .18);
 }
-.ability-close {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: 0 0 auto;
-    border: none;
-    background: transparent;
-    color: #e7dcc1;
-    font-size: 15px;
-    line-height: 1;
-    padding: 2px 4px;
-    cursor: pointer;
-    border-radius: 6px;
+/* Front card on top; cards behind keep only their rarity edge. */
+.ability-strip .acard:nth-child(1) { z-index: 1; } .ability-strip .acard:nth-child(2) { z-index: 2; }
+.ability-strip .acard:nth-child(3) { z-index: 3; } .ability-strip .acard:nth-child(4) { z-index: 4; }
+.ability-strip .acard:nth-child(5) { z-index: 5; }
+.ability-strip .acard .acard-name b { font-size: 12px; }
+.ability-strip .acard .acard-icon { width: 42px; height: 42px; font-size: 21px; }
+.ability-strip .acard .acard-effect { font-size: 9.5px; }
+.ability-strip .acard:not(:last-child) .acard-head,
+.ability-strip .acard:not(:last-child) .acard-icon,
+.ability-strip .acard:not(:last-child) .acard-effect { opacity: 0; transition: opacity .15s ease; }
+/* Hover/focus: fan out, reveal every label, highlight the lifted card. */
+.ability-strip:hover .acard, .ability-strip:focus-within .acard { margin-left: -16px; }
+.ability-strip:hover .acard:first-child, .ability-strip:focus-within .acard:first-child { margin-left: 0; }
+.ability-strip:hover .acard:not(:last-child) .acard-head,
+.ability-strip:hover .acard:not(:last-child) .acard-icon,
+.ability-strip:hover .acard:not(:last-child) .acard-effect,
+.ability-strip:focus-within .acard:not(:last-child) .acard-head,
+.ability-strip:focus-within .acard:not(:last-child) .acard-icon,
+.ability-strip:focus-within .acard:not(:last-child) .acard-effect { opacity: 1; }
+.ability-strip .acard:hover, .ability-strip .acard:focus-visible {
+    transform: translateY(-14px); margin-right: 14px; z-index: 7;
+    box-shadow: var(--elev-2, 0 14px 26px rgba(0, 0, 0, .42)); outline: 3px solid #ffe09a; outline-offset: 2px;
 }
-.ability-close:hover { background: rgba(255, 255, 255, .18); }
 
-/* Cards stack vertically and scroll — no hand limit, no fan overlap. */
-.ability-list {
-    flex: 1 1 auto;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 12px;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(123, 74, 36, .5) transparent;
-}
-.ability-list::-webkit-scrollbar { width: 7px; }
-.ability-list::-webkit-scrollbar-thumb { background: rgba(123, 74, 36, .45); border-radius: 4px; }
-.ability-list .acard { width: 100%; }
-
-/* Narrow screens: mirror the chat/codex FABs — move clear of the top HUD into the
-   bottom-right corner, still left of the codex disc. When open, drop the offset so
-   the panel uses the corner, and widen it like the chat/codex panel. */
+/* Narrow screens: fall back to a full-width scrollable strip below the rack. */
 @media (max-width: 820px) {
-    .ability-root {
-        top: auto;
-        bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
-        right: calc(env(safe-area-inset-right, 0px) + 12px + 52px + 12px + 52px + 12px);
-    }
-    .ability-root.open {
-        right: calc(env(safe-area-inset-right, 0px) + 12px);
-    }
-    .ability-root.open .ability-panel {
-        width: 86vw;
-        max-width: 86vw;
-        max-height: 64vh;
-    }
+    .ability-handside { order: 99; width: 100%; align-items: center; }
+    .ability-strip { width: 100%; overflow-x: auto; justify-content: center; padding-right: 0; }
+}
+/* Wide screens: ledge sits beside the rack (rack is position:relative). */
+@media (min-width: 821px) {
+    .hand-buttons .ability-handside { position: absolute; left: 1vw; bottom: 2vh; z-index: 4; }
 }
 
 /* ============================================================================

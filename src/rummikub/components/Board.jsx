@@ -750,6 +750,10 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                     </div>
                     {turnBanner}
                     {playableHint}
+                    {isChaos &&
+                        <AbilityHand cards={G.abilityHands?.[playerID] ?? []} onPlay={playCard}
+                                     faceDown={faceDown} declared={declared}
+                                     onToggleFaceDown={setFaceDown} onDeclare={setDeclared}/>}
                     {handGrid}
                     {coachCard}
                     <div className="controls-wrapper">
@@ -802,10 +806,6 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                    matchID={matchID}
                    playerID={playerID}/>
         {G.mode === 'chaos' && <AbilityCodex/>}
-        {G.mode === 'chaos' &&
-            <AbilityHand cards={G.abilityHands?.[playerID] ?? []} onPlay={playCard}
-                         faceDown={faceDown} declared={declared}
-                         onToggleFaceDown={setFaceDown} onDeclare={setDeclared}/>}
     </DndContext>
 }
 
