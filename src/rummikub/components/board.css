@@ -14,6 +14,9 @@
     /* Chaos board-tile floor: a placed tile never drops below the hand tile
        (2.0vw, 40px touch floor), so >=~90% of a rack tile at any width. */
     --board-tile-min: max(2.0vw, 40px);
+    /* Chaos transient interrupts ride mid-felt at opponent-avatar height so the
+       top stays the system-cue channel. ~42% keeps them clear of the top 20%. */
+    --interrupt-band-y: 42%;
 }
 
 body {
@@ -1583,6 +1586,34 @@ svg.fa-smile-beam {
 @keyframes timeout-toast-in {
     0%   { opacity: 0; transform: translateY(-6px); }
     100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Chaos UX fix T3 (P0-3/P0-4) — transient interrupts (peek/lock prompt, junk,
+   bluff, wheel + timeout toasts) move off the top into a centered band at
+   opponent-avatar height. The top-cue stack above keeps only system cues
+   (reconnecting/syncing). The band never intercepts input; each child opts in. */
+.interrupt-band {
+    position: absolute;
+    top: var(--interrupt-band-y, 42%);
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 9;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: max-content;
+    max-width: min(92vw, 420px);
+    pointer-events: none;
+}
+.interrupt-band > * { pointer-events: auto; }
+/* Peek/lock targeting locks the table: only opponent avatars / row buttons stay
+   live. The rack dims and the ability strip goes inert so a stray tap can't
+   mis-fire or re-pick a card while a target is pending. */
+.board.chaos.is-targeting .hand-grid { opacity: .45; }
+.board.chaos.is-targeting .ability-strip { pointer-events: none; opacity: .5; }
+@media (prefers-reduced-motion: reduce) {
+    .interrupt-band { transition: none; }
 }
 
 /* ===== WS-10 playable-tile hint (highlight-only) =====

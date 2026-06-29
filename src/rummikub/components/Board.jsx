@@ -524,6 +524,18 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
 
     const peekTargeting = isChaos && !!pendingPeek;
     const lockTargeting = isChaos && !!pendingLock;
+    // P0-4: a parked target must never become a permanent prompt. Bind it to the
+    // turn deadline (12s safety cap) — when it lapses, cancelTarget clears the
+    // pending card so it stays in hand (refund), the table unlocks, and the band
+    // prompt auto-dismisses. cancelTarget is stable, so this only re-arms when a
+    // target opens/closes or the deadline shifts.
+    useEffect(() => {
+        if (!peekTargeting && !lockTargeting) return;
+        const SAFETY_MS = 12000;
+        const ttl = G.timerExpireAt ? Math.max(0, (G.timerExpireAt - getSecTs()) * 1000) : SAFETY_MS;
+        const t = setTimeout(cancelTarget, Math.min(ttl, SAFETY_MS));
+        return () => clearTimeout(t);
+    }, [peekTargeting, lockTargeting, G.timerExpireAt, cancelTarget]);
     const tableSeats = (
         <TableSeats
             currentPlayer={ctx.currentPlayer}
@@ -696,12 +708,11 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                 </Suspense>}
 
             {sidebar}
-            <div className={isChaos ? 'board chaos' : 'board'} ref={boardRef} onClick={onBoardClick}>
+            <div className={(isChaos ? 'board chaos' : 'board') + ((peekTargeting || lockTargeting) ? ' is-targeting' : '')} ref={boardRef} onClick={onBoardClick}>
                 <div className="board-kick-layer">
                 <div className="top-cue-stack">
                     {connectionCue}
-                    {timeoutAnnouncement}
-                    {wheelToast}
+                    {!isChaos && timeoutAnnouncement}
                 </div>
                 {waiting &&
                     <div className="waiting-overlay" role="status" aria-live="polite"
@@ -735,10 +746,14 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                 {tableSeats}
                 {isChaos && castBeam && <CastBeam from={castBeam.from} to={castBeam.to}/>}
                 {peekPanel}
-                {junkAlert}
-                {bluffPrompt}
-                {peekTargetingBanner}
-                {lockTargetingBanner}
+                {isChaos && <div className="interrupt-band">
+                    {timeoutAnnouncement}
+                    {wheelToast}
+                    {junkAlert}
+                    {bluffPrompt}
+                    {peekTargetingBanner}
+                    {lockTargetingBanner}
+                </div>}
                 {boardGrid}
                 <div className={'hand-buttons'}>
                     {selfAvatar}

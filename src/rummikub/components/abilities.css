@@ -536,10 +536,8 @@
     .avatar.targetable { animation: none; }
 }
 .peek-targeting {
-    position: absolute;
-    top: 14px;
-    left: 50%;
-    transform: translateX(-50%);
+    position: static;
+    transform: none;
     z-index: 8;
     display: inline-flex;
     align-items: center;
