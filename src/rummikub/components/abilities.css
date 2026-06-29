@@ -711,3 +711,47 @@
     .beam-flow { animation: none; }
     .ability-presence::after { animation: none; }
 }
+
+/* ============================================================================
+   SP2b T2 — incoming-junk interrupt. Target sees accept/transfer; bystanders
+   get the slim "X owes +N" note. Tokens mirror shield-chip / peek-panel.
+   ========================================================================== */
+.junk-alert {
+    color: var(--cream, #f5edd8);
+    border-radius: 14px;
+    box-shadow: var(--elev-1, 0 2px 6px rgba(0, 0, 0, .3));
+}
+.junk-alert .jbrick { font-size: 18px; }
+.junk-incoming {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+    background: linear-gradient(180deg, #5a3520, #3a2113);
+    border: 1px solid rgba(224, 160, 108, .55);
+}
+.junk-head { display: flex; align-items: center; gap: 9px; }
+.junk-head .jttl { font-size: 13px; }
+.junk-shield { font-size: 11px; opacity: .85; }
+.junk-sub { font-size: 11px; opacity: .82; display: block; margin-bottom: 4px; }
+.junk-cards, .junk-seats { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+.junk-pick {
+    border: 1px solid rgba(224, 160, 108, .5);
+    background: rgba(0, 0, 0, .25);
+    color: var(--cream, #f5edd8);
+    border-radius: 9px;
+    padding: 4px 9px;
+    font-size: 11px;
+    cursor: pointer;
+}
+.junk-pick.on { background: rgba(224, 160, 108, .35); border-color: #e0a06c; }
+.junk-pick small { opacity: .6; }
+.junk-owes {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 11px;
+    font-size: 11.5px;
+    background: rgba(58, 33, 19, .85);
+    border: 1px solid rgba(224, 160, 108, .4);
+}

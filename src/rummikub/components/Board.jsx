@@ -29,6 +29,7 @@ import ChatPanel from "./ChatPanel";
 import AbilityCodex from "./AbilityCodex";
 import AbilityHand from "./AbilityHand";
 import PeekPanel from "./PeekPanel";
+import JunkAlert from "./JunkAlert";
 import CastBeam from "./CastBeam";
 import CoachCard from "./CoachCard";
 import HintsToggle from "./HintsToggle";
@@ -549,6 +550,20 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             </span>
         )
         : null;
+    // SP2b T2: incoming-junk interrupt panel. Only chaos, and only while a junk
+    // chain is pending. Target sees accept/transfer; bystanders see "X owes +N".
+    const junkAlert = isChaos && G.pendingJunk
+        ? (
+            <JunkAlert
+                pendingJunk={G.pendingJunk}
+                playerID={playerID}
+                matchData={matchData || []}
+                myJunkCards={(G.abilityHands?.[playerID] ?? []).filter((c) => /^junk[234]$/.test(c.type))}
+                hasShield={!!G.shields?.[playerID]}
+                onAccept={() => moves.acceptJunk()}
+                onTransfer={(cardId, pid) => moves.transferJunk(cardId, pid)}/>
+        )
+        : null;
 
     const selfData = (matchData || [])[Number(playerID)]
     const bannerLabel = showTurnTimer ? turnBannerLabel(ctx.currentPlayer, playerID, matchData) : null
@@ -664,6 +679,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                 {tableSeats}
                 {isChaos && castBeam && <CastBeam from={castBeam.from} to={castBeam.to}/>}
                 {peekPanel}
+                {junkAlert}
                 {peekTargetingBanner}
                 {boardGrid}
                 <div className={'hand-buttons'}>
