@@ -456,34 +456,34 @@ div.tile {
 }
 
 /* Board cells size responsively (the grid rows are minmax(--board-row-min,1fr)),
-   so board tiles fill their cell instead of the fixed 2.0vw/5.4vh of the base
-   .tile. A 2px cell padding keeps a constant inter-tile gap at any cell size.
-   Hand tiles (outside .ref) keep their 44px touch size. */
+   so board tiles fill their cell. A 2px cell padding keeps a constant inter-tile
+   gap at any cell size. Hand tiles (outside .ref) keep their 44px touch size. */
 .ref .grid-item {
     padding: 2px;
 }
+/* Rows floor at the rack-tile height so a placed board tile reads at roughly
+   hand-card size; 9 * 5.4vh = 48.6vh fits the 54vh desktop tray in the common
+   case, and on shorter windows .ref's overflow:auto scrolls (minmax fallback). */
+.ref .grid-container {
+    --board-row-min: 5.4vh;
+}
+/* Board tiles fill their cell but never shrink below the rack-tile floor
+   (--board-tile-min) in EITHER mode: the owner wants a placed board tile to match
+   hand-tile card size, not collapse into a tiny grid cell. The minmax row floor
+   above keeps them tall to match. On very short windows the floored rows exceed
+   the tray cap and .ref scrolls — match-hand size is chosen over no-scroll. The
+   mobile overrides below reset min-* to 0 so the 32-col phone board still fits. */
 .ref div.tile {
     width: 100%;
     height: 100%;
-}
-/* The tile value lives in .tile-text; the .tile element carries an inline
-   font-size (getTileStyle), so the responsive size must target .tile-text (no
-   inline font) to win. Sizing it to the cell keeps two-digit values inside the
-   now-smaller board cells instead of clipping. Hand .tile-text is untouched. */
-.ref .tile-text {
-    font-size: clamp(9px, 1.4vw, 18px);
-}
-/* Chaos T2: board tiles keep a rack-size floor so placement never starves them.
-   Rows lift to the tile height and each tile floors to --board-tile-min, keeping
-   a placed tile >=~90% of a rack tile; on very short windows the 9 floored rows
-   exceed the cap and .ref's overflow:auto scrolls (minmax fallback). Classic is
-   untouched: it keeps minmax(34px,1fr) + 100%/100% fill + clamp(9..18px). */
-.board.chaos { --board-row-min: 5.4vh; }
-.board.chaos .ref div.tile {
     min-width: var(--board-tile-min);
     min-height: var(--board-tile-min);
 }
-.board.chaos .ref .tile-text {
+/* The tile value lives in .tile-text; the .tile element carries an inline
+   font-size (getTileStyle), so the responsive size must target .tile-text (no
+   inline font) to win. The clamp floor keeps the value legible at the restored
+   board-tile size. Hand .tile-text is untouched. */
+.ref .tile-text {
     font-size: clamp(13px, 1.5vw, 24px);
 }
 
