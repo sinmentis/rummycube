@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "board-game-design": {
+      "source": "omer-metin/skills-for-antigravity",
+      "sourceType": "github",
+      "skillPath": "skills/board-game-design/SKILL.md",
+      "computedHash": "9cc2b7ee52261efcc099c679707ddb97a52cf277a0107de637325d812390c312"
+    },
+    "design-game": {
+      "source": "opusgamelabs/game-creator",
+      "sourceType": "github",
+      "skillPath": "skills/design-game/SKILL.md",
+      "computedHash": "ed3c4269349d9119f081725a02e76f3079b45e92615c366eddf86af0cbeaf0f2"
+    }
+  }
+}
