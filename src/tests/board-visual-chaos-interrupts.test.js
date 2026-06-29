@@ -20,10 +20,12 @@ function ruleBody(css, selector) {
 }
 
 describe('CSS source: interrupt band sits at avatar height, not the top', () => {
-  test('.interrupt-band is centered around ~42% vertical (well below the top 20%)', () => {
-    const tok = board.match(/--interrupt-band-y:\s*(\d+)%/);
+  test('.interrupt-band is anchored at the top opponent-avatar height, not mid-felt', () => {
+    // 08 --hud-band-y: the band rides the .seat-top avatar (top:1vh, 80px) so the
+    // reveal lands on the seat it concerns — i.e. ~1vh+40px, NOT the old 42% drift.
+    const tok = board.match(/--interrupt-band-y:\s*calc\(\s*1vh\s*\+\s*40px\s*\)/);
     expect(tok).toBeTruthy();
-    expect(Number(tok[1])).toBeGreaterThanOrEqual(35);
+    expect(board).not.toMatch(/--interrupt-band-y:\s*42%/);
     const body = ruleBody(board, '.interrupt-band');
     expect(body).toMatch(/top:\s*var\(--interrupt-band-y/);
     expect(body).toMatch(/left:\s*50%/);

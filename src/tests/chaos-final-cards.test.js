@@ -83,22 +83,26 @@ describe('FORCE', () => {
 });
 
 describe('LOCK', () => {
-  test('records {row, until: turn+2}, discards card', () => {
-    const G = gWith([card('lock')]);
+  test('records the formed group tile ids + until: turn+2, discards card', () => {
+    const tp = {7: {id: 7, gridId: BOARD_GRID_ID, row: 0, col: 0},
+      8: {id: 8, gridId: BOARD_GRID_ID, row: 0, col: 1},
+      9: {id: 9, gridId: BOARD_GRID_ID, row: 0, col: 2}};
+    const G = gWith([card('lock')], {tilePositions: tp});
     playAbilityCard({G, ctx, playerID: '0'}, 'lock-0', 0);
-    expect(G.lockedSets).toEqual([{row: 0, until: 6}]);
+    expect(G.lockedSets[0].until).toBe(6);
+    expect(new Set(G.lockedSets[0].tiles)).toEqual(new Set([7, 8, 9]));
     expect(G.abilityDiscard.map(c => c.id)).toContain('lock-0');
   });
-  test('moveTiles rejects touching a tile on a locked row until expiry', () => {
+  test('moveTiles rejects touching a tile in a locked group until expiry', () => {
     const tp = {9: {id: 9, gridId: BOARD_GRID_ID, row: 1, col: 0}};
-    const G = {mode: 'chaos', lockedSets: [{row: 1, until: 6}], tilePositions: tp, gameStateStack: []};
+    const G = {mode: 'chaos', lockedSets: [{row: 1, tiles: [9], until: 6}], tilePositions: tp, gameStateStack: []};
     expect(moveTiles({G, ctx: {currentPlayer: '0', turn: 4}, playerID: '0'}, 5, 1, BOARD_GRID_ID, {id: 9}, [])).toBe(INVALID);
     expect(insertTilesWithPush({G, ctx: {currentPlayer: '0', turn: 4}, playerID: '0'}, 5, 1, BOARD_GRID_ID, {id: 9}, [])).toBe(INVALID);
   });
   test('lock expires once ctx.turn reaches until', () => {
     const produce = require('immer').produce;
     const tp = {9: {id: 9, gridId: BOARD_GRID_ID, row: 1, col: 2}};
-    const base = {mode: 'chaos', lockedSets: [{row: 1, until: 6}], tilePositions: tp, gameStateStack: [], prevTilePositions: {}};
+    const base = {mode: 'chaos', lockedSets: [{row: 1, tiles: [9], until: 6}], tilePositions: tp, gameStateStack: [], prevTilePositions: {}};
     const next = produce(base, d => { moveTiles({G: d, ctx: {currentPlayer: '0', turn: 6}, playerID: '0'}, 5, 1, BOARD_GRID_ID, {id: 9}, []); });
     expect(next.tilePositions[9].col).toBe(5);   // moved, lock no longer blocks
   });

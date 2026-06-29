@@ -38,6 +38,7 @@ import HintsToggle from "./HintsToggle";
 import IconButton from "./IconButton";
 import TimeoutAnnouncement from "./TimeoutAnnouncement";
 import WheelToast from "./WheelToast";
+import ResultToast from "./ResultToast";
 import {useUndoRedoHotkeys} from "./useUndoRedoHotkeys";
 import {useTilePlacementHotkeys} from "./useTilePlacementHotkeys";
 import {usePersistentFlag} from "./hooks/usePersistentFlag";
@@ -336,6 +337,19 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     const wheelToast = G.mode === 'chaos' && !ctx.gameover
         ? <WheelToast lastWheel={G.lastWheel} matchData={matchData}/>
         : null;
+    // Fix2: short all-visible chaos result toasts (bluff outcome, skip, big wind),
+    // mirroring lastWheel — captured at id-change, auto-dismiss ~1.2s. Chaos only.
+    const chaosName = (seat) => ((matchData || [])[Number(seat)]?.name) || `Player ${Number(seat) + 1}`;
+    const showChaosResults = G.mode === 'chaos' && !ctx.gameover;
+    const bluffResult = G.lastBluffResult;
+    const bluffResultText = bluffResult
+        ? (bluffResult.success
+            ? `${chaosName(bluffResult.challenger)} caught ${chaosName(bluffResult.actor)} bluffing`
+            : `${chaosName(bluffResult.actor)} was honest — ${chaosName(bluffResult.challenger)} drew 2`)
+        : null;
+    const bluffResultToast = showChaosResults ? <ResultToast result={bluffResult} text={bluffResultText} kind="bluff"/> : null;
+    const skipResultToast = showChaosResults ? <ResultToast result={G.lastSkip} text={G.lastSkip ? `${chaosName(G.lastSkip.seat)} skipped` : null} kind="skip"/> : null;
+    const bigwindToast = showChaosResults ? <ResultToast result={G.lastBigwind} text="Everyone passed a tile left" kind="bigwind"/> : null;
 
     // S2-U6 / WS-D: canUndo/canRedo are the single source of truth shared by the
     // keyboard shortcuts (below) and the corner Undo/Redo icon buttons (.rack-tools),
@@ -481,6 +495,9 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     const activeLocks = isChaos && Array.isArray(G.lockedSets)
         ? G.lockedSets.filter((l) => l.until > ctx.turn) : [];
     const lockedRows = activeLocks.map((l) => l.row);
+    // Fix2: lock freezes a GROUP, so mark the exact tiles; row is kept only for the
+    // status-chip count. lockedTiles[0] gets the 🔒 marker.
+    const lockedTiles = activeLocks.flatMap((l) => l.tiles || []);
 
     const boardGrid = (<div className="ref">
         <GridContainer
@@ -501,7 +518,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             hoverPosition={hoverPosition}
             setHoverPosition={setHoverPosition}
             jokerHeat={G.jokerHeat}
-            lockedRows={isChaos ? lockedRows : undefined}
+            lockedTiles={isChaos ? lockedTiles : undefined}
             newlyAdded={[]}
         /></div>)
 
@@ -769,6 +786,9 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                 {isChaos && <div className="interrupt-band">
                     {timeoutAnnouncement}
                     {wheelToast}
+                    {bluffResultToast}
+                    {skipResultToast}
+                    {bigwindToast}
                     {junkAlert}
                     {peekTargetingBanner}
                     {lockTargetingBanner}

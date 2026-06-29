@@ -16,22 +16,33 @@ function seatName(matchData, seat) {
     return (s && s.name) || `Player ${Number(seat) + 1}`;
 }
 
+// 06 §2 fortune tags: drawing more tiles is a curse, shedding is a blessing, a full
+// re-deal is a coin-flip; table add = opportunity, remove = strike. Fix2 surfaces
+// the exact seat/count + this label so the toast reads as fortune, not just an event.
+const FORTUNE = {
+    draw: 'curse', discard: 'blessing', reshuffle: 'swap',
+    'add-set': 'boon', 'remove-set': 'strike',
+};
+
 function wheelText(lastWheel, matchData) {
     if (!lastWheel) return null;
     const {object, action, detail = {}} = lastWheel;
+    const tag = FORTUNE[action] ? ` (${FORTUNE[action]})` : '';
     if (object === 'table') {
-        return action === 'add-set' ? 'Table: set added' : 'Table: set removed';
+        const n = detail.count != null ? ` (${detail.count})` : '';
+        return action === 'add-set' ? `Table: set added${n}${tag}` : `Table: set removed${n}${tag}`;
     }
-    // 'all' hits every seat (detail.seats[], no single count) — keep it generic.
+    // 'all' hits every seat; sum the per-seat counts so the toast still has a number.
     if (object === 'all') {
-        if (action === 'draw') return 'Everyone draws';
-        if (action === 'discard') return 'Everyone discards';
-        return 'Everyone reshuffles';
+        const total = Array.isArray(detail.seats) ? detail.seats.reduce((s, x) => s + (x.count || 0), 0) : 0;
+        if (action === 'draw') return `Everyone draws ${total}${tag}`;
+        if (action === 'discard') return `Everyone discards ${total}${tag}`;
+        return `Everyone reshuffles${tag}`;
     }
     const who = seatName(matchData, detail.seat);
-    if (action === 'draw') return `${who} drew ${detail.count}`;
-    if (action === 'discard') return `${who} discarded`;
-    return `${who} reshuffled`;
+    if (action === 'draw') return `${who} drew ${detail.count}${tag}`;
+    if (action === 'discard') return `${who} discarded ${detail.count != null ? detail.count : 1}${tag}`;
+    return `${who} reshuffled${tag}`;
 }
 
 export default function WheelToast({lastWheel, matchData, durationMs = 4000}) {

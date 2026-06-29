@@ -821,6 +821,10 @@
 @media (prefers-reduced-motion: reduce) {
     .wheel-toast .wheel-spin { animation: none; }
 }
+/* Fix2 chaos result toasts (bluff/skip/bigwind): reuse wheel-toast pill, dwell ~1.2s. */
+.result-toast--bluff  { background: rgba(58, 26, 64, .94); border-color: rgba(190, 140, 224, .6); color: #f0d8ff; }
+.result-toast--skip   { background: rgba(36, 26, 10, .94); border-color: rgba(214, 160, 60, .6); color: #ffe1a8; }
+.result-toast--bigwind{ background: rgba(20, 38, 48, .94); border-color: rgba(120, 180, 224, .6); color: #d6ecff; }
 
 /* ============================================================================
    SP5 T2 — Bluff. A "Play face-down" toggle + Claim picker sit above the hand;
@@ -899,5 +903,5 @@
     font-weight: 700;
     cursor: pointer;
 }
-.grid-item.locked-row { background: rgba(190, 140, 224, .14); position: relative; }
+.grid-item.locked-cell { background: rgba(190, 140, 224, .14); position: relative; }
 .lock-mark { position: absolute; left: -14px; top: 50%; transform: translateY(-50%); font-size: 13px; z-index: 5; }

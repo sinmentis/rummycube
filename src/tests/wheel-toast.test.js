@@ -57,6 +57,24 @@ test('auto-dismiss after durationMs, replaced by next spin', () => {
   expect(screen.getByText(/Table:\s*set added/i)).toBeInTheDocument();
 });
 
+// Fix2 — toast carries exact seat/count + a blessing/curse fortune label.
+test('player draw shows exact count + curse label', () => {
+  render(el({lastWheel: {object: 'player', action: 'draw', detail: {seat: '1', count: 2}}}));
+  expect(screen.getByText(/Bob drew 2 \(curse\)/i)).toBeInTheDocument();
+});
+test('player discard shows blessing label', () => {
+  render(el({lastWheel: {object: 'player', action: 'discard', detail: {seat: '0', count: 1}}}));
+  expect(screen.getByText(/Alice discarded 1 \(blessing\)/i)).toBeInTheDocument();
+});
+test('table remove shows count + strike label', () => {
+  render(el({lastWheel: {object: 'table', action: 'remove-set', detail: {count: 5}}}));
+  expect(screen.getByText(/Table:\s*set removed \(5\) \(strike\)/i)).toBeInTheDocument();
+});
+test('all draw sums per-seat counts', () => {
+  render(el({lastWheel: {object: 'all', action: 'draw', detail: {seats: [{seat: '0', count: 2}, {seat: '1', count: 1}]}}}));
+  expect(screen.getByText(/Everyone draws 3 \(curse\)/i)).toBeInTheDocument();
+});
+
 const fs = require('fs');
 const path = require('path');
 const css = fs.readFileSync(path.join(__dirname, '../rummikub/components/abilities.css'), 'utf8');

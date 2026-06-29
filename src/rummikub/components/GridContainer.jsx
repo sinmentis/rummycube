@@ -36,14 +36,15 @@ const GridContainer = function ({
                                     onLongPress,
                                     newlyAdded,
                                     jokerHeat,
-                                    lockedRows,
+                                    lockedTiles,
                                     className
                                 }) {
 
     let colWidth = 2.2
     const selectedSet = new Set(selectedTiles)
     const playableSet = new Set(playableTiles)
-    const lockedRowSet = new Set(lockedRows)
+    const lockedSet = new Set((lockedTiles || []).map(Number))
+    let firstLocked = true
     const hasSelection = selectedSet.size > 0
     let gridItems = []
     let key = 0
@@ -62,6 +63,9 @@ const GridContainer = function ({
             // Chaos: only the board grid is passed jokerHeat, and only joker cells
             // have an entry — heat is per-cell so the danger meter is board-only.
             let tileHeat = tile ? jokerHeat?.[tile]?.heat : undefined
+            const isLockedCell = tile != null && lockedSet.has(Number(tile))
+            const isLockHead = isLockedCell && firstLocked
+            if (isLockedCell) firstLocked = false
             let gridTile = <GridSlot
                 canDnD={canDnD}
                 isDragActive={isDragActive}
@@ -79,7 +83,8 @@ const GridContainer = function ({
                 isPlayable={isPlayable}
                 isNewlyAdded={isNewlyAdded}
                 jokerHeat={tileHeat}
-                isLockedRow={lockedRowSet.has(y)}
+                isLocked={isLockedCell}
+                isLockHead={isLockHead}
             />
             gridItems.push(gridTile)
             key++

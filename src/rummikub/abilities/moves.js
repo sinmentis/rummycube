@@ -2,8 +2,9 @@
 import {INVALID_MOVE, Stage} from 'boardgame.io/dist/cjs/core.js';
 import {pushTilesToGrid} from '../orderTiles.js';
 import {spinWheel} from './wheel.js';
+import {extractSeqs} from '../moveValidation.js';
 import {isJoker} from '../util.js';
-import {HAND_ROWS, HAND_COLS, HAND_GRID_ID} from '../constants.js';
+import {HAND_ROWS, HAND_COLS, HAND_GRID_ID, BOARD_GRID_ID} from '../constants.js';
 
 const PLAYABLE_TYPES = new Set(['peek', 'shield', 'junk2', 'junk3', 'junk4', 'wheel', 'skip', 'lock', 'force', 'bigwind']);
 const JUNK_AMOUNT = {junk2: 2, junk3: 3, junk4: 4};
@@ -42,6 +43,23 @@ export function drawNormal(G, ctx, seat, n) {
     pushTilesToGrid(tiles, HAND_ROWS, HAND_COLS, G, {gridId: HAND_GRID_ID, playerID: seat}, ctx);
 }
 
+// Fix2 LOCK: lock a FORMED GROUP, not a whole row. Resolve the target row to the
+// tile-id set of the run(s) sitting on it (extractSeqs already splits per-row
+// contiguous groups); store that signature so only those exact tiles are frozen.
+// Empty row -> no lock. Fallback to every board tile on the row if seqs miss any.
+function lockedGroupTiles(G, row) {
+    const r = Number(row);
+    let best = [];
+    for (const seq of extractSeqs(G)) {
+        const onRow = seq.filter(id => {
+            const p = G.tilePositions[id];
+            return p && p.gridId === BOARD_GRID_ID && p.row === r;
+        });
+        if (onRow.length > best.length) best = onRow;
+    }
+    return best.map(Number);
+}
+
 function handIds(G, seat) {
     return Object.keys(G.tilePositions).filter(id => {
         const pos = G.tilePositions[id];
@@ -67,6 +85,10 @@ function bigWind(G, ctx, random) {
     }
     for (const {id, to} of moving) {
         pushTilesToGrid([id], HAND_ROWS, HAND_COLS, G, {gridId: HAND_GRID_ID, playerID: to}, ctx);
+    }
+    if (moving.length) {
+        G.chaosSeq = (G.chaosSeq || 0) + 1;
+        G.lastBigwind = {count: moving.length, id: G.chaosSeq};
     }
 }
 
@@ -140,7 +162,8 @@ function applyEffect(G, ctx, actor, type, target, events, random) {
     } else if (type === 'lock') {
         if (target == null) return;
         if (!Array.isArray(G.lockedSets)) G.lockedSets = [];
-        G.lockedSets.push({row: Number(target), until: (ctx && ctx.turn != null ? ctx.turn : 0) + LOCK_TURNS});
+        const tiles = lockedGroupTiles(G, target);
+        G.lockedSets.push({row: Number(target), tiles, until: (ctx && ctx.turn != null ? ctx.turn : 0) + LOCK_TURNS});
     } else if (type === 'bigwind') {
         bigWind(G, ctx, random);
     } else if (JUNK_AMOUNT[type]) {
@@ -215,6 +238,21 @@ function discardBluff(G, mode) {
     G.pendingBluff = null;
 }
 
+// Fix2: a public bluff result transient (mirrors lastWheel) so EVERY client sees a
+// caught/honest outcome for ~1.2s. reveal carries the real type only when the card
+// is shown (a challenge always reveals); pass keeps no result/no reveal.
+function recordBluffResult(G, b, challenger, success) {
+    G.chaosSeq = (G.chaosSeq || 0) + 1;
+    G.lastBluffResult = {
+        actor: b.actor.toString(),
+        challenger: challenger == null ? null : challenger.toString(),
+        declared: b.declared,
+        success: !!success,
+        reveal: b.real,
+        id: G.chaosSeq,
+    };
+}
+
 function canRespondBluff(G, playerID) {
     const b = G.pendingBluff;
     if (!b) return false;
@@ -244,10 +282,12 @@ export function challengeBluff({G, ctx, playerID, events, random}) {
             G.tilesPool.push(Number(id));
         }
         drawNormal(G, ctx, b.actor, BLUFF_PENALTY);
+        recordBluffResult(G, b, playerID, true);   // caught: challenge succeeded
         discardBluff(G, 'void');
     } else {
         drawNormal(G, ctx, playerID, BLUFF_PENALTY);
         applyEffect(G, ctx, b.actor, b.declared, b.target, events, random);
+        recordBluffResult(G, b, playerID, false);  // honest: challenge failed
         discardBluff(G, 'reveal'); // truthful + caught: the real card is shown
     }
     endBluff(events);

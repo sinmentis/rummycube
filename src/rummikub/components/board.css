@@ -14,9 +14,10 @@
     /* Chaos board-tile floor: a placed tile never drops below the hand tile
        (2.0vw, 40px touch floor), so >=~90% of a rack tile at any width. */
     --board-tile-min: max(2.0vw, 40px);
-    /* Chaos transient interrupts ride mid-felt at opponent-avatar height so the
-       top stays the system-cue channel. ~42% keeps them clear of the top 20%. */
-    --interrupt-band-y: 42%;
+    /* Chaos transient interrupts ride at the top opponent-avatar height (.seat-top
+       sits at top:1vh, 80px tall → centre ≈ 1vh + 40px) so the reveal lands on the
+       seat it concerns, not floating mid-felt. 08 --hud-band-y. */
+    --interrupt-band-y: calc(1vh + 40px);
 }
 
 body {
@@ -542,7 +543,8 @@ svg.fa-smile-beam {
     pointer-events: none;
     z-index: 30;
 }
-.jtile:hover .jheat-pop {
+.jtile:hover .jheat-pop,
+.grid-item:hover .jheat-pop {
     opacity: 1;
 }
 .jheat-pop .jbar {
@@ -1615,7 +1617,7 @@ svg.fa-smile-beam {
    (reconnecting/syncing). The band never intercepts input; each child opts in. */
 .interrupt-band {
     position: absolute;
-    top: var(--interrupt-band-y, 42%);
+    top: var(--interrupt-band-y, calc(1vh + 40px));
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 9;

@@ -142,6 +142,8 @@ function onTurnBegin({G, ctx, events, random}) {
     // and only auto-end once the per-turn bookkeeping above has run.
     if (G.mode === 'chaos' && G.skipNext && G.skipNext[seat]) {
         delete G.skipNext[seat]
+        G.chaosSeq = (G.chaosSeq || 0) + 1
+        G.lastSkip = {seat, id: G.chaosSeq}   // public toast: "<seat> skipped" (~1.2s)
         if (events) events.endTurn()
     }
 
