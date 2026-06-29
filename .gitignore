@@ -31,3 +31,5 @@ yarn-error.log*
 .copilot-memory.md
 .copilot-memory.md.bak-*
 .playwright-mcp/
+.agents/
+skills-lock.json
