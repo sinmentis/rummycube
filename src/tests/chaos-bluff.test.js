@@ -7,6 +7,7 @@ import {Client} from 'boardgame.io/client';
 import {Local} from 'boardgame.io/multiplayer';
 import {makeMatch} from './__helpers__/makeMatch';
 import {playAbilityCard, challengeBluff, passBluff, drawNormal} from '../rummikub/abilities/moves';
+import {playerView} from '../rummikub/playerView';
 import {getPlayerHandTiles} from '../rummikub/projection';
 import {RedJoker} from '../rummikub/util';
 import {HAND_GRID_ID} from '../rummikub/constants';
@@ -112,6 +113,18 @@ describe('passBluff / no challenge', () => {
     playAbilityCard({G, ctx, playerID: '0', events: evStub()}, 'peek-0', '1', {faceDown: true, declaredType: 'shield'});
     expect(challengeBluff({G, ctx, playerID: '2', events: evStub(), random: {Number: () => 0}})).toBe(INVALID);
     expect(G.pendingBluff).not.toBeNull();
+  });
+});
+
+describe('pass keeps the real type hidden (no-reveal leak)', () => {
+  test('opponent view of abilityDiscard shows declared, never real, after passBluff', () => {
+    const G = gWith([card('peek')]);
+    playAbilityCard({G, ctx, playerID: '0', events: evStub()}, 'peek-0', '1', {faceDown: true, declaredType: 'shield'});
+    passBluff({G, ctx, playerID: '1', events: evStub()});
+    const v = playerView({G: JSON.parse(JSON.stringify(G)), ctx, playerID: '1'});
+    const types = v.abilityDiscard.map(c => c.type);
+    expect(types).not.toContain('peek');   // real type never revealed
+    expect(types).toContain('shield');     // declared shown
   });
 });
 

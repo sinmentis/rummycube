@@ -151,11 +151,16 @@ export function playAbilityCard({G, ctx, playerID, events, random}, cardId, targ
     G.abilityDiscard.push(card);
 }
 
-// Settle a pending bluff to its discard pile. Voided keeps a redacted shell so no
-// real type leaks; otherwise the true card is shown. Always clears pendingBluff.
-function discardBluff(G, voided) {
+// Settle a pending bluff to its discard pile. 'void'/'reveal' (caught bluffs) show
+// the real card; 'pass' (unchallenged) keeps it hidden — discards a declared-typed
+// shell so opponents never read the real type. Always clears pendingBluff.
+function discardBluff(G, mode) {
     if (!G.abilityDiscard) G.abilityDiscard = [];
-    G.abilityDiscard.push(voided ? {id: G.pendingBluff.cardId, type: G.pendingBluff.real} : G.pendingBluff.card);
+    const b = G.pendingBluff;
+    const entry = mode === 'reveal' ? b.card
+        : mode === 'void' ? {id: b.cardId, type: b.real}
+            : {id: b.cardId, type: b.declared};
+    G.abilityDiscard.push(entry);
     G.pendingBluff = null;
 }
 
@@ -166,12 +171,12 @@ function canRespondBluff(G, playerID) {
     return playerID !== b.actor;
 }
 
-// Pass-resolve: declared effect applies face-up, card discarded, no reveal. Shared
-// by passBluff and the onTurnEnd timeout default so an unanswered bluff never stalls.
+// Pass-resolve: declared effect applies face-up, card discarded with NO reveal.
+// Shared by passBluff and the onTurnEnd timeout default so a bluff never stalls.
 export function resolveBluffPass(G, ctx, events, random) {
     const b = G.pendingBluff;
     applyEffect(G, ctx, b.actor, b.declared, b.target, events, random);
-    discardBluff(G, false);
+    discardBluff(G, 'pass');
 }
 
 // Challenge: SUCCESS (lied) -> challenger sheds 1 random tile to pool, actor draws 2,
@@ -188,11 +193,11 @@ export function challengeBluff({G, ctx, playerID, events, random}) {
             G.tilesPool.push(Number(id));
         }
         drawNormal(G, ctx, b.actor, BLUFF_PENALTY);
-        discardBluff(G, true);
+        discardBluff(G, 'void');
     } else {
         drawNormal(G, ctx, playerID, BLUFF_PENALTY);
-        resolveBluffPass(G, ctx, events, random);
-        return endBluff(events);
+        applyEffect(G, ctx, b.actor, b.declared, b.target, events, random);
+        discardBluff(G, 'reveal'); // truthful + caught: the real card is shown
     }
     endBluff(events);
 }
