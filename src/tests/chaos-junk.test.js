@@ -1,5 +1,5 @@
 // src/tests/chaos-junk.test.js
-import {playAbilityCard} from '../rummikub/abilities/moves';
+import {playAbilityCard, acceptJunk} from '../rummikub/abilities/moves';
 import {getPlayerHandTiles} from '../rummikub/projection';
 
 const INVALID = 'INVALID_MOVE';
@@ -24,14 +24,15 @@ function gWith(cards, opts = {}) {
 const ctx = {currentPlayer: '0'};
 
 test.each([['junk2', 2], ['junk3', 3], ['junk4', 4]])(
-  '%s forces target to draw N tiles, pool shrinks by N, card discarded',
+  '%s defers: sets pendingJunk N, draws nothing yet, card discarded',
   (type, n) => {
     const G = gWith([junk(type)]);
     const before = G.tilesPool.length;
     const r = playAbilityCard({G, ctx, playerID: '0'}, `${type}-0`, '1');
     expect(r).toBeUndefined();
-    expect(getPlayerHandTiles(G, '1')).toHaveLength(n);
-    expect(G.tilesPool.length).toBe(before - n);
+    expect(G.pendingJunk).toEqual({amount: n, target: '1', from: '0'});
+    expect(getPlayerHandTiles(G, '1')).toHaveLength(0);   // not yet
+    expect(G.tilesPool.length).toBe(before);              // pool untouched until accept
     expect(G.abilityHands['0']).toHaveLength(0);
     expect(G.abilityDiscard.map(c => c.id)).toContain(`${type}-0`);
   },
@@ -64,9 +65,11 @@ test('not your turn -> INVALID, no mutation', () => {
   expect(G.tilesPool).toHaveLength(10);
 });
 
-test('pool shorter than N: draws up to what remains', () => {
+test('acceptJunk draws pendingJunk amount up to what the pool has, then clears', () => {
   const G = gWith([junk('junk4')], {pool: [201, 202]});
   playAbilityCard({G, ctx, playerID: '0'}, 'junk4-0', '1');
+  acceptJunk({G, ctx, playerID: '1'});
   expect(getPlayerHandTiles(G, '1')).toHaveLength(2);
   expect(G.tilesPool).toHaveLength(0);
+  expect(G.pendingJunk).toBeFalsy();
 });

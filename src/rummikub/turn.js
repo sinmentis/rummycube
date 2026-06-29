@@ -10,6 +10,7 @@ import {
 import {original} from "immer"
 import {logger} from './logger.js';
 import {settleJokerBombs} from "./abilities/jokerBomb.js";
+import {resolveJunk} from "./abilities/moves.js";
 
 
 // Disconnected-seat tuning. Both are [PLACEHOLDER] pending Game Design / Product:
@@ -126,6 +127,9 @@ function onTurnBegin({G, ctx, events, random}) {
 function onTurnEnd({G, ctx, events, random}) {
     logger.debug('ON TURN END', new Date())
     G.timerExpireAt = null
+    // SP2a-T2: timeout default = accept. An unanswered junk resolves when the turn
+    // ends so the interrupt never stalls turn flow (mirrors forceEndTurn's soft-timer).
+    if (G.pendingJunk) resolveJunk(G, ctx, G.pendingJunk.target, G.pendingJunk.amount)
     if (G.jokerHeat) settleJokerBombs({G, ctx, random, events})
     checkGameOver(G, ctx, events)
 }
