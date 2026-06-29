@@ -30,6 +30,7 @@ const SERVER_GRAPH_MODULES = [
   '../rummikub/abilities/cards.js',
   '../rummikub/abilities/moves.js',
   '../rummikub/abilities/jokerBomb.js',
+  '../rummikub/abilities/wheel.js',
 ];
 
 test.each(SERVER_GRAPH_MODULES)('%s (server-imported) references no DOM globals', (rel) => {

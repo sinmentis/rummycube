@@ -1,9 +1,10 @@
 // src/rummikub/abilities/moves.js
 import {INVALID_MOVE, Stage} from 'boardgame.io/dist/cjs/core.js';
 import {pushTilesToGrid} from '../orderTiles.js';
+import {spinWheel} from './wheel.js';
 import {HAND_ROWS, HAND_COLS, HAND_GRID_ID} from '../constants.js';
 
-const PLAYABLE_TYPES = new Set(['peek', 'shield', 'junk2', 'junk3', 'junk4']);
+const PLAYABLE_TYPES = new Set(['peek', 'shield', 'junk2', 'junk3', 'junk4', 'wheel']);
 const JUNK_AMOUNT = {junk2: 2, junk3: 3, junk4: 4};
 
 // Pour `amount` tiles from the pool into target's hand. Shared by acceptJunk (the
@@ -59,7 +60,7 @@ export function transferJunk({G, ctx, playerID, events}, cardId, nextTarget) {
 // Play one ability card face-up on your turn. Resolves peek + shield + junk +N;
 // other types reject (their effects land in later sub-projects). Bluff/face-down
 // is SP5. Effect applies immediately at move time (never an undoable interim).
-export function playAbilityCard({G, ctx, playerID, events}, cardId, target) {
+export function playAbilityCard({G, ctx, playerID, events, random}, cardId, target) {
     if (playerID !== ctx.currentPlayer) return INVALID_MOVE;
     const hand = G.abilityHands && G.abilityHands[playerID];
     if (!hand) return INVALID_MOVE;
@@ -75,6 +76,8 @@ export function playAbilityCard({G, ctx, playerID, events}, cardId, target) {
     } else if (card.type === 'shield') {
         if (!G.shields) G.shields = {};
         G.shields[playerID] = true;
+    } else if (card.type === 'wheel') {
+        spinWheel({G, ctx, random}); // public Wheel: immediate object x action effect into G.lastWheel
     } else if (JUNK_AMOUNT[card.type]) {
         if (target == null) return INVALID_MOVE;
         if (G.pendingJunk) return INVALID_MOVE; // one junk chain at a time — don't overwrite a pending interrupt
