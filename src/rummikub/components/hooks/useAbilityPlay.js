@@ -1,4 +1,5 @@
 import {useCallback, useState} from 'react';
+import {SINGLE_TARGET_DECLARES} from '../../abilities/cardMeta';
 
 // SP1b T5: the play controller for the viewer's chaos ability hand. Kept as a
 // standalone hook (not Board-local state) so the peek targeting flow is
@@ -18,24 +19,39 @@ const NEEDS_TARGET = new Set(['peek', 'junk2', 'junk3', 'junk4']);
 
 export default function useAbilityPlay(moves) {
     const [pendingPeek, setPendingPeek] = useState(null);
+    const [faceDown, setFaceDown] = useState(false);
+    const [declared, setDeclared] = useState('peek');
 
     const playCard = useCallback((card) => {
         if (!card) return;
+        if (faceDown && declared) {
+            const opts = {faceDown: true, declaredType: declared};
+            if (SINGLE_TARGET_DECLARES.has(declared)) {
+                setPendingPeek({...card, opts});       // single-target claim: pick a victim first
+            } else {
+                moves.playAbilityCard(card.id, undefined, opts); // table-wide (wheel): fire now
+            }
+            return;
+        }
         if (card.type === 'shield') {
             moves.playAbilityCard(card.id);
         } else if (NEEDS_TARGET.has(card.type)) {
             setPendingPeek(card);
         }
         // other types are inert here — no dispatch.
-    }, [moves]);
+    }, [moves, faceDown, declared]);
 
     const pickTarget = useCallback((pid) => {
         if (!pendingPeek) return;
-        moves.playAbilityCard(pendingPeek.id, pid);
+        if (pendingPeek.opts) {
+            moves.playAbilityCard(pendingPeek.id, pid, pendingPeek.opts);
+        } else {
+            moves.playAbilityCard(pendingPeek.id, pid);
+        }
         setPendingPeek(null);
     }, [moves, pendingPeek]);
 
     const cancelTarget = useCallback(() => setPendingPeek(null), []);
 
-    return {pendingPeek, playCard, pickTarget, cancelTarget};
+    return {pendingPeek, playCard, pickTarget, cancelTarget, faceDown, setFaceDown, declared, setDeclared};
 }

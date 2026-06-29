@@ -1,32 +1,48 @@
 import React from 'react';
 import AbilityCard from './AbilityCard';
-import {PLAYABLE_TYPES} from '../abilities/cardMeta';
+import {PLAYABLE_TYPES, CARD_META, DECLARE_TYPES} from '../abilities/cardMeta';
 import './abilities.css';
 
 // The viewer's own ability-card hand. Desktop: an overlapping ledge-fan
-// (.ability-fan) where only the front card shows its full face and the cards
-// behind it tuck away to a clean rarity-colored top edge — no label bleed
-// (owner feedback from the mockup rounds); hovering spreads the fan and reveals
-// every face. Mobile: the same row reflows into a horizontally-swipeable drawer
-// (.ability-drawer), so a big hand is just a longer scroll — no hand limit.
+// (.ability-fan); hovering spreads it. Mobile: a swipeable drawer. Face-up,
+// playable types come from PLAYABLE_TYPES; the rest render greyed-out and inert.
 //
-// Playable types come from PLAYABLE_TYPES (peek/shield/junk2/junk3/junk4); every
-// other type renders greyed-out and inert. Clicking a playable card calls
-// onPlay(card); shield/peek/junk routing lives in useAbilityPlay.
-//
-// Privacy: this renders ONLY the viewer's own cards passed in `cards` — it never
-// reads any other player's hand.
-export default function AbilityHand({cards = [], onPlay}) {
+// SP5 bluff: a "Play face-down" toggle + a Declare picker let the viewer claim a
+// card type. With it on, ANY card is playable (you can bluff a gold card as peek);
+// clicking dispatches a face-down play with the chosen claim. onPlay routing lives
+// in useAbilityPlay. Privacy: renders ONLY the viewer's own cards passed in `cards`.
+export default function AbilityHand({cards = [], onPlay, faceDown = false, declared = 'peek', onToggleFaceDown, onDeclare}) {
+    const showBluff = typeof onToggleFaceDown === 'function';
     return (
-        <div className="ability-fan ability-drawer">
-            {cards.map((card) => (
-                <AbilityCard
-                    key={card.id}
-                    card={card}
-                    onClick={onPlay}
-                    disabled={!PLAYABLE_TYPES.has(card.type)}
-                />
-            ))}
+        <div className="ability-zone">
+            {showBluff && (
+                <div className={'bluff-bar' + (faceDown ? ' on' : '')}>
+                    <label className="bluff-toggle">
+                        <input type="checkbox" checked={faceDown} onChange={(e) => onToggleFaceDown(e.target.checked)}/>
+                        Play face-down
+                    </label>
+                    {faceDown && (
+                        <label className="bluff-claim">
+                            Claim
+                            <select value={declared} onChange={(e) => onDeclare && onDeclare(e.target.value)}>
+                                {DECLARE_TYPES.map((t) => (
+                                    <option key={t} value={t}>{(CARD_META[t] || {name: t}).name}</option>
+                                ))}
+                            </select>
+                        </label>
+                    )}
+                </div>
+            )}
+            <div className="ability-fan ability-drawer">
+                {cards.map((card) => (
+                    <AbilityCard
+                        key={card.id}
+                        card={card}
+                        onClick={onPlay}
+                        disabled={!faceDown && !PLAYABLE_TYPES.has(card.type)}
+                    />
+                ))}
+            </div>
         </div>
     );
 }

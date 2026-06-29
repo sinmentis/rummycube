@@ -30,6 +30,7 @@ import AbilityCodex from "./AbilityCodex";
 import AbilityHand from "./AbilityHand";
 import PeekPanel from "./PeekPanel";
 import JunkAlert from "./JunkAlert";
+import BluffPrompt from "./BluffPrompt";
 import CastBeam from "./CastBeam";
 import CoachCard from "./CoachCard";
 import HintsToggle from "./HintsToggle";
@@ -347,7 +348,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     // parks in `pendingPeek` and waits for the player to click an opponent avatar
     // (targeting mode below), then dispatches playAbilityCard(cardId, pid). Kept in
     // a standalone, unit-tested hook so the targeting flow doesn't depend on Board.
-    const {pendingPeek, playCard, pickTarget, cancelTarget} = useAbilityPlay(moves);
+    const {pendingPeek, playCard, pickTarget, cancelTarget, faceDown, setFaceDown, declared, setDeclared} = useAbilityPlay(moves);
     // SP1b T6 (juice): when a peek is cast, briefly draw a beam from your avatar to
     // the picked opponent. We anchor it off the live DOM rects (in board-pixel
     // space) at the click, then auto-clear it after a beat — purely cosmetic, so a
@@ -571,6 +572,18 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                 onTransfer={(cardId, pid) => moves.transferJunk(cardId, pid)}/>
         )
         : null;
+    // SP5 T2: face-down bluff challenge interrupt. Only chaos, only while a bluff
+    // is pending; BluffPrompt shows nothing to the actor / non-challengers.
+    const bluffPrompt = isChaos && G.pendingBluff
+        ? (
+            <BluffPrompt
+                pendingBluff={G.pendingBluff}
+                playerID={playerID}
+                matchData={matchData || []}
+                onChallenge={() => moves.challengeBluff()}
+                onPass={() => moves.passBluff()}/>
+        )
+        : null;
 
     const selfData = (matchData || [])[Number(playerID)]
     const bannerLabel = showTurnTimer ? turnBannerLabel(ctx.currentPlayer, playerID, matchData) : null
@@ -688,6 +701,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                 {isChaos && castBeam && <CastBeam from={castBeam.from} to={castBeam.to}/>}
                 {peekPanel}
                 {junkAlert}
+                {bluffPrompt}
                 {peekTargetingBanner}
                 {boardGrid}
                 <div className={'hand-buttons'}>
@@ -752,7 +766,9 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                    playerID={playerID}/>
         {G.mode === 'chaos' && <AbilityCodex/>}
         {G.mode === 'chaos' &&
-            <AbilityHand cards={G.abilityHands?.[playerID] ?? []} onPlay={playCard}/>}
+            <AbilityHand cards={G.abilityHands?.[playerID] ?? []} onPlay={playCard}
+                         faceDown={faceDown} declared={declared}
+                         onToggleFaceDown={setFaceDown} onDeclare={setDeclared}/>}
     </DndContext>
 }
 
