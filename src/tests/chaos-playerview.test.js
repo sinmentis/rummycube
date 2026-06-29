@@ -36,3 +36,17 @@ test('peek widens only the granted target: own visible, non-granted hidden, prev
   expect(v.tilePositions['7']).toBeUndefined();    // non-granted opponent stays hidden
   expect(v.prevTilePositions['6']).toBeUndefined(); // prior snapshot stays peek-free while grant active
 });
+
+// SP2a: pendingJunk is public board state (who owes how many) — cloneDeep must pass
+// it through to every seat unstripped so both junker and target render it, while
+// opponent ability hands stay hidden. The incoming-junk alert UI is SP2b.
+test('pendingJunk passes through unstripped to both target and a third party', () => {
+  const pending = {amount: 5, target: '1', from: '0'};
+  for (const viewer of ['0', '1']) {
+    const G = baseG(); G.pendingJunk = pending;
+    const v = playerView({G, ctx: {currentPlayer: '0'}, playerID: viewer});
+    const opponent = viewer === '0' ? '1' : '0';
+    expect(v.pendingJunk).toEqual(pending);             // exposed, not stripped
+    expect(v.abilityHands[opponent]).toBeUndefined();   // opponent hands still hidden
+  }
+});
