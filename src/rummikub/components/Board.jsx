@@ -45,6 +45,7 @@ import {usePersistentFlag} from "./hooks/usePersistentFlag";
 import {useGiveUpConfirm} from "./hooks/useGiveUpConfirm";
 import {useSyncingCue} from "./hooks/useSyncingCue";
 import {useComboCelebration} from "./hooks/useComboCelebration";
+import {useLastPlayHighlight} from "./hooks/useLastPlayHighlight";
 import {useDropDispatch} from "./hooks/useDropDispatch";
 import useAbilityPlay from "./hooks/useAbilityPlay";
 import {seatConnected} from "../seats/seatConnection";
@@ -152,6 +153,8 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         G, matchData, playerID, activeTile,
         selectedTiles: state.selectedTiles, clearSyncing,
     });
+    // Everyone briefly sees the previous play's committed tiles highlighted.
+    const lastPlayTiles = useLastPlayHighlight(G.lastPlay);
     const chatBubbles = useChatBubbles(chatMessages, {ttlMs: 5000});
     const [showInvalidTiles, setShowInvalidTiles] = useState(false);
     const [validTiles, setValidTiles] = useState([])
@@ -519,7 +522,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             setHoverPosition={setHoverPosition}
             jokerHeat={G.jokerHeat}
             lockedTiles={isChaos ? lockedTiles : undefined}
-            newlyAdded={[]}
+            newlyAdded={lastPlayTiles}
         /></div>)
 
     const handGrid = (
