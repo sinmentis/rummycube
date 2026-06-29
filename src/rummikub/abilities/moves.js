@@ -25,8 +25,34 @@ export function resolveJunk(G, ctx, target, amount) {
 export function acceptJunk({G, ctx, playerID, events}) {
     if (G.mode !== 'chaos') return INVALID_MOVE;
     if (!G.pendingJunk || G.pendingJunk.target !== playerID) return INVALID_MOVE;
-    resolveJunk(G, ctx, playerID, G.pendingJunk.amount);
+    if (G.shields && G.shields[playerID]) {
+        G.shields[playerID] = false; // shield absorbs the whole stacked chain; nobody draws
+        G.pendingJunk = null;
+    } else {
+        resolveJunk(G, ctx, playerID, G.pendingJunk.amount);
+    }
     if (events) events.setActivePlayers({all: Stage.NULL});
+}
+
+// SP2a-T3: instead of accepting, a target holding their own junk card may stack it
+// onto the pending chain and pass it on. Adds JUNK_AMOUNT, retargets, and re-enters
+// respondJunk for the next holder. Uncapped: the chain grows until someone accepts
+// (draws the whole stack) or shield-absorbs it. Gated to the current target.
+export function transferJunk({G, playerID, events}, cardId, nextTarget) {
+    if (G.mode !== 'chaos') return INVALID_MOVE;
+    if (!G.pendingJunk || G.pendingJunk.target !== playerID) return INVALID_MOVE;
+    if (nextTarget == null || nextTarget.toString() === playerID) return INVALID_MOVE;
+    const hand = G.abilityHands && G.abilityHands[playerID];
+    if (!hand) return INVALID_MOVE;
+    const idx = hand.findIndex(c => c.id === cardId);
+    if (idx < 0 || !JUNK_AMOUNT[hand[idx].type]) return INVALID_MOVE;
+    const card = hand[idx];
+    const tgt = nextTarget.toString();
+    G.pendingJunk = {amount: G.pendingJunk.amount + JUNK_AMOUNT[card.type], target: tgt, from: playerID};
+    hand.splice(idx, 1);
+    if (!G.abilityDiscard) G.abilityDiscard = [];
+    G.abilityDiscard.push(card);
+    if (events) events.setActivePlayers({currentPlayer: Stage.NULL, value: {[tgt]: 'respondJunk'}});
 }
 
 // Play one ability card face-up on your turn. Resolves peek + shield + junk +N;

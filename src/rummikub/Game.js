@@ -6,7 +6,7 @@ import {onPlayPhaseBegin, onTurnBegin, onTurnEnd} from "./turn.js";
 import {GAME_NAME, HAND_COLS, HAND_GRID_ID, HAND_ROWS, TILES_TO_DRAW} from "./constants.js";
 import {orderByColorVal, orderByValColor} from "./orderTiles.js";
 import {buildAbilityDeck} from "./abilities/cards.js";
-import {playAbilityCard, acceptJunk} from "./abilities/moves.js";
+import {playAbilityCard, acceptJunk, transferJunk} from "./abilities/moves.js";
 
 
 const Rummikub = {
@@ -112,6 +112,7 @@ const Rummikub = {
         _setConnection,
         playAbilityCard,
         acceptJunk,
+        transferJunk,
         clearRecentlyDrawnTiles: ({G, ctx}) => {
             G.recentlyDrawnTiles = []
         }
@@ -119,9 +120,9 @@ const Rummikub = {
     turn: {
         activePlayers: {all: Stage.NULL},
         stages: {
-            // SP2a-T2: junk transfer interrupt. A's junk drops the target into here;
-            // they acceptJunk (draw now) or time out -> onTurnEnd auto-accepts.
-            respondJunk: {moves: {acceptJunk}},
+            // SP2a-T2/T3: junk transfer interrupt. A's junk drops the target into here;
+            // they acceptJunk (draw now), transferJunk (stack + pass on), or time out.
+            respondJunk: {moves: {acceptJunk, transferJunk}},
         },
         onBegin: onTurnBegin,
         onEnd: onTurnEnd,
