@@ -54,7 +54,7 @@ const PlayerAvatarWithTimer = ({name, matchId, seatId, tiles, isActive, isConnec
     }, [timeLeft, totalTime]);
 
     return (
-        <div className="player">
+        <div className="player" data-seat={seatId}>
             <div className={`avatar ${isActive ? "active" : ""} ${isConnected === false ? "offline" : ""} ${targetable ? "targetable" : ""}`}
                  {...targetProps}
                  style={{

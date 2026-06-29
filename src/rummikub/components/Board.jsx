@@ -10,6 +10,7 @@ import {
 } from "../constants";
 import Sidebar from "./Sidebar";
 import TableSeats from "./TableSeats";
+import {SINGLE_TARGET_DECLARES} from "../abilities/cardMeta";
 import PlayerAvatarWithTimer from "./PlayerAvatar";
 import TurnDeadlineWatcher from "./TurnDeadlineWatcher";
 import {extractSeqs, isBoardHasNewTiles, isBoardValid, isSubmitAccepted, submitRejectReason} from "../moveValidation";
@@ -31,7 +32,6 @@ import AbilityHand from "./AbilityHand";
 import PeekPanel from "./PeekPanel";
 import JunkAlert from "./JunkAlert";
 import StatusBadges from "./StatusBadges";
-import BluffPrompt from "./BluffPrompt";
 import CastBeam from "./CastBeam";
 import CoachCard from "./CoachCard";
 import HintsToggle from "./HintsToggle";
@@ -358,20 +358,32 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     const [castBeam, setCastBeam] = useState(null);
     const beamTimerRef = useRef(null);
     useEffect(() => () => clearTimeout(beamTimerRef.current), []);
-    const handlePickTarget = useCallback((pid, e) => {
+    const handlePickTarget = useCallback((pid) => { pickTarget(pid); }, [pickTarget]);
+    // T4: every client flashes the beam off the public G.lastCast transient (mirrors
+    // lastWheel) — caster->target by [data-seat], or an "affects all" felt glow for
+    // no-target casts. id-keyed + mount-seeded so a cast already on G can't re-pop on
+    // reconnect, and reduced-motion drops the travel (CSS) but keeps the result.
+    const cast = G.lastCast;
+    const castId = cast ? cast.id : null;
+    const seenCastRef = useRef(castId);
+    useEffect(() => {
+        if (castId == null || castId === seenCastRef.current) return;
+        seenCastRef.current = castId;
         const board = boardRef.current;
-        const targetEl = e?.currentTarget;
-        if (board && targetEl) {
-            const b = board.getBoundingClientRect();
-            const center = (r) => ({x: r.left - b.left + r.width / 2, y: r.top - b.top + r.height / 2});
-            const selfEl = board.querySelector('.rack-self .avatar');
-            const from = selfEl ? center(selfEl.getBoundingClientRect()) : {x: b.width / 2, y: b.height};
-            setCastBeam({from, to: center(targetEl.getBoundingClientRect())});
-            clearTimeout(beamTimerRef.current);
-            beamTimerRef.current = setTimeout(() => setCastBeam(null), 1100);
-        }
-        pickTarget(pid);
-    }, [pickTarget]);
+        if (!board) return;
+        const b = board.getBoundingClientRect();
+        const center = (sel) => {
+            const el = board.querySelector(`[data-seat="${sel}"] .avatar`);
+            if (!el) return null;
+            const r = el.getBoundingClientRect();
+            return {x: r.left - b.left + r.width / 2, y: r.top - b.top + r.height / 2};
+        };
+        const from = center(cast.from);
+        const to = cast.to != null ? center(cast.to) : null;
+        setCastBeam({from, to, type: cast.type, blocked: cast.blocked, affectsAll: cast.to == null});
+        clearTimeout(beamTimerRef.current);
+        beamTimerRef.current = setTimeout(() => setCastBeam(null), 700);
+    }, [castId]);
     useUndoRedoHotkeys({canUndo, canRedo, onUndo: onUndoKey, onRedo: onRedoKey});
 
     // Pass button, used only when there's nothing to submit and no tile to draw.
@@ -536,6 +548,13 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
         const t = setTimeout(cancelTarget, Math.min(ttl, SAFETY_MS));
         return () => clearTimeout(t);
     }, [peekTargeting, lockTargeting, G.timerExpireAt, cancelTarget]);
+    // T4: the bluff challenge anchors to the actor's avatar; only the eligible
+    // challenger sees Challenge/Pass (single-target -> the named target, else any
+    // opponent). The actor and bystanders just read who claimed what.
+    const bluff = isChaos ? G.pendingBluff : null;
+    const bluffCanChallenge = !!bluff && (SINGLE_TARGET_DECLARES.has(bluff.declared)
+        ? String(bluff.target) === String(playerID)
+        : String(bluff.actor) !== String(playerID));
     const tableSeats = (
         <TableSeats
             currentPlayer={ctx.currentPlayer}
@@ -552,6 +571,10 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
             targetable={peekTargeting}
             onPickTarget={handlePickTarget}
             abilityPresence={isChaos ? G.abilityPresence : undefined}
+            bluff={bluff}
+            bluffCanChallenge={bluffCanChallenge}
+            onChallenge={() => moves.challengeBluff()}
+            onPass={() => moves.passBluff()}
         />
     )
 
@@ -619,18 +642,9 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                 onTransfer={(cardId, pid) => moves.transferJunk(cardId, pid)}/>
         )
         : null;
-    // SP5 T2: face-down bluff challenge interrupt. Only chaos, only while a bluff
-    // is pending; BluffPrompt shows nothing to the actor / non-challengers.
-    const bluffPrompt = isChaos && G.pendingBluff
-        ? (
-            <BluffPrompt
-                pendingBluff={G.pendingBluff}
-                playerID={playerID}
-                matchData={matchData || []}
-                onChallenge={() => moves.challengeBluff()}
-                onPass={() => moves.passBluff()}/>
-        )
-        : null;
+    // SP5 T2 / T4: face-down bluff challenge now anchors to the actor's avatar (the
+    // .bluff-bubble in TableSeats above), so the table reads who claimed what; the
+    // center band no longer carries a duplicate prompt. BluffPrompt is unchanged.
 
     const selfData = (matchData || [])[Number(playerID)]
     const bannerLabel = showTurnTimer ? turnBannerLabel(ctx.currentPlayer, playerID, matchData) : null
@@ -744,13 +758,15 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                     timerExpireAt={showTurnTimer ? G.timerExpireAt : null}
                     onTimeout={onTurnTimeout}/>
                 {tableSeats}
-                {isChaos && castBeam && <CastBeam from={castBeam.from} to={castBeam.to}/>}
+                {isChaos && castBeam && castBeam.affectsAll &&
+                    <div className="affects-all-glow" aria-hidden="true"/>}
+                {isChaos && castBeam && !castBeam.affectsAll &&
+                    <CastBeam from={castBeam.from} to={castBeam.to} type={castBeam.type} blocked={castBeam.blocked}/>}
                 {peekPanel}
                 {isChaos && <div className="interrupt-band">
                     {timeoutAnnouncement}
                     {wheelToast}
                     {junkAlert}
-                    {bluffPrompt}
                     {peekTargetingBanner}
                     {lockTargetingBanner}
                 </div>}

@@ -110,6 +110,9 @@ function playerView({G, ctx, playerID}) {
         delete view.lastWheel.detail.tiles;
     }
 
+    // T4: G.lastCast (caster->target beam event) is public — no tile identities, so
+    // cloneDeep passes it through unstripped to every client (mirrors lastWheel).
+
     return view;
 }
 

@@ -669,12 +669,79 @@
     stroke: var(--brass-soft, #cda24b);
     stroke-width: 2.5;
 }
+/* Chaos T4 — pulse ring at the target (clean hit) + burst at the shield (blocked).
+   The whole overlay lives ~700ms; the ring/burst expand once then fade. */
+.beam-ring {
+    fill: none;
+    stroke: #ffe9b0;
+    stroke-width: 3;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: cast-ring .7s ease-out forwards;
+}
+.cast-beam--blocked .beam-core, .cast-beam--blocked .beam-flow { opacity: .55; }
+.beam-burst {
+    fill: none;
+    stroke: #8fd4ff;
+    stroke-width: 4;
+    transform-box: fill-box;
+    transform-origin: center;
+    filter: drop-shadow(0 0 7px rgba(143, 212, 255, .9));
+    animation: cast-burst .55s ease-out forwards;
+}
+@keyframes cast-ring { 0% { opacity: .9; transform: scale(.4); } 100% { opacity: 0; transform: scale(2.1); } }
+@keyframes cast-burst { 0% { opacity: 1; transform: scale(.3); } 100% { opacity: 0; transform: scale(2.4); } }
+/* No-target casts (wheel/bigwind) hit everyone — a brief felt-wide glow, no beam. */
+.affects-all-glow {
+    position: absolute;
+    inset: 0;
+    z-index: 7;
+    pointer-events: none;
+    background: radial-gradient(circle, rgba(190, 140, 224, .22), transparent 70%);
+    animation: affects-all .7s ease;
+}
+@keyframes affects-all { 0% { opacity: 0; } 35% { opacity: 1; } 100% { opacity: 0; } }
 
 /* Accessibility: degrade to a still result — no travelling spark, no gain pulse. */
 @media (prefers-reduced-motion: reduce) {
     .beam-flow { animation: none; }
     .ability-presence::after { animation: none; }
+    .beam-ring, .beam-burst { animation: none; opacity: .8; }
+    .affects-all-glow { animation: none; opacity: .35; }
 }
+
+/* T4 bluff bubble — anchored above the actor's avatar in .table-seats. Pure
+   chrome; the BluffPrompt note still drives the timed auto-pass. */
+.bluff-bubble {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9;
+    max-width: 220px;
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #3a2960, #25184a);
+    border: 1px solid rgba(190, 140, 224, .6);
+    box-shadow: var(--elev-1, 0 2px 6px rgba(0, 0, 0, .3));
+    color: var(--cream, #f5edd8);
+    font-size: 12px;
+}
+.bluff-bubble::after {
+    content: "▼";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #25184a;
+    font-size: 11px;
+}
+.bluff-bubble__acts { display: flex; gap: 6px; }
+.bluff-bubble__acts .rummikub-button { padding: 3px 8px; font-size: 11px; }
 
 /* ============================================================================
    SP2b T2 — incoming-junk interrupt. Target sees accept/transfer; bystanders

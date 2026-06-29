@@ -12,7 +12,19 @@ export const FORCE_DRAW = 3;
 // SP5: single-target declares route the challenge to the named target; everything
 // else (wheel/bigwind) is table-wide, so every opponent gets challenge rights.
 const SINGLE_TARGET = new Set(['peek', 'shield', 'junk2', 'junk3', 'junk4', 'skip', 'lock', 'force']);
+// T4: cards whose beam runs caster->target avatar. shield/wheel/bigwind hit no one
+// (self/all) and lock targets a board row, so they carry to:null (affects-all glow).
+const PLAYER_TARGET = new Set(['peek', 'skip', 'force', 'junk2', 'junk3', 'junk4']);
 const BLUFF_PENALTY = 2;
+
+// T4: broadcast a transient G.lastCast so EVERY client can flash the caster->target
+// beam (mirrors lastWheel/lastTimeout). A bumped id makes each play a fresh event
+// even when content repeats; playerView passes it through unstripped (no tile ids).
+function recordCast(G, actor, type, target, blocked) {
+    G.castSeq = (G.castSeq || 0) + 1;
+    const to = PLAYER_TARGET.has(type) && target != null ? target.toString() : null;
+    G.lastCast = {from: actor.toString(), to, type, blocked: !!blocked, id: G.castSeq};
+}
 
 // Pour `n` normal (non-joker) tiles from the pool into a seat's hand. Penalty draws
 // (junk auto-resolve, bluff penalties) are normal-only: jokers are kept in the pool.
@@ -111,6 +123,7 @@ export function transferJunk({G, ctx, playerID, events}, cardId, nextTarget) {
 // face-up playAbilityCard and bluff resolution (declared effect on pass / lost
 // challenge). Junk re-enters its own interrupt; unsupported declares are inert.
 function applyEffect(G, ctx, actor, type, target, events, random) {
+    let blocked = false;
     if (type === 'peek') {
         if (target == null) return;
         if (!G.peekGrants) G.peekGrants = {};
@@ -139,11 +152,14 @@ function applyEffect(G, ctx, actor, type, target, events, random) {
         const tgt = target.toString();
         if (G.shields && G.shields[tgt]) {
             G.shields[tgt] = false;
+            blocked = true; // shield absorbs the junk -> beam reads as broken + burst
         } else {
             G.pendingJunk = {amount: JUNK_AMOUNT[type], target: tgt, from: actor};
             if (events) events.setActivePlayers({currentPlayer: Stage.NULL, value: {[tgt]: 'respondJunk'}});
         }
     }
+    // T4: every resolved effect emits a public beam event so the whole table sees it.
+    recordCast(G, actor, type, target, blocked);
 }
 
 // Play one ability card. Face-up: resolves peek/shield/junk/wheel now. Face-down
