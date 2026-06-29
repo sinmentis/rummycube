@@ -23,6 +23,17 @@ test('peek waits for a target, then dispatches playAbilityCard(cardId, pid)', ()
   expect(result.current.pendingPeek).toBeFalsy();               // cleared after target
 });
 
+test.each(['junk2', 'junk3', 'junk4'])('%s waits for a target, then dispatches playAbilityCard(cardId, pid)', (type) => {
+  const moves = {playAbilityCard: jest.fn()};
+  const {result} = renderHook(() => useAbilityPlay(moves));
+  act(() => result.current.playCard({id: `${type}-0`, type}));
+  expect(moves.playAbilityCard).not.toHaveBeenCalled();          // parks, no target yet
+  expect(result.current.pendingPeek).toMatchObject({id: `${type}-0`});
+  act(() => result.current.pickTarget('1'));
+  expect(moves.playAbilityCard).toHaveBeenCalledWith(`${type}-0`, '1');
+  expect(result.current.pendingPeek).toBeFalsy();
+});
+
 test('non-playable types are ignored by the controller', () => {
   const moves = {playAbilityCard: jest.fn()};
   const {result} = renderHook(() => useAbilityPlay(moves));

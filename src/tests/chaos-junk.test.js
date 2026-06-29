@@ -65,6 +65,15 @@ test('not your turn -> INVALID, no mutation', () => {
   expect(G.tilesPool).toHaveLength(10);
 });
 
+test('second junk while one is already pending -> INVALID, original pendingJunk untouched', () => {
+  const G = gWith([junk('junk2'), {id: 'junk3-0', type: 'junk3', rarity: 'white'}]);
+  playAbilityCard({G, ctx, playerID: '0'}, 'junk2-0', '1');
+  expect(G.pendingJunk).toEqual({amount: 2, target: '1', from: '0'});
+  expect(playAbilityCard({G, ctx, playerID: '0'}, 'junk3-0', '1')).toBe(INVALID);
+  expect(G.pendingJunk).toEqual({amount: 2, target: '1', from: '0'}); // not overwritten
+  expect(G.abilityHands['0'].map(c => c.id)).toContain('junk3-0');     // 2nd junk kept
+});
+
 test('acceptJunk draws pendingJunk amount up to what the pool has, then clears', () => {
   const G = gWith([junk('junk4')], {pool: [201, 202]});
   playAbilityCard({G, ctx, playerID: '0'}, 'junk4-0', '1');

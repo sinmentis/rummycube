@@ -38,10 +38,11 @@ export function acceptJunk({G, ctx, playerID, events}) {
 // onto the pending chain and pass it on. Adds JUNK_AMOUNT, retargets, and re-enters
 // respondJunk for the next holder. Uncapped: the chain grows until someone accepts
 // (draws the whole stack) or shield-absorbs it. Gated to the current target.
-export function transferJunk({G, playerID, events}, cardId, nextTarget) {
+export function transferJunk({G, ctx, playerID, events}, cardId, nextTarget) {
     if (G.mode !== 'chaos') return INVALID_MOVE;
     if (!G.pendingJunk || G.pendingJunk.target !== playerID) return INVALID_MOVE;
     if (nextTarget == null || nextTarget.toString() === playerID) return INVALID_MOVE;
+    if (ctx && ctx.numPlayers != null && Number(nextTarget) >= ctx.numPlayers) return INVALID_MOVE;
     const hand = G.abilityHands && G.abilityHands[playerID];
     if (!hand) return INVALID_MOVE;
     const idx = hand.findIndex(c => c.id === cardId);
@@ -76,6 +77,7 @@ export function playAbilityCard({G, ctx, playerID, events}, cardId, target) {
         G.shields[playerID] = true;
     } else if (JUNK_AMOUNT[card.type]) {
         if (target == null) return INVALID_MOVE;
+        if (G.pendingJunk) return INVALID_MOVE; // one junk chain at a time — don't overwrite a pending interrupt
         const tgt = target.toString();
         if (G.shields && G.shields[tgt]) {
             G.shields[tgt] = false; // shield absorbs the junk; nobody draws

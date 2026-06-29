@@ -29,5 +29,5 @@ export const RARITY_LABEL = Object.freeze({white: 'Common', blue: 'Uncommon', go
 // Low-to-high rarity order, for sorting and rendering rarity groups.
 export const RARITY_ORDER = Object.freeze(['white', 'blue', 'gold']);
 
-// SP1b ships only these two types as playable; the hand greys out the rest.
-export const PLAYABLE_TYPES = new Set(['peek', 'shield']);
+// SP2b ships peek + shield + junk +N as playable; the hand greys out the rest.
+export const PLAYABLE_TYPES = new Set(['peek', 'shield', 'junk2', 'junk3', 'junk4']);

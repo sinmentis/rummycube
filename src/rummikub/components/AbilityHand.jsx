@@ -10,9 +10,9 @@ import './abilities.css';
 // every face. Mobile: the same row reflows into a horizontally-swipeable drawer
 // (.ability-drawer), so a big hand is just a longer scroll — no hand limit.
 //
-// SP1b ships only peek/shield as playable (PLAYABLE_TYPES); every other type
-// renders greyed-out and inert. Clicking a playable card calls onPlay(card); the
-// real shield/peek routing lands in Task 5's useAbilityPlay.
+// Playable types come from PLAYABLE_TYPES (peek/shield/junk2/junk3/junk4); every
+// other type renders greyed-out and inert. Clicking a playable card calls
+// onPlay(card); shield/peek/junk routing lives in useAbilityPlay.
 //
 // Privacy: this renders ONLY the viewer's own cards passed in `cards` — it never
 // reads any other player's hand.
