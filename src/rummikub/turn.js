@@ -10,7 +10,7 @@ import {
 import {original} from "immer"
 import {logger} from './logger.js';
 import {settleJokerBombs} from "./abilities/jokerBomb.js";
-import {resolveJunk} from "./abilities/moves.js";
+import {resolveJunk, resolveBluffPass} from "./abilities/moves.js";
 import {spinWheel} from "./abilities/wheel.js";
 import {BOARD_GRID_ID} from "./constants.js";
 
@@ -149,6 +149,8 @@ function onTurnEnd({G, ctx, events, random}) {
     // SP2a-T2: timeout default = accept. An unanswered junk resolves when the turn
     // ends so the interrupt never stalls turn flow (mirrors forceEndTurn's soft-timer).
     if (G.pendingJunk) resolveJunk(G, ctx, G.pendingJunk.target, G.pendingJunk.amount)
+    // SP5-T1: an unchallenged bluff pass-resolves its declared effect on turn end.
+    if (G.pendingBluff) resolveBluffPass(G, ctx, events, random)
     if (G.jokerHeat) settleJokerBombs({G, ctx, random, events})
     // SP3a-T2: a big turn (chaos only) spins the public wheel once, after jokers
     // settle (the wheel skips joker runs, so it never double-charges a bomb).

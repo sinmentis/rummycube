@@ -6,7 +6,7 @@ import {onPlayPhaseBegin, onTurnBegin, onTurnEnd} from "./turn.js";
 import {GAME_NAME, HAND_COLS, HAND_GRID_ID, HAND_ROWS, TILES_TO_DRAW} from "./constants.js";
 import {orderByColorVal, orderByValColor} from "./orderTiles.js";
 import {buildAbilityDeck} from "./abilities/cards.js";
-import {playAbilityCard, acceptJunk, transferJunk} from "./abilities/moves.js";
+import {playAbilityCard, acceptJunk, transferJunk, challengeBluff, passBluff} from "./abilities/moves.js";
 
 
 const Rummikub = {
@@ -113,6 +113,8 @@ const Rummikub = {
         playAbilityCard,
         acceptJunk,
         transferJunk,
+        challengeBluff,
+        passBluff,
         clearRecentlyDrawnTiles: ({G, ctx}) => {
             G.recentlyDrawnTiles = []
         }
@@ -123,6 +125,9 @@ const Rummikub = {
             // SP2a-T2/T3: junk transfer interrupt. A's junk drops the target into here;
             // they acceptJunk (draw now), transferJunk (stack + pass on), or time out.
             respondJunk: {moves: {acceptJunk, transferJunk}},
+            // SP5-T1: bluff face-down play drops challengers here; challengeBluff
+            // (call the lie) or passBluff (let declared effect stand), else timeout.
+            respondBluff: {moves: {challengeBluff, passBluff}},
         },
         onBegin: onTurnBegin,
         onEnd: onTurnEnd,

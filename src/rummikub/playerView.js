@@ -92,6 +92,16 @@ function playerView({G, ctx, playerID}) {
         view.abilityDeck = [];
     }
 
+    // Chaos: a face-down bluff is public (who, declared, target) but its real type
+    // must stay hidden — only the actor sees what was actually played, else there's
+    // nothing to challenge. Redact real/card for everyone but the bluffer.
+    if (view.pendingBluff && view.pendingBluff.actor !== viewerID) {
+        const shown = {...view.pendingBluff};
+        delete shown.real;
+        delete shown.card;
+        view.pendingBluff = shown;
+    }
+
     return view;
 }
 

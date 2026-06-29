@@ -2,10 +2,37 @@
 import {INVALID_MOVE, Stage} from 'boardgame.io/dist/cjs/core.js';
 import {pushTilesToGrid} from '../orderTiles.js';
 import {spinWheel} from './wheel.js';
+import {isJoker} from '../util.js';
 import {HAND_ROWS, HAND_COLS, HAND_GRID_ID} from '../constants.js';
 
 const PLAYABLE_TYPES = new Set(['peek', 'shield', 'junk2', 'junk3', 'junk4', 'wheel']);
 const JUNK_AMOUNT = {junk2: 2, junk3: 3, junk4: 4};
+// SP5: single-target declares route the challenge to the named target; everything
+// else (wheel/bigwind) is table-wide, so every opponent gets challenge rights.
+const SINGLE_TARGET = new Set(['peek', 'shield', 'junk2', 'junk3', 'junk4', 'skip', 'lock', 'force']);
+const BLUFF_PENALTY = 2;
+
+// Pour `n` normal (non-joker) tiles from the pool into a seat's hand. Penalty draws
+// (junk auto-resolve, bluff penalties) are normal-only: jokers are kept in the pool.
+export function drawNormal(G, ctx, seat, n) {
+    const tiles = [];
+    const skipped = [];
+    while (tiles.length < n && G.tilesPool.length) {
+        const tile = G.tilesPool.pop();
+        if (tile == null) break;
+        if (isJoker(Number(tile))) { skipped.push(tile); continue; }
+        tiles.push(tile);
+    }
+    for (const joker of skipped) G.tilesPool.unshift(joker);
+    pushTilesToGrid(tiles, HAND_ROWS, HAND_COLS, G, {gridId: HAND_GRID_ID, playerID: seat}, ctx);
+}
+
+function handIds(G, seat) {
+    return Object.keys(G.tilePositions).filter(id => {
+        const pos = G.tilePositions[id];
+        return pos.gridId === HAND_GRID_ID && pos.playerID === seat;
+    });
+}
 
 // Pour `amount` tiles from the pool into target's hand. Shared by acceptJunk (the
 // chosen "accept now") and the onTurnEnd timeout default (auto-accept). Clears
@@ -57,41 +84,126 @@ export function transferJunk({G, ctx, playerID, events}, cardId, nextTarget) {
     if (events) events.setActivePlayers({currentPlayer: Stage.NULL, value: {[tgt]: 'respondJunk'}});
 }
 
-// Play one ability card face-up on your turn. Resolves peek + shield + junk +N;
-// other types reject (their effects land in later sub-projects). Bluff/face-down
-// is SP5. Effect applies immediately at move time (never an undoable interim).
-export function playAbilityCard({G, ctx, playerID, events, random}, cardId, target) {
+// Apply one ability's declared/face-up effect via the existing handlers. Shared by
+// face-up playAbilityCard and bluff resolution (declared effect on pass / lost
+// challenge). Junk re-enters its own interrupt; unsupported declares are inert.
+function applyEffect(G, ctx, actor, type, target, events, random) {
+    if (type === 'peek') {
+        if (target == null) return;
+        if (!G.peekGrants) G.peekGrants = {};
+        G.peekGrants[actor] = target.toString();
+    } else if (type === 'shield') {
+        if (!G.shields) G.shields = {};
+        G.shields[actor] = true;
+    } else if (type === 'wheel') {
+        spinWheel({G, ctx, random});
+    } else if (JUNK_AMOUNT[type]) {
+        if (target == null || G.pendingJunk) return;
+        const tgt = target.toString();
+        if (G.shields && G.shields[tgt]) {
+            G.shields[tgt] = false;
+        } else {
+            G.pendingJunk = {amount: JUNK_AMOUNT[type], target: tgt, from: actor};
+            if (events) events.setActivePlayers({currentPlayer: Stage.NULL, value: {[tgt]: 'respondJunk'}});
+        }
+    }
+}
+
+// Play one ability card. Face-up: resolves peek/shield/junk/wheel now. Face-down
+// (SP5): defer into G.pendingBluff and hand a respondBluff stage to whoever may
+// challenge — the target alone for single-target declares, else every opponent.
+// Effect applies immediately at move time (never an undoable interim).
+export function playAbilityCard({G, ctx, playerID, events, random}, cardId, target, opts = {}) {
     if (playerID !== ctx.currentPlayer) return INVALID_MOVE;
     const hand = G.abilityHands && G.abilityHands[playerID];
     if (!hand) return INVALID_MOVE;
     const idx = hand.findIndex(c => c.id === cardId);
     if (idx < 0) return INVALID_MOVE;
     const card = hand[idx];
-    if (!PLAYABLE_TYPES.has(card.type)) return INVALID_MOVE;
 
-    if (card.type === 'peek') {
-        if (target == null) return INVALID_MOVE;
-        if (!G.peekGrants) G.peekGrants = {};
-        G.peekGrants[playerID] = target.toString();
-    } else if (card.type === 'shield') {
-        if (!G.shields) G.shields = {};
-        G.shields[playerID] = true;
-    } else if (card.type === 'wheel') {
-        spinWheel({G, ctx, random}); // public Wheel: immediate object x action effect into G.lastWheel
-    } else if (JUNK_AMOUNT[card.type]) {
-        if (target == null) return INVALID_MOVE;
-        if (G.pendingJunk) return INVALID_MOVE; // one junk chain at a time — don't overwrite a pending interrupt
-        const tgt = target.toString();
-        if (G.shields && G.shields[tgt]) {
-            G.shields[tgt] = false; // shield absorbs the junk; nobody draws
+    if (opts.faceDown) {
+        if (G.mode !== 'chaos' || G.pendingBluff) return INVALID_MOVE;
+        const declared = opts.declaredType;
+        if (!declared) return INVALID_MOVE;
+        const tgt = target == null ? null : target.toString();
+        if (SINGLE_TARGET.has(declared) && tgt == null) return INVALID_MOVE;
+        hand.splice(idx, 1);
+        G.pendingBluff = {actor: playerID, real: card.type, declared, target: tgt, cardId, card};
+        const value = {};
+        if (SINGLE_TARGET.has(declared)) {
+            value[tgt] = 'respondBluff';
         } else {
-            // SP2a-T2: don't draw now. Hand the junk to the target as an interrupt;
-            // they accept (draw) via acceptJunk, or onTurnEnd auto-accepts on timeout.
-            G.pendingJunk = {amount: JUNK_AMOUNT[card.type], target: tgt, from: playerID};
-            if (events) events.setActivePlayers({currentPlayer: Stage.NULL, value: {[tgt]: 'respondJunk'}});
+            for (const pid of Object.keys(G.abilityHands)) if (pid !== playerID) value[pid] = 'respondBluff';
         }
+        if (events) events.setActivePlayers({currentPlayer: Stage.NULL, value});
+        return;
     }
+
+    if (!PLAYABLE_TYPES.has(card.type)) return INVALID_MOVE;
+    if (card.type === 'peek' && target == null) return INVALID_MOVE;
+    if (JUNK_AMOUNT[card.type]) {
+        if (target == null) return INVALID_MOVE;
+        if (G.pendingJunk) return INVALID_MOVE; // one junk chain at a time
+    }
+    applyEffect(G, ctx, playerID, card.type, target, events, random);
     hand.splice(idx, 1);
     if (!G.abilityDiscard) G.abilityDiscard = [];
     G.abilityDiscard.push(card);
+}
+
+// Settle a pending bluff to its discard pile. Voided keeps a redacted shell so no
+// real type leaks; otherwise the true card is shown. Always clears pendingBluff.
+function discardBluff(G, voided) {
+    if (!G.abilityDiscard) G.abilityDiscard = [];
+    G.abilityDiscard.push(voided ? {id: G.pendingBluff.cardId, type: G.pendingBluff.real} : G.pendingBluff.card);
+    G.pendingBluff = null;
+}
+
+function canRespondBluff(G, playerID) {
+    const b = G.pendingBluff;
+    if (!b) return false;
+    if (SINGLE_TARGET.has(b.declared)) return b.target === playerID;
+    return playerID !== b.actor;
+}
+
+// Pass-resolve: declared effect applies face-up, card discarded, no reveal. Shared
+// by passBluff and the onTurnEnd timeout default so an unanswered bluff never stalls.
+export function resolveBluffPass(G, ctx, events, random) {
+    const b = G.pendingBluff;
+    applyEffect(G, ctx, b.actor, b.declared, b.target, events, random);
+    discardBluff(G, false);
+}
+
+// Challenge: SUCCESS (lied) -> challenger sheds 1 random tile to pool, actor draws 2,
+// card voided. FAIL (truthful) -> challenger draws 2, then the declared effect lands.
+export function challengeBluff({G, ctx, playerID, events, random}) {
+    if (G.mode !== 'chaos') return INVALID_MOVE;
+    if (!canRespondBluff(G, playerID)) return INVALID_MOVE;
+    const b = G.pendingBluff;
+    if (b.declared !== b.real) {
+        const ids = handIds(G, playerID);
+        if (ids.length) {
+            const id = ids[Math.floor((random ? random.Number() : 0) * ids.length)];
+            delete G.tilePositions[id];
+            G.tilesPool.push(Number(id));
+        }
+        drawNormal(G, ctx, b.actor, BLUFF_PENALTY);
+        discardBluff(G, true);
+    } else {
+        drawNormal(G, ctx, playerID, BLUFF_PENALTY);
+        resolveBluffPass(G, ctx, events, random);
+        return endBluff(events);
+    }
+    endBluff(events);
+}
+
+export function passBluff({G, ctx, playerID, events, random}) {
+    if (G.mode !== 'chaos') return INVALID_MOVE;
+    if (!canRespondBluff(G, playerID)) return INVALID_MOVE;
+    resolveBluffPass(G, ctx, events, random);
+    endBluff(events);
+}
+
+function endBluff(events) {
+    if (events) events.setActivePlayers({all: Stage.NULL});
 }
