@@ -42,6 +42,15 @@ test('a non-target white type stays inert without face-down', () => {
   expect(result.current.pendingPeek).toBeFalsy();
 });
 
+test('canPlay=false: off-turn play refuses to dispatch or park a target', () => {
+  const moves = {playAbilityCard: jest.fn()};
+  const {result} = renderHook(() => useAbilityPlay(moves, false));
+  act(() => result.current.playCard({id: 'shield-0', type: 'shield'})); // no-target card
+  act(() => result.current.playCard({id: 'peek-0', type: 'peek'}));     // target card
+  expect(moves.playAbilityCard).not.toHaveBeenCalled();
+  expect(result.current.pendingPeek).toBeFalsy();
+});
+
 test('PeekPanel renders the revealed target rack tiles + privacy note, foldable', () => {
   // peekGrants[0]='1' -> player 1's hand tiles are present in tilePositions (playerView reveal)
   const tilePositions = {

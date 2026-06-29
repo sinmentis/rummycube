@@ -10,8 +10,9 @@ const JUNK_AMOUNT = {junk2: 2, junk3: 3, junk4: 4};
 const LOCK_TURNS = 2;
 export const FORCE_DRAW = 3;
 // SP5: single-target declares route the challenge to the named target; everything
-// else (wheel/bigwind) is table-wide, so every opponent gets challenge rights.
-const SINGLE_TARGET = new Set(['peek', 'shield', 'junk2', 'junk3', 'junk4', 'skip', 'lock', 'force']);
+// else (shield=self, wheel/bigwind=table, lock=board) is non-player, so every
+// opponent gets challenge rights.
+const SINGLE_TARGET = new Set(['peek', 'junk2', 'junk3', 'junk4', 'skip', 'force']);
 // T4: cards whose beam runs caster->target avatar. shield/wheel/bigwind hit no one
 // (self/all) and lock targets a board row, so they carry to:null (affects-all glow).
 const PLAYER_TARGET = new Set(['peek', 'skip', 'force', 'junk2', 'junk3', 'junk4']);
@@ -73,12 +74,7 @@ function bigWind(G, ctx, random) {
 // chosen "accept now") and the onTurnEnd timeout default (auto-accept). Clears
 // pendingJunk so it resolves exactly once. Pure G mutation -> safe on a draft.
 export function resolveJunk(G, ctx, target, amount) {
-    const tiles = [];
-    for (let i = 0; i < amount; i++) {
-        const tile = G.tilesPool.pop();
-        if (tile != null) tiles.push(tile);
-    }
-    pushTilesToGrid(tiles, HAND_ROWS, HAND_COLS, G, {gridId: HAND_GRID_ID, playerID: target}, ctx);
+    drawNormal(G, ctx, target, amount); // penalty draw: normal-only, jokers stay in pool
     G.pendingJunk = null;
 }
 

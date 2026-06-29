@@ -22,7 +22,7 @@ test('classic: no-op, returns null, nothing moves', () => {
 
 test('player draw1: pool->hand, count 1', () => {
   const G = {mode: 'chaos', tilePositions: {}, tilesPool: [101, 102, 103]};
-  const r = spinWheel({G, ctx, random: seq(0.1, 0.1, 0.1)}); // player, draw, count=1
+  const r = spinWheel({G, ctx, random: seq(0.1, 0.0, 0.1, 0.1)}); // player, seat0, draw, count=1
   expect(r).toEqual({object: 'player', action: 'draw', detail: {seat: '0', count: 1}});
   expect(hand(G, '0')).toHaveLength(1);
   expect(G.tilesPool).toHaveLength(2);
@@ -31,14 +31,30 @@ test('player draw1: pool->hand, count 1', () => {
 
 test('player draw3: count 3', () => {
   const G = {mode: 'chaos', tilePositions: {}, tilesPool: [101, 102, 103, 104]};
-  spinWheel({G, ctx, random: seq(0.1, 0.1, 0.9)}); // player, draw, count=3
+  spinWheel({G, ctx, random: seq(0.1, 0.0, 0.1, 0.9)}); // player, seat0, draw, count=3
   expect(hand(G, '0')).toHaveLength(3);
   expect(G.tilesPool).toHaveLength(1);
 });
 
+test('player draw never hands out a joker: skipped, stays in pool', () => {
+  const G = {mode: 'chaos', tilePositions: {}, tilesPool: [101, 14, 102]};
+  spinWheel({G, ctx, random: seq(0.1, 0.0, 0.1, 0.9)}); // player, seat0, draw, count=3
+  expect(hand(G, '0')).toHaveLength(2);            // only the 2 normals drawn
+  expect(G.tilesPool).toEqual([14]);               // joker left behind, never drawn
+});
+
+test('player event hits a RANDOM seat, not always the caster', () => {
+  const G = {mode: 'chaos', tilePositions: {}, tilesPool: [101, 102, 103]};
+  const r = spinWheel({G, ctx, random: seq(0.1, 0.9, 0.1, 0.1)}); // player, seat1, draw, count=1
+  expect(r.object).toBe('player');
+  expect(r.detail.seat).toBe('1');                 // not ctx.currentPlayer '0'
+  expect(hand(G, '1')).toHaveLength(1);
+  expect(hand(G, '0')).toHaveLength(0);
+});
+
 test('player discard: random hand tile -> pool', () => {
   const G = {mode: 'chaos', tilePositions: {201: handTile(201, '0', 0), 202: handTile(202, '0', 1)}, tilesPool: []};
-  const r = spinWheel({G, ctx, random: seq(0.1, 0.5, 0.0)}); // player, discard, pick idx0
+  const r = spinWheel({G, ctx, random: seq(0.1, 0.0, 0.5, 0.0)}); // player, seat0, discard, pick idx0
   expect(r.action).toBe('discard');
   expect(hand(G, '0')).toHaveLength(1);
   expect(G.tilesPool).toHaveLength(1);
@@ -46,7 +62,7 @@ test('player discard: random hand tile -> pool', () => {
 
 test('player reshuffle: same hand count kept', () => {
   const G = {mode: 'chaos', tilePositions: {201: handTile(201, '0', 0), 202: handTile(202, '0', 1)}, tilesPool: [101, 102]};
-  spinWheel({G, ctx, random: seq(0.1, 0.9)}); // player, reshuffle
+  spinWheel({G, ctx, random: seq(0.1, 0.0, 0.9)}); // player, seat0, reshuffle
   expect(hand(G, '0')).toHaveLength(2);
   expect(G.tilesPool).toHaveLength(2);
 });
@@ -98,7 +114,7 @@ test('wheel card triggers an immediate spin + records lastWheel', () => {
     mode: 'chaos', abilityHands: {'0': [{id: 'wheel-0', type: 'wheel', rarity: 'blue'}]},
     abilityDiscard: [], tilePositions: {}, tilesPool: [101, 102, 103],
   };
-  const r = playAbilityCard({G, ctx, playerID: '0', random: seq(0.1, 0.1, 0.1)}, 'wheel-0');
+  const r = playAbilityCard({G, ctx, playerID: '0', random: seq(0.1, 0.0, 0.1, 0.1)}, 'wheel-0'); // player, seat0, draw, count1
   expect(r).toBeUndefined();
   expect(G.lastWheel.object).toBe('player');
   expect(hand(G, '0')).toHaveLength(1);

@@ -24,16 +24,38 @@ describe('useAbilityPlay face-down routing', () => {
     expect(result.current.pendingPeek).toBeFalsy();
   });
 
-  test('single-target declare (shield) waits for target then dispatches with opts', () => {
+  test('shield declare (self) dispatches faceDown immediately, no target', () => {
     const moves = {playAbilityCard: jest.fn()};
     const {result} = renderHook(() => useAbilityPlay(moves));
     act(() => result.current.setFaceDown(true));
     act(() => result.current.setDeclared('shield'));
     act(() => result.current.playCard({id: 'gold-0', type: 'lock'}));
+    expect(moves.playAbilityCard).toHaveBeenCalledWith('gold-0', undefined, {faceDown: true, declaredType: 'shield'});
+    expect(result.current.pendingPeek).toBeFalsy();
+  });
+
+  test('lock declare waits for a board row then dispatches with opts', () => {
+    const moves = {playAbilityCard: jest.fn()};
+    const {result} = renderHook(() => useAbilityPlay(moves));
+    act(() => result.current.setFaceDown(true));
+    act(() => result.current.setDeclared('lock'));
+    act(() => result.current.playCard({id: 'peek-0', type: 'peek'}));
+    expect(moves.playAbilityCard).not.toHaveBeenCalled();
+    expect(result.current.pendingLock).toMatchObject({id: 'peek-0'});
+    act(() => result.current.pickRow(2));
+    expect(moves.playAbilityCard).toHaveBeenCalledWith('peek-0', 2, {faceDown: true, declaredType: 'lock'});
+  });
+
+  test('player declare (junk2) waits for target then dispatches with opts', () => {
+    const moves = {playAbilityCard: jest.fn()};
+    const {result} = renderHook(() => useAbilityPlay(moves));
+    act(() => result.current.setFaceDown(true));
+    act(() => result.current.setDeclared('junk2'));
+    act(() => result.current.playCard({id: 'gold-0', type: 'lock'}));
     expect(moves.playAbilityCard).not.toHaveBeenCalled();
     expect(result.current.pendingPeek).toMatchObject({id: 'gold-0'});
     act(() => result.current.pickTarget('1'));
-    expect(moves.playAbilityCard).toHaveBeenCalledWith('gold-0', '1', {faceDown: true, declaredType: 'shield'});
+    expect(moves.playAbilityCard).toHaveBeenCalledWith('gold-0', '1', {faceDown: true, declaredType: 'junk2'});
   });
 
   test('face-down off keeps classic routing (peek waits, then no opts)', () => {
@@ -48,9 +70,9 @@ describe('useAbilityPlay face-down routing', () => {
 describe('AbilityHand declare UI', () => {
   test('face-down toggle + declare picker makes any card bluff-playable', () => {
     const onPlay = jest.fn();
-    render(<AbilityHand cards={[{id: 'lock-0', type: 'lock', rarity: 'gold'}]} onPlay={onPlay}
+    const {container} = render(<AbilityHand cards={[{id: 'lock-0', type: 'lock', rarity: 'gold'}]} onPlay={onPlay}
                         faceDown={true} declared="peek" onToggleFaceDown={() => {}} onDeclare={() => {}}/>);
-    fireEvent.click(screen.getByText(CARD_META.lock.name).closest('.acard'));
+    fireEvent.click(container.querySelector('.ability-strip .acard'));
     expect(onPlay).toHaveBeenCalledTimes(1);   // gold card playable when bluffing
   });
 
@@ -63,14 +85,14 @@ describe('AbilityHand declare UI', () => {
 });
 
 describe('BluffPrompt challenge interrupt', () => {
-  const bluff = {actor: '1', declared: 'shield', target: '0'};
+  const bluff = {actor: '1', declared: 'skip', target: '0'};
   test('single-target: claim + Challenge fires onChallenge, Pass fires onPass', () => {
     const onChallenge = jest.fn(); const onPass = jest.fn();
     render(<BluffPrompt pendingBluff={bluff} playerID="0" matchData={matchData}
                         onChallenge={onChallenge} onPass={onPass}/>);
     expect(screen.getByText(/claims/i)).toBeInTheDocument();
     expect(screen.getByText('Bob')).toBeInTheDocument();
-    expect(screen.getByText(new RegExp(CARD_META.shield.name, 'i'))).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(CARD_META.skip.name, 'i'))).toBeInTheDocument();
     expect(screen.getByText(/turn end/i)).toBeInTheDocument();   // soft-timer note
     fireEvent.click(screen.getByRole('button', {name: /challenge/i}));
     fireEvent.click(screen.getByRole('button', {name: /pass/i}));

@@ -44,15 +44,19 @@ function drawCount(random) {
     return 3;
 }
 
-// Pop up to `count` tiles off the pool and place them into a seat's hand grid,
-// mirroring drawTile. Stops if the pool empties. Returns the ids moved.
+// Pop up to `count` NORMAL tiles off the pool into a seat's hand grid. Jokers are
+// skipped (returned to the pool bottom) so a Wheel draw never hands out the bomb —
+// matches addSet and the penalty drawNormal. Stops if the pool empties. Returns ids.
 function popToHand(G, ctx, seat, count) {
     const tiles = [];
-    for (let i = 0; i < count; i++) {
+    const skipped = [];
+    while (tiles.length < count && G.tilesPool.length) {
         const tile = G.tilesPool.pop();
         if (tile == null) break;
+        if (isJoker(Number(tile))) { skipped.push(tile); continue; }
         tiles.push(tile);
     }
+    for (const joker of skipped) G.tilesPool.unshift(joker);
     pushTilesToGrid(tiles, HAND_ROWS, HAND_COLS, G, {gridId: HAND_GRID_ID, playerID: seat}, ctx);
     return tiles;
 }
@@ -134,7 +138,9 @@ function spinWheel({G, ctx, random}) {
     const objRoll = random.Number();
     let result;
     if (objRoll < OBJECT_PLAYER) {
-        const [action, detail] = playerAction(G, ctx, ctx.currentPlayer, random);
+        // 06 §2: the player event hits a RANDOM seat, not always the caster.
+        const seat = String(Math.floor(random.Number() * (ctx.numPlayers || 1)));
+        const [action, detail] = playerAction(G, ctx, seat, random);
         result = {object: 'player', action, detail};
     } else if (objRoll < OBJECT_TABLE) {
         const [action, detail] = tableAction(G, random);

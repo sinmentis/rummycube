@@ -47,9 +47,9 @@ describe('face-down play defers into pendingBluff', () => {
   test('sets pendingBluff{actor,real,declared,target,cardId}, discards nothing, no effect yet', () => {
     const G = gWith([card('peek')]);
     const events = evStub();
-    const r = playAbilityCard({G, ctx, playerID: '0', events}, 'peek-0', '1', {faceDown: true, declaredType: 'shield'});
+    const r = playAbilityCard({G, ctx, playerID: '0', events}, 'peek-0', '1', {faceDown: true, declaredType: 'junk2'});
     expect(r).toBeUndefined();
-    expect(G.pendingBluff).toMatchObject({actor: '0', real: 'peek', declared: 'shield', target: '1', cardId: 'peek-0'});
+    expect(G.pendingBluff).toMatchObject({actor: '0', real: 'peek', declared: 'junk2', target: '1', cardId: 'peek-0'});
     expect(G.abilityHands['0']).toHaveLength(0);   // pulled from hand
     expect(G.abilityDiscard).toHaveLength(0);      // discard nothing yet
     expect(G.peekGrants).toEqual({});              // no real effect yet
@@ -60,6 +60,13 @@ describe('face-down play defers into pendingBluff', () => {
     const G = gWith([card('peek')]);
     const events = evStub();
     playAbilityCard({G, ctx, playerID: '0', events}, 'peek-0', '1', {faceDown: true, declaredType: 'wheel'});
+    expect(events.setActivePlayers).toHaveBeenCalledWith({currentPlayer: null, value: {'1': 'respondBluff', '2': 'respondBluff'}});
+  });
+
+  test.each(['shield', 'lock', 'bigwind'])('declared %s (self/board/all) is table-wide: every opponent may challenge', (declaredType) => {
+    const G = gWith([card('peek')]);
+    const events = evStub();
+    playAbilityCard({G, ctx, playerID: '0', events}, 'peek-0', '1', {faceDown: true, declaredType});
     expect(events.setActivePlayers).toHaveBeenCalledWith({currentPlayer: null, value: {'1': 'respondBluff', '2': 'respondBluff'}});
   });
 
@@ -74,7 +81,7 @@ describe('challengeBluff SUCCESS (declared != real)', () => {
   test('challenger sheds 1 random tile to pool, actor draws 2, card void to discard, no effect', () => {
     const tp = {50: {id: 50, gridId: 'h', playerID: '1', col: 0, row: 0}};
     const G = gWith([card('peek')], {pool: [201, 202], tilePositions: tp});
-    playAbilityCard({G, ctx, playerID: '0', events: evStub()}, 'peek-0', '1', {faceDown: true, declaredType: 'shield'});
+    playAbilityCard({G, ctx, playerID: '0', events: evStub()}, 'peek-0', '1', {faceDown: true, declaredType: 'junk2'});
     const events = evStub();
     challengeBluff({G, ctx, playerID: '1', events, random: {Number: () => 0}});
     expect(getPlayerHandTiles(G, '1')).toHaveLength(0);        // shed reward tile
@@ -110,7 +117,7 @@ describe('passBluff / no challenge', () => {
 
   test('non-target cannot challenge a single-target bluff', () => {
     const G = gWith([card('peek')]);
-    playAbilityCard({G, ctx, playerID: '0', events: evStub()}, 'peek-0', '1', {faceDown: true, declaredType: 'shield'});
+    playAbilityCard({G, ctx, playerID: '0', events: evStub()}, 'peek-0', '1', {faceDown: true, declaredType: 'junk2'});
     expect(challengeBluff({G, ctx, playerID: '2', events: evStub(), random: {Number: () => 0}})).toBe(INVALID);
     expect(G.pendingBluff).not.toBeNull();
   });

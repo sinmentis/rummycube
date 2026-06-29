@@ -349,7 +349,10 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
     // parks in `pendingPeek` and waits for the player to click an opponent avatar
     // (targeting mode below), then dispatches playAbilityCard(cardId, pid). Kept in
     // a standalone, unit-tested hook so the targeting flow doesn't depend on Board.
-    const {pendingPeek, pendingLock, playCard, pickTarget, pickRow, cancelTarget, faceDown, setFaceDown, declared, setDeclared} = useAbilityPlay(moves);
+    // Ability cards are playable only on your turn, while not waiting, and with no
+    // junk/bluff interrupt pending — off-turn the whole strip is inert (06 §3).
+    const canPlay = isMyTurn && !waiting && !G.pendingJunk && !G.pendingBluff;
+    const {pendingPeek, pendingLock, playCard, pickTarget, pickRow, cancelTarget, faceDown, setFaceDown, declared, setDeclared} = useAbilityPlay(moves, canPlay);
     // SP1b T6 (juice): when a peek is cast, briefly draw a beam from your avatar to
     // the picked opponent. We anchor it off the live DOM rects (in board-pixel
     // space) at the click, then auto-clear it after a beat — purely cosmetic, so a
@@ -774,7 +777,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
                 <div className="match-dock">
                 {isChaos &&
                     <AbilityHand cards={G.abilityHands?.[playerID] ?? []} onPlay={playCard}
-                                 faceDown={faceDown} declared={declared}
+                                 faceDown={faceDown} declared={declared} canPlay={canPlay}
                                  onToggleFaceDown={setFaceDown} onDeclare={setDeclared}/>}
                 <div className={'hand-buttons'}>
                     {selfAvatar}

@@ -38,6 +38,16 @@ test('playable card calls onPlay(card)', () => {
     expect(onPlay).toHaveBeenCalledWith(card);
 });
 
+test('off-turn (canPlay=false) disables every card and swallows clicks', () => {
+    const onPlay = jest.fn();
+    const card = {id: 'peek-0', type: 'peek', rarity: 'white'};
+    render(<AbilityHand cards={[card]} onPlay={onPlay} canPlay={false} />);
+    const el = screen.getByText(CARD_META.peek.name).closest('.acard');
+    expect(el).toHaveClass('is-disabled');
+    fireEvent.click(el);
+    expect(onPlay).not.toHaveBeenCalled();   // inert off-turn / mid-interrupt
+});
+
 test('bluff toggle + declare picker live above the strip', () => {
     const onToggleFaceDown = jest.fn();
     const {container} = render(
@@ -45,6 +55,13 @@ test('bluff toggle + declare picker live above the strip', () => {
                      faceDown={true} declared="peek" onToggleFaceDown={onToggleFaceDown} onDeclare={() => {}} />);
     expect(container.querySelector('.bluff-bar')).toBeInTheDocument();
     expect(container.querySelector('.bluff-claim select')).toBeInTheDocument();
+});
+
+test('declare picker offers all 10 card types as bluff claims', () => {
+    const {container} = render(
+        <AbilityHand cards={[{id: 'peek-0', type: 'peek', rarity: 'white'}]} onPlay={() => {}}
+                     faceDown={true} declared="peek" onToggleFaceDown={() => {}} onDeclare={() => {}} />);
+    expect(container.querySelectorAll('.bluff-claim select option')).toHaveLength(10);
 });
 
 // CSS-source guard: the strip replaces the drawer. Cards sit side-by-side with the

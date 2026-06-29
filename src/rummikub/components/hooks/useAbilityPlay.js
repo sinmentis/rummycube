@@ -20,20 +20,22 @@ import {SINGLE_TARGET_DECLARES} from '../../abilities/cardMeta';
 const NEEDS_TARGET = new Set(['peek', 'junk2', 'junk3', 'junk4', 'skip', 'force']);
 const NO_TARGET = new Set(['shield', 'bigwind', 'wheel']);
 
-export default function useAbilityPlay(moves) {
+export default function useAbilityPlay(moves, canPlay = true) {
     const [pendingPeek, setPendingPeek] = useState(null);
     const [pendingLock, setPendingLock] = useState(null);
     const [faceDown, setFaceDown] = useState(false);
     const [declared, setDeclared] = useState('peek');
 
     const playCard = useCallback((card) => {
-        if (!card) return;
+        if (!card || !canPlay) return; // off-turn / pending interrupt: ability cards are inert
         if (faceDown && declared) {
             const opts = {faceDown: true, declaredType: declared};
             if (SINGLE_TARGET_DECLARES.has(declared)) {
-                setPendingPeek({...card, opts});       // single-target claim: pick a victim first
+                setPendingPeek({...card, opts});       // player claim: pick a victim first
+            } else if (declared === 'lock') {
+                setPendingLock({...card, opts});       // lock claim: pick a board row first
             } else {
-                moves.playAbilityCard(card.id, undefined, opts); // table-wide (wheel): fire now
+                moves.playAbilityCard(card.id, undefined, opts); // shield/wheel/bigwind: fire now
             }
             return;
         }
@@ -45,7 +47,7 @@ export default function useAbilityPlay(moves) {
             setPendingPeek(card);
         }
         // other types are inert here — no dispatch.
-    }, [moves, faceDown, declared]);
+    }, [moves, faceDown, declared, canPlay]);
 
     const pickTarget = useCallback((pid) => {
         if (!pendingPeek) return;
@@ -59,7 +61,11 @@ export default function useAbilityPlay(moves) {
 
     const pickRow = useCallback((row) => {
         if (!pendingLock) return;
-        moves.playAbilityCard(pendingLock.id, row);
+        if (pendingLock.opts) {
+            moves.playAbilityCard(pendingLock.id, row, pendingLock.opts);
+        } else {
+            moves.playAbilityCard(pendingLock.id, row);
+        }
         setPendingLock(null);
     }, [moves, pendingLock]);
 

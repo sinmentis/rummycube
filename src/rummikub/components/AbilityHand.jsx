@@ -14,7 +14,7 @@ import './abilities.css';
 // the viewer claim a card type. With it on, ANY card is playable and clicking
 // dispatches a face-down play with the chosen claim. onPlay routing lives in
 // useAbilityPlay. Privacy: renders ONLY the viewer's own cards. Empty hand hides.
-export default function AbilityHand({cards = [], onPlay, faceDown = false, declared = 'peek', onToggleFaceDown, onDeclare}) {
+export default function AbilityHand({cards = [], onPlay, faceDown = false, declared = 'peek', onToggleFaceDown, onDeclare, canPlay = true}) {
     const showBluff = typeof onToggleFaceDown === 'function';
     if (cards.length === 0) return null;
     return (
@@ -44,7 +44,7 @@ export default function AbilityHand({cards = [], onPlay, faceDown = false, decla
                         key={card.id}
                         card={card}
                         onClick={onPlay}
-                        disabled={!faceDown && !PLAYABLE_TYPES.has(card.type)}
+                        disabled={!canPlay || (!faceDown && !PLAYABLE_TYPES.has(card.type))}
                     />
                 ))}
             </div>

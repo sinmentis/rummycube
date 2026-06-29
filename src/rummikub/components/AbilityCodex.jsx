@@ -42,7 +42,7 @@ export default function AbilityCodex() {
                 <div className="codex-howto">
                     <b>How Chaos works</b>
                     <p>Classic Rummikub still applies. Empty your tile rack to win. On your turn
-                       you may also play one hidden ability card. Some target a single rival,
+                       you may also play any number of ability cards. Some target a single rival,
                        others hit everyone or the table. Any card can be played face-down as a
                        bluff, and the target or table may challenge it.</p>
                 </div>

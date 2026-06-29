@@ -82,3 +82,12 @@ test('acceptJunk draws pendingJunk amount up to what the pool has, then clears',
   expect(G.tilesPool).toHaveLength(0);
   expect(G.pendingJunk).toBeFalsy();
 });
+
+test('penalty draw is normal-only: jokers are skipped, never given as a junk draw', () => {
+  // RedJoker=14, BlackJoker=30: only normals must reach the target; jokers stay pooled.
+  const G = gWith([junk('junk4')], {pool: [14, 201, 30, 202, 203, 204]});
+  playAbilityCard({G, ctx, playerID: '0'}, 'junk4-0', '1');
+  acceptJunk({G, ctx, playerID: '1'});
+  expect(getPlayerHandTiles(G, '1')).toHaveLength(4);          // 4 normal tiles drawn
+  expect(G.tilesPool.sort((a, b) => a - b)).toEqual([14, 30]); // both jokers left behind
+});

@@ -19,7 +19,7 @@ export const CARD_META = Object.freeze({
     // gold (Rare)
     junk4: {name: 'Junk +4', icon: '🧱', effect: 'Force a player to draw 4 (chainable).'},
     skip: {name: 'Skip', icon: '⏭️', effect: 'Skip a player\'s turn.'},
-    lock: {name: 'Lock', icon: '🔒', effect: 'Freeze a board set for a round.'},
+    lock: {name: 'Lock', icon: '🔒', effect: 'Freeze a board set for 2 turns.'},
 });
 
 // The single non-color rarity cue shown on the card: one short word. Colour
@@ -32,8 +32,10 @@ export const RARITY_ORDER = Object.freeze(['white', 'blue', 'gold']);
 // SP6 ships the full deck as playable; the hand greys out nothing now.
 export const PLAYABLE_TYPES = new Set(['peek', 'shield', 'junk2', 'junk3', 'junk4', 'wheel', 'skip', 'lock', 'force', 'bigwind']);
 
-// SP5 bluff: claims you can make face-down. Mirrors moves.js SINGLE_TARGET so a
-// declared single-target claim parks for a target pick before dispatch; wheel is
-// table-wide. DECLARE_TYPES are the believable claims offered by the Declare picker.
-export const SINGLE_TARGET_DECLARES = new Set(['peek', 'shield', 'junk2', 'junk3', 'junk4', 'skip', 'lock', 'force']);
-export const DECLARE_TYPES = ['peek', 'shield', 'junk2', 'junk3', 'junk4', 'wheel'];
+// SP5 bluff: claims you can make face-down. Any of the 10 card types is a believable
+// claim. Target kind drives the pick: shield=self / wheel,bigwind=table -> no pick;
+// peek,junk,skip,force=a player; lock=a board set. SINGLE_TARGET_DECLARES are the
+// player-aimed claims (mirror moves.js SINGLE_TARGET): only the named target may
+// challenge; everything else is table-wide.
+export const SINGLE_TARGET_DECLARES = new Set(['peek', 'junk2', 'junk3', 'junk4', 'skip', 'force']);
+export const DECLARE_TYPES = ['peek', 'shield', 'junk2', 'junk3', 'junk4', 'force', 'wheel', 'bigwind', 'skip', 'lock'];

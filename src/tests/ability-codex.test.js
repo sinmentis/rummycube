@@ -31,6 +31,12 @@ test('open panel lists all 10 cards + a chaos how-to', () => {
   expect(container.querySelector('.codex-howto')).toBeInTheDocument();
 });
 
+test('how-to says you may play any number of ability cards (not one)', () => {
+  render(<AbilityCodex />);
+  fireEvent.click(screen.getByRole('button', {name: /open ability codex/i}));
+  expect(screen.getByText(/any number of ability cards/i)).toBeInTheDocument();
+});
+
 // CSS-source assertions (mirror board-visual-layout.test.js): the codex FAB must
 // mirror the chat FAB's collapse mechanism — FAB shows by default, panel hidden
 // until .codex-root.open swaps them. jsdom can't evaluate the real CSS, so we
