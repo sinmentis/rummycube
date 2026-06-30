@@ -11,7 +11,7 @@ const boardCss = fs.readFileSync(
   'utf8',
 );
 
-test('tile face carries suit class on the outer tile for stripe/shape markers', () => {
+test('tile face carries suit class on the outer tile for the color strip', () => {
   const red = buildTileObj(7, COLOR.red, 0);
   const {container, rerender} = render(<TilePreview tile={red}/>);
   expect(container.querySelector('.tile')).toHaveClass('tile-red');
@@ -27,7 +27,7 @@ test('tile face carries suit class on the outer tile for stripe/shape markers', 
   expect(container.querySelector('.tile')).toHaveClass('tile-black');
 });
 
-test('stateful tiles quiet the stripe but keep the shape marker', () => {
+test('stateful tiles quiet the color strip', () => {
   const red = buildTileObj(7, COLOR.red, 0);
   const {container, rerender} = render(<TilePreview tile={red} newlyAdded/>);
   expect(container.querySelector('.tile')).toHaveClass('tile-stateful');
@@ -39,9 +39,9 @@ test('stateful tiles quiet the stripe but keep the shape marker', () => {
   expect(container.querySelector('.tile')).not.toHaveClass('tile-stateful');
 });
 
-test('CSS implements top stripe that wraps the top-right shape marker', () => {
-  expect(boardCss).toMatch(/\.tile::before\s*\{[\s\S]*right:\s*15px/);
-  expect(boardCss).toMatch(/\.tile::after\s*\{[\s\S]*top:\s*3px/);
+test('CSS implements only a top color strip, no shape logo', () => {
+  expect(boardCss).toMatch(/\.tile::before\s*\{[\s\S]*right:\s*4px/);
+  expect(boardCss).not.toMatch(/\.tile::after\s*\{/);
   expect(boardCss).toMatch(/\.tile-stateful::before\s*\{[\s\S]*opacity:\s*\.24/);
-  expect(boardCss).toMatch(/\.tile\.tile-joker::before,\s*div\.tile\.tile-joker::after\s*\{[\s\S]*display:\s*none/);
+  expect(boardCss).toMatch(/\.tile\.tile-joker::before\s*\{[\s\S]*display:\s*none/);
 });
