@@ -28,12 +28,19 @@ test('board tile floor token sits at the rack-tile size (max(2.0vw, 40px))', () 
     expect(board).toMatch(/--board-tile-min:\s*max\(\s*2\.0vw\s*,\s*40px\s*\)/);
 });
 
-test('ALL board tiles floor to the rack size (no shrink) — not just chaos', () => {
+test('board tiles fill their cell flush (choice B) — no min-size floor that overflows', () => {
     const body = ruleBody('.ref div.tile');
-    expect(body).toMatch(/min-width:\s*var\(--board-tile-min\)/);
-    expect(body).toMatch(/min-height:\s*var\(--board-tile-min\)/);
-    // The floor must NOT be scoped to chaos anymore — classic gets it too.
+    expect(body).toMatch(/width:\s*100%/);
+    expect(body).toMatch(/height:\s*100%/);
+    // The old overflow-causing floor is gone: tile must fit its 1fr cell exactly.
+    expect(body).not.toMatch(/min-width:\s*var\(--board-tile-min\)/);
     expect(board).not.toMatch(/\.board\.chaos\s+\.ref\s+div\.tile\s*\{/);
+});
+
+test('board columns share the width evenly (32 x 1fr) so tiles align to gridlines, no h-scroll', () => {
+    expect(board).toMatch(/grid-template-columns:\s*repeat\(32,\s*minmax\(0,\s*1fr\)\)/);
+    // cell lines divide evenly to match the 1fr cells
+    expect(board).toMatch(/background-size:\s*calc\(100%\s*\/\s*32\)\s*calc\(100%\s*\/\s*9\)/);
 });
 
 test('board tile-text keeps the larger legibility floor (clamp 13..24px) in both modes', () => {

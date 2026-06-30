@@ -376,20 +376,21 @@ div.grid-container {
     background-color: rgba(0, 0, 0, .10);
     box-shadow: var(--felt-vignette, inset 0 0 60px rgba(0, 0, 0, .45)),
                 0 1px 0 rgba(255, 255, 255, .04);
-    /* Faint cell lines. The 1px lines tile at the actual cell size
-       (cols = 2.2vw, rows = 7vh from GridContainer.jsx), so they sit
-       exactly on the grid-item boundaries — no guessed vw/vh. */
+    /* Cell lines divide the container evenly (cols = 1fr each, rows = 1/9), so they
+       sit exactly on the grid-item boundaries and the tile fills its cell flush. */
     background-image:
         linear-gradient(to right, rgba(255, 255, 255, .04) 1px, transparent 1px),
         linear-gradient(to bottom, rgba(255, 255, 255, .04) 1px, transparent 1px);
-    /* Cell lines follow the now-responsive row height: vertical = 1/9 of the
-       container height; horizontal stays at the fixed desktop col (2.2vw). */
-    background-size: 2.2vw calc(100% / 9), 2.2vw calc(100% / 9);
+    background-size: calc(100% / 32) calc(100% / 9), calc(100% / 32) calc(100% / 9);
     background-position: 0 0;
     /* Fill .ref so 1fr rows divide the available height; clamp each row to a
        legibility floor, then .ref's overflow:auto takes over (scroll fallback). */
     height: 100%;
     margin-top: 0;
+    /* Owner choice B: tiles fill their cells exactly with no horizontal scroll —
+       32 columns share the board width evenly (1fr), so a tile == its cell and never
+       overflows the gridlines. Rows keep the legibility floor. */
+    grid-template-columns: repeat(32, minmax(0, 1fr)) !important;
     grid-template-rows: repeat(9, minmax(var(--board-row-min, 34px), 1fr)) !important;
 }
 
@@ -467,17 +468,12 @@ div.tile {
 .ref .grid-container {
     --board-row-min: 5.4vh;
 }
-/* Board tiles fill their cell but never shrink below the rack-tile floor
-   (--board-tile-min) in EITHER mode: the owner wants a placed board tile to match
-   hand-tile card size, not collapse into a tiny grid cell. The minmax row floor
-   above keeps them tall to match. On very short windows the floored rows exceed
-   the tray cap and .ref scrolls — match-hand size is chosen over no-scroll. The
-   mobile overrides below reset min-* to 0 so the 32-col phone board still fits. */
+/* Board tiles fill their cell exactly (owner choice B): width/height 100% of the
+   1fr cell, no min-size floor that would overflow the gridlines. The cell is as wide
+   as the board allows for 32 columns without scrolling; the row floor keeps height. */
 .ref div.tile {
     width: 100%;
     height: 100%;
-    min-width: var(--board-tile-min);
-    min-height: var(--board-tile-min);
 }
 /* The tile value lives in .tile-text; the .tile element carries an inline
    font-size (getTileStyle), so the responsive size must target .tile-text (no
