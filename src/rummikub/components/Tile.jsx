@@ -41,15 +41,23 @@ function TilePreview({tile, canDnD, isSelected, isDragging, isValid, isPlayable,
 
         if (!(isXWithinBounds && isYWithinBounds)) return null
     }
-    let val = isJoker(tile) ? <FontAwesomeIcon icon={faSmileBeam}/> : getTileValue(tile)
+    const joker = isJoker(tile)
+    const colorName = COLORS[getTileColor(tile)]
+    const stateful = isValid === true || isValid === false || isSelected === true || newlyAdded === true
+    let val = joker ? <FontAwesomeIcon icon={faSmileBeam}/> : getTileValue(tile)
     let validGlyph = isValid === true ? '✓' : isValid === false ? '✕' : ''
     return (
         <div
             style={getTileStyle(isSelected, isDragging, isValid, position, index, newlyAdded, canDnD)}
-            className={"tile tile-clickable border-dark" + (newlyAdded === true ? " tile-drawn" : "") + (isPlayable === true ? " tile-playable" : "") + (isSelected === true ? " tile-selected" : "")}>
+            className={"tile tile-clickable border-dark tile-" + colorName
+                + (joker ? " tile-joker" : "")
+                + (stateful ? " tile-stateful" : "")
+                + (newlyAdded === true ? " tile-drawn" : "")
+                + (isPlayable === true ? " tile-playable" : "")
+                + (isSelected === true ? " tile-selected" : "")}>
             {isPlayable === true &&
                 <span className="tile-playable-mark" aria-hidden="true"/>}
-            <div className={"tile-text tile-" + COLORS[getTileColor(tile)]}>{val}</div>
+            <div className={"tile-text tile-" + colorName}>{val}</div>
             <div className={"tile-subscript"} aria-hidden="true">{validGlyph}</div>
         </div>
     )

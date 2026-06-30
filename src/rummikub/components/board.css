@@ -455,6 +455,69 @@ div.tile {
     line-height: 1;
     transition: transform .12s ease, box-shadow .12s ease;
 }
+/* Permanent tile identity: keep the ivory material face, then add a small suit
+   cue. The top stripe stops before the shape marker, so neither overlaps the
+   number. Transient states own the face; they only quiet the stripe, not the
+   shape marker. */
+div.tile {
+    --suit: currentColor;
+}
+div.tile::before,
+div.tile::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+}
+div.tile::before {
+    left: 4px;
+    right: 15px;
+    top: 3px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--suit);
+    opacity: .68;
+    z-index: 1;
+}
+div.tile::after {
+    top: 3px;
+    right: 4px;
+    width: 8px;
+    height: 8px;
+    background: var(--suit);
+    box-shadow: 0 0 0 2px rgba(255,255,255,.78);
+    z-index: 3;
+}
+div.tile.tile-stateful::before {
+    opacity: .24;
+}
+div.tile.tile-joker::before,
+div.tile.tile-joker::after {
+    display: none;
+}
+div.tile.tile-red { --suit: var(--c-red); }
+div.tile.tile-blue { --suit: var(--c-blue); }
+div.tile.tile-orange { --suit: var(--c-orange); }
+div.tile.tile-black { --suit: var(--c-black); }
+div.tile.tile-red::after {
+    border-radius: 50%;
+}
+div.tile.tile-blue::after {
+    background: transparent;
+    box-shadow: none;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 8px solid var(--suit);
+    filter: drop-shadow(0 0 0 rgba(255,255,255,.78));
+}
+div.tile.tile-orange::after {
+    border-radius: 2px;
+}
+div.tile.tile-black::after {
+    border-radius: 2px;
+    transform: rotate(45deg);
+}
 
 /* Board cells size responsively (cols = 32 x 1fr, rows = minmax(--board-row-min,1fr)).
    Choice B: tiles fill the cell flush to the gridlines, so the cell carries no padding
@@ -495,10 +558,13 @@ div.tile:hover {
 }
 
 .tile-text {
+    position: relative;
+    z-index: 2;
     user-select: none;
     text-align: center;
     line-height: 1;
     letter-spacing: .5px;
+    text-shadow: 0 1px 0 rgba(255,255,255,.82), 0 -1px 1px rgba(70,45,18,.26);
 }
 
 svg.fa-smile-beam {

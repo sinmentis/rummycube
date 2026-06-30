@@ -46,14 +46,14 @@ test('an insert that triggers an auto-arrange cascade does not inflate rearrange
     expect(s.rearranged).toBe(0);
     expect(s.placed).toBe(1);
     expect(s.groups.length).toBe(1);
-    // 3*1 group + 3*0 rearrange + 0*1 placed = 3 (NICE), NOT 12 (3 phantom shifts).
-    expect(s.count).toBe(3);
+    // Combo now means "net tiles added to the table", not group/manipulation math.
+    // One new tile landed on the board, so the combo number is 1, NOT 12
+    // (3 phantom shifts) and not 3 (old group-weighted scoring).
+    expect(s.count).toBe(1);
+    expect(s.manipulation).toBe(1);
 });
 
-// A real manipulation still scores: relocating an EXISTING tile to a new row is a
-// genuine restructure, so the fix narrows false positives without silencing real
-// board manipulation.
-test('relocating an existing tile to a new row still counts as a rearrange', () => {
+test('net new table tiles drive combo even when an existing tile is rearranged', () => {
     // Turn start: a stray committed tile red6 parked at row 0, col 10.
     const prev = {};
     prev[r(6)] = {id: r(6), col: 10, row: 0, gridId: BOARD_GRID_ID, tmp: false, playerID: null};
@@ -68,7 +68,8 @@ test('relocating an existing tile to a new row still counts as a rearrange', () 
     const formedGroups = [[r(4), r(5), r(6)]];
     const s = computePlayScore({tilePositions: cur, formedGroups, prevTilePositions: prev});
 
-    expect(s.rearranged).toBe(1);          // red6 changed row
+    expect(s.rearranged).toBe(1);          // still reported for telemetry
     expect(s.placed).toBe(2);              // red4, red5 played from hand
-    expect(s.count).toBe(3 * 1 + 3 * 1);   // 1 group + 1 rearrange = 6 (COMBO)
+    expect(s.count).toBe(2);               // combo = board tile count net +2
+    expect(s.manipulation).toBe(2);
 });

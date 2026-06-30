@@ -4,7 +4,6 @@
 // caller must pass tilePositions BEFORE freezeTmpTiles.
 import {isJoker, getTileValue} from "../tile/codec.js";
 import {freezeSeqJokers} from "../tile/sequence.js";
-import {manipulationScore} from "../juice/comboMath.js";
 import {extractSeqs} from "../moveValidation.js";
 import {BOARD_GRID_ID} from "../constants.js";
 
@@ -49,9 +48,10 @@ export function computePlayScore({tilePositions, formedGroups, prevTilePositions
         })
     }
     const points = tmp.reduce((s, p) => s + (isJoker(p.id) ? (jokerValueById[p.id] || 0) : getTileValue(p.id)), 0)
-    // Manipulation score rewards groups formed + existing board tiles rearranged
-    // this turn over a raw tile dump. prevTilePositions is the turn-start baseline
-    // and is reset next turn, so this must run here, pre-freeze.
+    // Combo score is the net number of tiles added to the table this turn.
+    // Keep rearranged as telemetry, but don't score it: auto-arrange can nudge
+    // existing board tiles cosmetically, and players expect the number to match
+    // "how many tiles did this play add to the table?"
     const placed = tmp.length
     const baseline = prevTilePositions || {}
     // Count an existing board tile as rearranged ONLY when the player genuinely
@@ -70,7 +70,11 @@ export function computePlayScore({tilePositions, formedGroups, prevTilePositions
         if (!base || !cur) return true
         return base.row !== cur.row || !sameMembers(base.members, cur.members)
     }).length
-    const score = manipulationScore({groups: formedGroups.length, rearranged, placed})
+    const currentBoardCount = Object.values(tilePositions)
+        .filter(p => p && p.gridId === BOARD_GRID_ID).length
+    const previousBoardCount = Object.values(baseline)
+        .filter(p => p && p.gridId === BOARD_GRID_ID).length
+    const score = Math.max(0, currentBoardCount - previousBoardCount)
     return {
         count: score,
         points: points,

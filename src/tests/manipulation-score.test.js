@@ -26,7 +26,7 @@ function spawn(setup) {
     return {c0, c1};
 }
 
-test('a play forming 2 groups beats a 3-tile flat dump, scored pre-freeze', () => {
+test('combo count is the net number of tiles added to the board, scored pre-freeze', () => {
     // --- Play A: complete two separate runs (2 groups formed). ---
     const setupTwoGroups = () => {
         const tilePositions = {};
@@ -58,7 +58,7 @@ test('a play forming 2 groups beats a 3-tile flat dump, scored pre-freeze', () =
     expect(twoGroups.placed).toBe(2);
     expect(twoGroups.rearranged).toBe(0);
     expect(twoGroups.manipulation).toBe(twoGroups.count);
-    expect(twoGroups.count).toBe(6); // 3*2 + 3*0 + 0*2
+    expect(twoGroups.count).toBe(2); // net +2 board tiles
 
     // --- Play B: flat-dump a single 3-tile run. ---
     const setupFlatDump = () => {
@@ -80,9 +80,10 @@ test('a play forming 2 groups beats a 3-tile flat dump, scored pre-freeze', () =
     expect(flatDump).toBeTruthy();
     expect(flatDump.groups.length).toBe(1);
     expect(flatDump.placed).toBe(3);
-    expect(flatDump.count).toBe(3); // 3*1 + 3*0 + 0*3
+    expect(flatDump.count).toBe(3); // net +3 board tiles
     expect(flatDump.manipulation).toBe(flatDump.count);
 
-    // Manipulation beats dumping: more groups for fewer tiles scores higher.
-    expect(twoGroups.count).toBeGreaterThan(flatDump.count);
+    // Combo now means "how many tiles did you add to the table?", not how many
+    // groups were manipulated. A larger flat dump correctly has the larger number.
+    expect(flatDump.count).toBeGreaterThan(twoGroups.count);
 });
