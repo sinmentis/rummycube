@@ -1,6 +1,7 @@
 import React from 'react';
 import {render, screen, fireEvent, waitFor} from '@testing-library/react';
 import ReportBugButton from '../rummikub/components/ReportBugButton';
+import {installBugLog, snapshotBugLog} from '../rummikub/bugLog';
 
 beforeEach(() => {
   global.fetch = jest.fn(() => Promise.resolve({
@@ -34,4 +35,18 @@ test('report button posts current game snapshot to the bug-report endpoint', asy
   expect(body.snapshot.ctx.turn).toBe(7);
   expect(body.client.url).toBe(window.location.href);
   await waitFor(() => expect(screen.getByText(/saved bug\.json/i)).toBeInTheDocument());
+});
+
+test('bug log never breaks console.error for unserializable objects', () => {
+  const original = console.error;
+  const calls = [];
+  console.error = (...args) => calls.push(args);
+  installBugLog();
+
+  const bad = {toJSON() { throw new Error('boom'); }};
+  expect(() => console.error(bad)).not.toThrow();
+  expect(calls).toHaveLength(1);
+  expect(snapshotBugLog().at(-1).message).toContain('[unserializable]');
+
+  console.error = original;
 });

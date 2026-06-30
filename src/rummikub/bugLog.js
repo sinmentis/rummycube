@@ -3,16 +3,24 @@ const logs = [];
 let installed = false;
 
 function add(level, args) {
-    logs.push({
-        ts: new Date().toISOString(),
-        level,
-        message: args.map(a => {
-            if (a instanceof Error) return `${a.name}: ${a.message}\n${a.stack || ''}`;
-            if (typeof a === 'string') return a;
-            try { return JSON.stringify(a); } catch (e) { return String(a); }
-        }).join(' '),
-    });
-    if (logs.length > MAX_LOGS) logs.splice(0, logs.length - MAX_LOGS);
+    try {
+        logs.push({
+            ts: new Date().toISOString(),
+            level,
+            message: args.map(a => {
+                try {
+                    if (a instanceof Error) return `${a.name}: ${a.message}\n${a.stack || ''}`;
+                    if (typeof a === 'string') return a;
+                    return JSON.stringify(a);
+                } catch (e) {
+                    return '[unserializable]';
+                }
+            }).join(' '),
+        });
+        if (logs.length > MAX_LOGS) logs.splice(0, logs.length - MAX_LOGS);
+    } catch (e) {
+        // Reporting must never break the app's own console/error path.
+    }
 }
 
 export function installBugLog() {
