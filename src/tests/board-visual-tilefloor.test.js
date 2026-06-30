@@ -1,15 +1,12 @@
 const fs = require('fs');
 const path = require('path');
 
-// Board-tile size floor. jsdom can't measure pixels, so (like the other
-// board-visual-*.test.js) these are CSS-source assertions. The owner wants a
-// placed BOARD tile to read at roughly hand-tile card size in BOTH classic and
-// chaos — not collapse into a tiny grid cell — so the rack-size floor lives on the
-// base `.ref div.tile` / `.ref .tile-text` (no `.board.chaos` scope) and the row
-// floor (--board-row-min) is lifted for every mode. On very short windows the 9
-// floored rows exceed the tray cap and .ref's overflow:auto scrolls (the existing
-// minmax fallback): match-hand size is chosen over no-scroll. The mobile block
-// (asserted in board-visual-mobile.test.js) resets min-* so the phone board fits.
+// Board-tile sizing. jsdom can't measure pixels, so (like the other
+// board-visual-*.test.js) these are CSS-source assertions. Owner choice B: a board
+// tile fills its grid cell EXACTLY and aligns to the gridlines with NO horizontal
+// scroll. The 32 columns share the width evenly (32 x minmax(0,1fr)), the cell
+// carries no padding, and `.ref div.tile` fills 100% with no min-size floor (which
+// previously overflowed the narrow columns). Rows keep the legibility floor.
 const board = fs.readFileSync(
     path.join(__dirname, '../rummikub/components/board.css'),
     'utf8',
@@ -22,10 +19,8 @@ function ruleBody(selector) {
     return m[1];
 }
 
-test('board tile floor token sits at the rack-tile size (max(2.0vw, 40px))', () => {
-    // 40px is >= 90% of the rack tile width (2.0vw ~= 38.4px @1920) so a placed
-    // tile never shrinks below the hand tile.
-    expect(board).toMatch(/--board-tile-min:\s*max\(\s*2\.0vw\s*,\s*40px\s*\)/);
+test('board cells carry no padding so tiles reach the gridlines', () => {
+    expect(ruleBody('.ref .grid-item')).toMatch(/padding:\s*0/);
 });
 
 test('board tiles fill their cell flush (choice B) — no min-size floor that overflows', () => {

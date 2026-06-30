@@ -456,11 +456,11 @@ div.tile {
     transition: transform .12s ease, box-shadow .12s ease;
 }
 
-/* Board cells size responsively (the grid rows are minmax(--board-row-min,1fr)),
-   so board tiles fill their cell. A 2px cell padding keeps a constant inter-tile
-   gap at any cell size. Hand tiles (outside .ref) keep their 44px touch size. */
+/* Board cells size responsively (cols = 32 x 1fr, rows = minmax(--board-row-min,1fr)).
+   Choice B: tiles fill the cell flush to the gridlines, so the cell carries no padding
+   (a 1px line gap still reads between cards). Hand tiles (outside .ref) keep 44px. */
 .ref .grid-item {
-    padding: 2px;
+    padding: 0;
 }
 /* Rows floor at the rack-tile height so a placed board tile reads at roughly
    hand-card size; 9 * 5.4vh = 48.6vh fits the 54vh desktop tray in the common
