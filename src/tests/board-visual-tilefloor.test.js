@@ -20,7 +20,12 @@ function ruleBody(selector) {
 }
 
 test('board cells carry no padding so tiles reach the gridlines', () => {
-    expect(ruleBody('.ref .grid-item')).toMatch(/padding:\s*0/);
+    const body = ruleBody('.ref .grid-item');
+    expect(body).toMatch(/display:\s*block/);
+    expect(body).toMatch(/padding:\s*0/);
+    const wrapper = ruleBody('.ref .grid-item > div');
+    expect(wrapper).toMatch(/width:\s*100%/);
+    expect(wrapper).toMatch(/height:\s*100%/);
 });
 
 test('board tiles fill their cell flush (choice B) — no min-size floor that overflows', () => {

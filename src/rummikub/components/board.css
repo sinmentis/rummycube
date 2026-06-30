@@ -460,7 +460,12 @@ div.tile {
    Choice B: tiles fill the cell flush to the gridlines, so the cell carries no padding
    (a 1px line gap still reads between cards). Hand tiles (outside .ref) keep 44px. */
 .ref .grid-item {
+    display: block;
     padding: 0;
+}
+.ref .grid-item > div {
+    width: 100%;
+    height: 100%;
 }
 /* Rows floor at the rack-tile height so a placed board tile reads at roughly
    hand-card size; 9 * 5.4vh = 48.6vh fits the 54vh desktop tray in the common
