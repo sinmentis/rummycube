@@ -58,11 +58,12 @@ test('desktop caps the board tray height so it no longer dominates the felt', ()
 
 test('rack keeps a stable desktop width when Submit meld appears', () => {
     expect(board).toContain('width: min(94vw, 960px);');
+    expect(board).toContain('width: min(72vw, 820px);');
     expect(board).not.toMatch(/\.hand-buttons\s*\{[^}]*width:\s*fit-content/);
 });
 
 test('hand tile numbers are larger than the inherited 25px inline size', () => {
     expect(board).toMatch(
-        /\.hand-buttons\s+\.hand-grid\s+\.tile-text\s*\{[^}]*font-size:\s*clamp\(18px,\s*2vw,\s*30px\)/,
+        /\.hand-buttons\s+\.hand-grid\s+\.tile-text\s*\{[^}]*font-size:\s*clamp\(26px,\s*2vw,\s*32px\)/,
     );
 });
