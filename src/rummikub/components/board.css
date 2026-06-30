@@ -130,7 +130,7 @@ body {
 .hand-buttons {
     position: relative;
     flex: 0 0 auto;
-    width: fit-content;
+    width: min(94vw, 960px);
     max-width: 94vw;
     margin: 2.2vh auto 1vh;
     padding: 1.4vh 1.6vw 1.8vh;
@@ -175,6 +175,10 @@ body {
         margin-left: auto;
         margin-right: auto;
     }
+}
+
+.hand-buttons .hand-grid .tile-text {
+    font-size: clamp(18px, 2vw, 30px);
 }
 
 /* Your own avatar, pinned to the top-left corner of your rack. R5b-T4 seats it on
