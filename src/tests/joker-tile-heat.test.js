@@ -21,6 +21,7 @@ test('board.css carries heat tokens + jheat-pop hover rule', () => {
     expect(css).toMatch(/\.heat-low/);
     expect(css).toMatch(/\.heat-med/);
     expect(css).toMatch(/\.heat-high/);
+    expect(css).toMatch(/\.jtile\s*\{[\s\S]*z-index:\s*10/);
     // Fix2: the popover must trigger on the CELL hover, not .jtile (which is
     // pointer-events:none and never receives :hover), so the exact % is reachable.
     expect(css).toMatch(/\.grid-item:hover\s+\.jheat-pop/);
