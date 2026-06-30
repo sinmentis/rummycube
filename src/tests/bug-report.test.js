@@ -63,7 +63,7 @@ test('enrichBugReport adds boardgame.io state, metadata, log and initialState', 
 });
 
 test('enrichBugReport records fetch errors without blocking snapshot save', async () => {
-  const db = {fetch: jest.fn(async () => { throw new Error('disk sad'); })};
+  const db = {fetch: jest.fn(async () => { throw 'disk sad'; })};
   const enriched = await enrichBugReport({matchID: 'm2'}, {db});
   expect(enriched.server.error).toMatch(/disk sad/);
 });
