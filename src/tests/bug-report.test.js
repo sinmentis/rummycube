@@ -20,3 +20,19 @@ test('saveBugReport writes timestamped JSON with sanitized match/player ids', ()
   expect(written.savedAt).toBe('2026-06-30T02:03:04.005Z');
   expect(written.snapshot.ctx.turn).toBe(3);
 });
+
+test('saveBugReport defaults under FLATFILE_DIR so reports persist with match data volume', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rummy-flatfile-'));
+  const old = process.env.FLATFILE_DIR;
+  process.env.FLATFILE_DIR = dir;
+  try {
+    const result = saveBugReport({matchID: 'm2', playerID: '1'}, {
+      now: () => new Date('2026-06-30T03:00:00.000Z'),
+    });
+    expect(result.path).toBe(path.join(dir, 'bug-reports', result.filename));
+    expect(fs.existsSync(result.path)).toBe(true);
+  } finally {
+    if (old === undefined) delete process.env.FLATFILE_DIR;
+    else process.env.FLATFILE_DIR = old;
+  }
+});

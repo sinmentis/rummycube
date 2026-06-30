@@ -14,7 +14,8 @@ function timestampForFile(d) {
 }
 
 export function saveBugReport(payload, {dir, now = () => new Date()} = {}) {
-    const outDir = dir || process.env.BUG_REPORT_DIR || path.resolve(process.cwd(), 'bug-reports');
+    const baseDir = process.env.FLATFILE_DIR || process.cwd();
+    const outDir = dir || process.env.BUG_REPORT_DIR || path.resolve(baseDir, 'bug-reports');
     fs.mkdirSync(outDir, {recursive: true});
     const savedAt = now();
     const filename = `${timestampForFile(savedAt)}-${safePart(payload.matchID, 'match')}-p-${safePart(payload.playerID, 'seat')}.json`;
