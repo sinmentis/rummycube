@@ -1,7 +1,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import {saveBugReport} from '../rummikub/bugReport';
+import {enrichBugReport, saveBugReport} from '../rummikub/bugReport';
 
 test('saveBugReport writes timestamped JSON with sanitized match/player ids', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rummy-bug-'));
@@ -35,4 +35,35 @@ test('saveBugReport defaults under FLATFILE_DIR so reports persist with match da
     if (old === undefined) delete process.env.FLATFILE_DIR;
     else process.env.FLATFILE_DIR = old;
   }
+});
+
+test('enrichBugReport adds boardgame.io state, metadata, log and initialState', async () => {
+  const db = {
+    fetch: jest.fn(async () => ({
+      state: {G: {mode: 'chaos'}, ctx: {turn: 4}},
+      metadata: {players: {'0': {name: 'A'}}},
+      log: [{action: {type: 'MAKE_MOVE', payload: {type: 'drawTile'}}}],
+      initialState: {G: {mode: 'classic'}, ctx: {turn: 0}},
+    })),
+  };
+
+  const enriched = await enrichBugReport({matchID: 'm1', snapshot: {client: true}}, {db});
+
+  expect(db.fetch).toHaveBeenCalledWith('m1', {
+    state: true,
+    metadata: true,
+    log: true,
+    initialState: true,
+  });
+  expect(enriched.snapshot.client).toBe(true);
+  expect(enriched.server.state.ctx.turn).toBe(4);
+  expect(enriched.server.metadata.players['0'].name).toBe('A');
+  expect(enriched.server.log[0].action.payload.type).toBe('drawTile');
+  expect(enriched.server.initialState.ctx.turn).toBe(0);
+});
+
+test('enrichBugReport records fetch errors without blocking snapshot save', async () => {
+  const db = {fetch: jest.fn(async () => { throw new Error('disk sad'); })};
+  const enriched = await enrichBugReport({matchID: 'm2'}, {db});
+  expect(enriched.server.error).toMatch(/disk sad/);
 });

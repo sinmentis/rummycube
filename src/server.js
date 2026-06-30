@@ -5,7 +5,7 @@ import {Rummikub} from "./rummikub/Game.js";
 import {ConnAwareSocketIO} from "./rummikub/connTransport.js";
 import {FRONTEND_ADDR, GAME_NAME} from "./rummikub/constants.js";
 import {computeServerStats} from "./rummikub/serverStats.js";
-import {saveBugReport} from "./rummikub/bugReport.js";
+import {enrichBugReport, saveBugReport} from "./rummikub/bugReport.js";
 
 const allowedOrigins = [Origins.LOCALHOST, `http://${FRONTEND_ADDR}`];
 if (process.env.PUBLIC_ORIGIN) {
@@ -99,7 +99,7 @@ server.app.use(async (ctx, next) => {
     if (ctx.method === 'POST' && ctx.path === '/api/bug-report') {
         try {
             const payload = await readJsonBody(ctx.req);
-            const saved = saveBugReport(payload);
+            const saved = saveBugReport(await enrichBugReport(payload, {db}));
             ctx.set('Cache-Control', 'no-store');
             ctx.body = {ok: true, filename: saved.filename};
         } catch (e) {

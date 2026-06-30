@@ -26,3 +26,20 @@ export function saveBugReport(payload, {dir, now = () => new Date()} = {}) {
     fs.writeFileSync(path.join(outDir, filename), JSON.stringify(body, null, 2));
     return {filename, path: path.join(outDir, filename)};
 }
+
+export async function enrichBugReport(payload, {db} = {}) {
+    if (!db || !payload.matchID) {
+        return payload;
+    }
+    try {
+        const server = await db.fetch(payload.matchID, {
+            state: true,
+            metadata: true,
+            log: true,
+            initialState: true,
+        });
+        return {...payload, server};
+    } catch (e) {
+        return {...payload, server: {error: e.message || String(e)}};
+    }
+}
