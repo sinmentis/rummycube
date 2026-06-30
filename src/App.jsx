@@ -12,6 +12,9 @@ import JoinGamePage from "./rummikub/components/JoinGamePage";
 import SoundToggle from "./rummikub/components/SoundToggle";
 import HowToPlay from "./rummikub/components/HowToPlay";
 import ExitButton from "./rummikub/components/ExitButton";
+import {installBugLog} from "./rummikub/bugLog";
+
+installBugLog();
 
 function getTestPlayerClient() {
     let PlayerClient = Client({

@@ -5,6 +5,7 @@ import {Rummikub} from "./rummikub/Game.js";
 import {ConnAwareSocketIO} from "./rummikub/connTransport.js";
 import {FRONTEND_ADDR, GAME_NAME} from "./rummikub/constants.js";
 import {computeServerStats} from "./rummikub/serverStats.js";
+import {saveBugReport} from "./rummikub/bugReport.js";
 
 const allowedOrigins = [Origins.LOCALHOST, `http://${FRONTEND_ADDR}`];
 if (process.env.PUBLIC_ORIGIN) {
@@ -27,6 +28,19 @@ const server = Server({
     transport: new ConnAwareSocketIO(),
 });
 const PORT = process.env.PORT || 9119;
+
+async function readJsonBody(req, limitBytes = 4 * 1024 * 1024) {
+    let raw = '';
+    for await (const chunk of req) {
+        raw += chunk;
+        if (Buffer.byteLength(raw) > limitBytes) {
+            const e = new Error('payload too large');
+            e.status = 413;
+            throw e;
+        }
+    }
+    return raw ? JSON.parse(raw) : {};
+}
 
 // Periodically reclaim finished and stale matches so FlatFile + node-persist's
 // in-memory cache don't grow unbounded against the 512M container cap.
@@ -82,6 +96,19 @@ const frontEndAppBuildPath = path.resolve(import.meta.dirname, '../build');
 // Public, counts-only server activity (deliberately exposes NO match IDs or
 // player names — just aggregate numbers for the homepage).
 server.app.use(async (ctx, next) => {
+    if (ctx.method === 'POST' && ctx.path === '/api/bug-report') {
+        try {
+            const payload = await readJsonBody(ctx.req);
+            const saved = saveBugReport(payload);
+            ctx.set('Cache-Control', 'no-store');
+            ctx.body = {ok: true, filename: saved.filename};
+        } catch (e) {
+            console.error('bug report error', e);
+            ctx.status = e.status || 400;
+            ctx.body = {ok: false, error: e.message};
+        }
+        return;
+    }
     if (ctx.method === 'GET' && ctx.path === '/api/stats') {
         let body = {inProgress: 0, waiting: 0, players: 0};
         try {

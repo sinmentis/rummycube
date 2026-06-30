@@ -39,6 +39,7 @@ import IconButton from "./IconButton";
 import TimeoutAnnouncement from "./TimeoutAnnouncement";
 import WheelToast from "./WheelToast";
 import ResultToast from "./ResultToast";
+import ReportBugButton from "./ReportBugButton";
 import {useUndoRedoHotkeys} from "./useUndoRedoHotkeys";
 import {useTilePlacementHotkeys} from "./useTilePlacementHotkeys";
 import {usePersistentFlag} from "./hooks/usePersistentFlag";
@@ -746,6 +747,7 @@ const RummikubBoard = function ({G, ctx, moves, playerID, matchData, matchID, ev
 
             {sidebar}
             <div className={(isChaos ? 'board chaos' : 'board') + ((peekTargeting || lockTargeting) ? ' is-targeting' : '')} ref={boardRef} onClick={onBoardClick}>
+                <ReportBugButton matchID={matchID} playerID={playerID} G={G} ctx={ctx} matchData={matchData}/>
                 <div className="board-kick-layer">
                 <div className="top-cue-stack">
                     {connectionCue}

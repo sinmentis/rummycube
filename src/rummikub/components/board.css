@@ -1625,6 +1625,41 @@ svg.fa-smile-beam {
     gap: 8px;
     pointer-events: none;
 }
+
+.bug-report {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    z-index: 80;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    pointer-events: auto;
+}
+
+.bug-report-btn {
+    min-height: 36px;
+    padding: 6px 12px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(20, 16, 12, .82);
+    color: #fffdf4;
+    font-weight: 800;
+    box-shadow: 0 6px 14px rgba(0,0,0,.35), inset 0 1px rgba(255,255,255,.18);
+    cursor: pointer;
+}
+
+.bug-report-status {
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: rgba(20, 16, 12, .82);
+    color: #fffdf4;
+    font-size: 12px;
+    max-width: min(42vw, 360px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 .timeout-toast {
     display: inline-flex;
     align-items: center;
