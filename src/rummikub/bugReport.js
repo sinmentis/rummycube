@@ -14,7 +14,10 @@ function timestampForFile(d) {
 }
 
 export function saveBugReport(payload, {dir, now = () => new Date()} = {}) {
-    const baseDir = process.env.FLATFILE_DIR || process.cwd();
+    // Do NOT default under FLATFILE_DIR. boardgame.io's FlatFile/node-persist
+    // storage expects only its own files in that directory; putting a bug-reports
+    // subdirectory there makes its scans crash with EISDIR.
+    const baseDir = process.cwd();
     const outDir = dir || process.env.BUG_REPORT_DIR || path.resolve(baseDir, 'bug-reports');
     fs.mkdirSync(outDir, {recursive: true});
     const savedAt = now();

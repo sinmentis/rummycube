@@ -21,19 +21,40 @@ test('saveBugReport writes timestamped JSON with sanitized match/player ids', ()
   expect(written.snapshot.ctx.turn).toBe(3);
 });
 
-test('saveBugReport defaults under FLATFILE_DIR so reports persist with match data volume', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rummy-flatfile-'));
+test('saveBugReport never defaults inside FLATFILE_DIR', () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'rummy-cwd-'));
+  const flatfile = fs.mkdtempSync(path.join(os.tmpdir(), 'rummy-flatfile-'));
   const old = process.env.FLATFILE_DIR;
-  process.env.FLATFILE_DIR = dir;
+  const oldCwd = process.cwd();
+  process.env.FLATFILE_DIR = flatfile;
   try {
+    process.chdir(cwd);
     const result = saveBugReport({matchID: 'm2', playerID: '1'}, {
       now: () => new Date('2026-06-30T03:00:00.000Z'),
     });
-    expect(result.path).toBe(path.join(dir, 'bug-reports', result.filename));
+    expect(result.path).toBe(path.join(cwd, 'bug-reports', result.filename));
+    expect(result.path.startsWith(flatfile)).toBe(false);
     expect(fs.existsSync(result.path)).toBe(true);
   } finally {
+    process.chdir(oldCwd);
     if (old === undefined) delete process.env.FLATFILE_DIR;
     else process.env.FLATFILE_DIR = old;
+  }
+});
+
+test('saveBugReport uses BUG_REPORT_DIR when provided', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rummy-bug-dir-'));
+  const old = process.env.BUG_REPORT_DIR;
+  process.env.BUG_REPORT_DIR = dir;
+  try {
+    const result = saveBugReport({matchID: 'm3', playerID: '2'}, {
+      now: () => new Date('2026-06-30T03:30:00.000Z'),
+    });
+    expect(result.path).toBe(path.join(dir, result.filename));
+    expect(fs.existsSync(result.path)).toBe(true);
+  } finally {
+    if (old === undefined) delete process.env.BUG_REPORT_DIR;
+    else process.env.BUG_REPORT_DIR = old;
   }
 });
 
