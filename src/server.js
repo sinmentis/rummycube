@@ -6,6 +6,7 @@ import {ConnAwareSocketIO} from "./rummikub/connTransport.js";
 import {FRONTEND_ADDR, GAME_NAME} from "./rummikub/constants.js";
 import {computeServerStats} from "./rummikub/serverStats.js";
 import {enrichBugReport, saveBugReport} from "./rummikub/bugReport.js";
+import {createServerLifecycle} from "./serverLifecycle.js";
 
 const allowedOrigins = [Origins.LOCALHOST, `http://${FRONTEND_ADDR}`];
 if (process.env.PUBLIC_ORIGIN) {
@@ -92,6 +93,18 @@ async function getServerStats() {
 
 // Build path relative to the server.js file
 const frontEndAppBuildPath = path.resolve(import.meta.dirname, '../build');
+let lifecycle;
+
+server.app.use(async (ctx, next) => {
+    if (ctx.method === 'GET' && ctx.path === '/readyz') {
+        const ready = lifecycle?.isReady() === true;
+        ctx.status = ready ? 200 : 503;
+        ctx.set('Cache-Control', 'no-store');
+        ctx.body = {status: ready ? 'ready' : 'draining'};
+        return;
+    }
+    await next();
+});
 
 // Public, counts-only server activity (deliberately exposes NO match IDs or
 // player names — just aggregate numbers for the homepage).
@@ -123,13 +136,27 @@ server.app.use(async (ctx, next) => {
     await next();
 });
 
-server.app.use(serve(frontEndAppBuildPath))
+server.app.use(serve(frontEndAppBuildPath));
 
-server.run(PORT, () => {
+const runningServers = await server.run(PORT, () => {
     server.app.use(
         async (ctx, next) => await serve(frontEndAppBuildPath)(
             Object.assign(ctx, {path: 'index.html'}),
             next
         )
-    )
+    );
 });
+
+lifecycle = createServerLifecycle({
+    io: server.app._io,
+    appServer: runningServers.appServer,
+    apiServer: runningServers.apiServer,
+    timers: [gcTimer],
+});
+lifecycle.markReady();
+
+for (const signal of ['SIGTERM', 'SIGINT']) {
+    process.once(signal, () => {
+        void lifecycle.shutdown(signal);
+    });
+}

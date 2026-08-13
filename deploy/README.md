@@ -27,6 +27,12 @@ systemctl --user start shunlyu-rummycube.service
 The unit publishes the container (port 9119) on `127.0.0.1:8093`, injects the
 public origin env, sets `FLATFILE_DIR=/app/data` with the `rummycube-data`
 volume mounted there, and caps resources (`MemoryMax=512M`, `CPUQuota=100%`).
+The server exposes `/readyz` for readiness and exits cleanly on `SIGTERM` so
+dashboard-initiated pauses do not require a forced container kill.
+
+The project-owned dashboard contract is
+`ops/dashboard/workload.declaration.json`. Concrete unit names and host ports
+remain in the trusted binding in the dashboard repository.
 
 > Needs a real deploy to verify: the named volume mount, persistence across a
 > container restart, and reconnect-across-restart can only be confirmed on the

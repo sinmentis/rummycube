@@ -1,0 +1,36 @@
+{
+  "apiVersion": "dash.shunlyu.com/v1alpha1",
+  "kind": "WorkloadDeclaration",
+  "metadata": {
+    "name": "rummycube",
+    "displayName": "RummyCube"
+  },
+  "spec": {
+    "capabilities": {
+      "core.lifecycle": {
+        "version": 1,
+        "roles": [
+          "web"
+        ]
+      },
+      "core.health": {
+        "version": 1,
+        "checks": [
+          {
+            "name": "ready",
+            "kind": "http",
+            "port": "http",
+            "path": "/readyz",
+            "expectStatus": 200,
+            "timeoutSeconds": 3
+          }
+        ]
+      }
+    },
+    "ports": {
+      "http": {
+        "containerPort": 9119
+      }
+    }
+  }
+}
